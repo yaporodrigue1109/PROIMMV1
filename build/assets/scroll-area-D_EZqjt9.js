@@ -1,0 +1,1 @@
+import{t as e}from"./app-Bxd--byn.js";import{s as t}from"./card-TJZT1W8r.js";var n=e();function r({className:e,children:r,...i}){return(0,n.jsx)(`div`,{className:t(`overflow-auto`,e),...i,children:r})}export{r as t};
