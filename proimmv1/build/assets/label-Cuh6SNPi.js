@@ -1,1 +1,0 @@
-import{c as e,d as t,t as n}from"./app-Bxd--byn.js";import{s as r}from"./card-TJZT1W8r.js";var i=t(e(),1),a=n(),o=i.forwardRef(function({className:e,...t},n){return(0,a.jsx)(`label`,{ref:n,className:r(`text-sm font-medium leading-none text-[#0f172a] peer-disabled:cursor-not-allowed peer-disabled:opacity-70`,e),...t})});export{o as t};
