@@ -7,6 +7,7 @@ const badgeVariants = {
     success: 'border-transparent bg-[#e6f5d0] text-[#4f8f00]',
     warning: 'border-transparent bg-[#e1edf6] text-[#00559b]',
     danger: 'border-transparent bg-rose-100 text-rose-700',
+    destructive: 'border-transparent bg-rose-100 text-rose-700',
 };
 
 export function Badge({ className, variant = 'default', ...props }) {

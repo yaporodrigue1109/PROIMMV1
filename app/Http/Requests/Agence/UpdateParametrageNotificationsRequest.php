@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Requests\Parametrage;
-
 namespace App\Http\Requests\Agence;
+
+use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateParametrageNotificationsRequest extends FormRequest
 {
@@ -19,8 +19,8 @@ class UpdateParametrageNotificationsRequest extends FormRequest
             'notif_recu' => 'nullable|boolean',
             'email_compta' => 'nullable|email|max:255',
             'email_dg' => 'nullable|email|max:255',
-            'delai_rappel' => 'nullable|integer|min:1|max:30',
-            'seuil_dg' => 'nullable|integer|min:0',
+            'delai_rappel' => 'nullable|integer|min:1',
+            'seuil_dg' => 'nullable|numeric|min:0',
         ];
     }
 }

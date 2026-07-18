@@ -26,6 +26,7 @@ import { Input } from '../../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { agenceButtonStyles } from '../../../lib/buttonStyles';
 import { cn } from '../../../lib/utils';
+import { ComboboxField as SharedComboboxField } from '../../../components/ui/combobox-field';
 
 const currency = (value) =>
     new Intl.NumberFormat('fr-FR', {
@@ -525,7 +526,7 @@ export default function Maintenance({
 
                 <SectionCard icon={Home} title="Filtre de maintenance" description="Choisissez un propriétaire puis sa propriété associée.">
                     <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <ComboboxField
+                        <SharedComboboxField
     label="Propriétaire"
     value={proprietaireFilter}
     placeholder="Tous les propriétaires"
@@ -976,7 +977,7 @@ export default function Maintenance({
 
                         <form className="space-y-5 pt-2" onSubmit={handleSubmit}>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <ComboboxField
+                                <SharedComboboxField
                                     label="Propriétaire"
                                     required
                                     value={form.proprietaire_id}

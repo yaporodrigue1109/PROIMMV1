@@ -30,6 +30,7 @@ import { ScrollArea } from '../../../components/ui/scroll-area';
 import ProximitePickerCard from './ProximitePicker';
 import { agenceButtonStyles } from '../../../lib/buttonStyles';
 import { cn } from '../../../lib/utils';
+import { ComboboxField as SharedComboboxField } from '../../../components/ui/combobox-field';
 
 // ─────────────────────────────────────────────────────────────
 // Factories & helpers
@@ -1496,7 +1497,7 @@ export default function Form({
                         description="Identité et lot"
                     >
                         <div className="mt-4 grid grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
-                                <ComboboxField
+                                <SharedComboboxField
                                     label="Propriétaire"
                                     required
                                     value={toId(data.proprietaire_id)}

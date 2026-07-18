@@ -62,6 +62,11 @@ class Maintenancier extends Model
         return $this->belongsTo(Agence::class, 'agence_id');
     }
 
+    public function typePiece()
+    {
+        return $this->belongsTo(TypePiece::class, 'type_piece_id', 'type_pieces_id');
+    }
+
     public function maintenances()
     {
         return $this->hasMany(MaintenanceDetail::class, 'maintenancier_id');
@@ -78,6 +83,7 @@ class Maintenancier extends Model
             'maintenances',
             'agence',
             'fonction',
+            'typePiece',
 
         ]);
     }

@@ -3,18 +3,33 @@
 namespace App\Http\Controllers\Admin\Abonnement;
 
 use App\Http\Controllers\Controller;
+use App\Models\Abonnement;
+use App\Models\AbonnementHistorique;
+use App\Services\AgenceService;
+use App\Services\ConfigurationTarifService;
+use App\Repositories\Interfaces\AbonnementRepositoryInterface;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class AbonnementController extends Controller
 {
+    public function __construct(
+        protected AgenceService $agenceService,
+        protected ConfigurationTarifService $tarifService,
+        protected AbonnementRepositoryInterface $abonnementRepository
+    ) {}
+
     public function index(): Response
     {
-        $abonnements = $this->mockAbonnements();
+        $abonnements = $this->getSubscriptionItems();
+        $plans = $this->getPlans();
 
         return Inertia::render('Admin/Abonnements/Index', [
             'abonnements' => $abonnements,
-            'plans' => $this->mockPlans(),
+            'plans' => $plans,
             'stats' => $this->buildStats($abonnements),
             'nextRenewals' => $abonnements
                 ->sortBy('date_fin')
@@ -23,141 +38,183 @@ class AbonnementController extends Controller
         ]);
     }
 
-    public function plans(): Response
-    {
-        return Inertia::render('Admin/Abonnements/Plans', [
-            'plans' => $this->mockPlans(),
-            'stats' => $this->buildStats($this->mockAbonnements()),
-        ]);
-    }
-
     public function create(): Response
     {
         return Inertia::render('Admin/Abonnements/Form', [
             'mode' => 'create',
-            'abonnement' => null,
-            'plans' => $this->mockPlans(),
+            'agence' => null,
+            'agences' => $this->getAgencesForSubscription(),
+            'tarifs' => $this->tarifService->getTarifsPourFormulaire(),
         ]);
     }
 
     public function show($codeAgence): Response
     {
-        $abonnement = $this->findAbonnement($codeAgence);
+        $abonnement = $this->findSubscription($codeAgence);
 
         abort_if(!$abonnement, 404, 'Abonnement introuvable.');
 
         return Inertia::render('Admin/Abonnements/Show', [
             'abonnement' => $abonnement,
-            'history' => $this->buildHistory($abonnement),
-            'plans' => $this->mockPlans(),
+            'history' => $this->buildHistory($abonnement['agence_id'] ?? null),
+            'plans' => $this->getPlans(),
         ]);
     }
 
     public function edit($codeAgence): Response
     {
-        $abonnement = $this->findAbonnement($codeAgence);
+        $agence = $this->findAgency($codeAgence);
 
-        abort_if(!$abonnement, 404, 'Abonnement introuvable.');
+        abort_if(!$agence, 404, 'Agence introuvable.');
 
         return Inertia::render('Admin/Abonnements/Form', [
             'mode' => 'edit',
-            'abonnement' => $abonnement,
-            'plans' => $this->mockPlans(),
+            'agence' => $agence,
+            'agences' => $this->getAgencesForSubscription(),
+            'tarifs' => $this->tarifService->getTarifsPourFormulaire(),
         ]);
     }
 
-    private function findAbonnement(string $codeAgence): ?array
+    public function store(Request $request): RedirectResponse
     {
-        return $this->mockAbonnements()
-            ->firstWhere('code_agence', $codeAgence);
+        return $this->saveSubscription($request, false);
     }
 
-    private function mockAbonnements()
+    public function update(Request $request, string $codeAgence): RedirectResponse
     {
-        return collect([
-            [
-                'agence' => 'Pros Immobilier Cocody',
-                'code_agence' => 'AGC-001',
-                'plan' => 'Premium',
-                'montant' => 45000,
-                'cycle' => 'Mensuel',
-                'date_debut' => '2026-04-01',
-                'date_fin' => '2026-04-30',
-                'statut' => 'Actif',
-                'modules' => ['Annonces illimitees', 'SMS', 'WhatsApp', 'Statistiques', 'Support prioritaire'],
-                'notes' => 'Agence prioritaire avec modules de communication actifs.',
-                'created_at' => '2026-04-01 09:40:00',
-            ],
-            [
-                'agence' => 'Pros Immobilier Plateau',
-                'code_agence' => 'AGC-002',
-                'plan' => 'Standard',
-                'montant' => 25000,
-                'cycle' => 'Mensuel',
-                'date_debut' => '2026-04-05',
-                'date_fin' => '2026-05-05',
-                'statut' => 'Actif',
-                'modules' => ['Annonces standard', 'SMS', 'Rapports simples'],
-                'notes' => 'Suivi mensuel standard.',
-                'created_at' => '2026-04-05 12:08:00',
-            ],
-            [
-                'agence' => 'Pros Immobilier Yopougon',
-                'code_agence' => 'AGC-003',
-                'plan' => 'Essentiel',
-                'montant' => 15000,
-                'cycle' => 'Mensuel',
-                'date_debut' => '2026-03-01',
-                'date_fin' => '2026-03-31',
-                'statut' => 'Expire',
-                'modules' => ['Annonces limitees', 'Support email'],
-                'notes' => 'Renouvellement a relancer.',
-                'created_at' => '2026-03-01 08:22:00',
-            ],
-            [
-                'agence' => 'Pros Immobilier Bingerville',
-                'code_agence' => 'AGC-004',
-                'plan' => 'Premium',
-                'montant' => 45000,
-                'cycle' => 'Mensuel',
-                'date_debut' => '2026-04-15',
-                'date_fin' => '2026-05-15',
-                'statut' => 'En attente',
-                'modules' => ['Annonces illimitees', 'SMS', 'WhatsApp', 'Statistiques'],
-                'notes' => 'Paiement en attente de confirmation.',
-                'created_at' => '2026-04-15 17:15:00',
-            ],
-        ]);
+        return $this->saveSubscription($request, true, $codeAgence);
     }
 
-    private function mockPlans(): array
+    private function findAgency(string $codeAgence): ?object
     {
+        $agence = $this->agenceService->findByCode($codeAgence);
+
+        if (!$agence) {
+            return null;
+        }
+
+        return $this->agenceService->findWithRelations($agence->agence_id) ?? $agence;
+    }
+
+    private function findSubscription(string $codeAgence): ?array
+    {
+        $agence = $this->findAgency($codeAgence);
+
+        if (!$agence) {
+            return null;
+        }
+
+        $snapshot = Abonnement::query()
+            ->where('type', 'subscription')
+            ->with(['nouvelAbonnement'])
+            ->where('agence_id', $agence->agence_id)
+            ->first();
+
+        return $this->mapSubscriptionItem($agence, $snapshot);
+    }
+
+    private function saveSubscription(Request $request, bool $isUpdate, ?string $codeAgence = null): RedirectResponse
+    {
+        try {
+            $data = $request->validate([
+                'agence_id' => ['required', 'string', 'exists:agences,agence_id'],
+                'abonnement_start' => ['required', 'date'],
+                'abonnement_end' => ['required', 'date', 'after:abonnement_start'],
+                'duree_mois' => ['required', 'integer', 'min:1'],
+                'montant_base_total' => ['required', 'numeric', 'min:0'],
+                'montant_total' => ['required', 'numeric', 'min:0'],
+                'options' => ['nullable', 'array'],
+                'options.*' => ['integer'],
+                'abonnement_notes' => ['nullable', 'string', 'max:500'],
+            ]);
+
+            $agenceId = $data['agence_id'];
+            unset($data['agence_id']);
+            $data['statut'] = 'active';
+
+            $agence = $this->agenceService->updateAgence($agenceId, $data);
+
+            return redirect()
+                ->route('admin.abonnements.show', $agence->code_agence)
+                ->with(
+                    'success',
+                    $isUpdate
+                        ? 'L\'abonnement de l\'agence a été renouvelé avec succès.'
+                        : 'L\'agence a été abonnée avec succès.'
+                );
+        } catch (\Throwable $e) {
+            return back()
+                ->with('error', 'Erreur lors de l\'enregistrement : ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    private function getAgencesForSubscription()
+    {
+        return $this->agenceService->getAll([], -1);
+    }
+
+    private function getSubscriptionItems()
+    {
+        $agences = collect($this->agenceService->getAll([], -1));
+        $snapshots = Abonnement::query()
+            ->where('type', 'subscription')
+            ->with(['nouvelAbonnement'])
+            ->get()
+            ->keyBy('agence_id');
+
+        $items = $agences
+            ->filter(fn ($agence) => !empty($agence->abonnement_start) || !empty($agence->abonnement_end) || !empty($agence->abonnement_id))
+            ->map(fn ($agence) => $this->mapSubscriptionItem($agence, $snapshots->get($agence->agence_id)))
+            ->values();
+
+        return $items;
+    }
+
+    private function mapSubscriptionItem(object $agence, ?Abonnement $snapshot = null): array
+    {
+        $plan = $snapshot?->nouvelAbonnement ?? $agence->abonnement;
+        $start = $snapshot?->nouvelle_date_debut ?? $agence->abonnement_start ?? null;
+        $end = $snapshot?->nouvelle_date_fin ?? $agence->abonnement_end ?? null;
+        $duration = $snapshot?->duree_mois ?? $agence->duree_mois ?? null;
+        $amount = $snapshot?->montant_ht ?? $agence->montant_total ?? $plan?->prix_mensuel_ht ?? 0;
+        $notes = $snapshot?->notes ?? null;
+
         return [
-            [
-                'nom' => 'Essentiel',
-                'prix' => 15000,
-                'description' => 'Pour les petites agences qui demarrent.',
-                'cycle' => 'Mensuel',
-                'modules' => ['Annonces limitees', 'Support email', 'Tableau de bord simple'],
-                'highlight' => false,
-            ],
-            [
-                'nom' => 'Standard',
-                'prix' => 25000,
-                'description' => 'Pour suivre les agences actives au quotidien.',
-                'cycle' => 'Mensuel',
-                'modules' => ['Annonces standard', 'SMS', 'Rapports simples', 'Gestion equipe'],
-                'highlight' => true,
-            ],
-            [
-                'nom' => 'Premium',
-                'prix' => 45000,
-                'description' => 'Pour les agences qui veulent tous les leviers.',
-                'cycle' => 'Mensuel',
-                'modules' => ['Annonces illimitees', 'SMS', 'WhatsApp', 'Statistiques', 'Support prioritaire'],
-                'highlight' => false,
-            ],
+            'agence' => $agence->name ?? 'Agence sans nom',
+            'code_agence' => $agence->code_agence ?? null,
+            'plan' => $plan?->name ?? 'Plan unique',
+            'plan_label' => $plan?->name ?? 'Plan unique',
+            'plan_description' => $plan?->description ?? 'Aucune description disponible.',
+            'plan_modules' => $this->extractModules($plan?->features ?? []),
+            'montant' => (float) $amount,
+            'cycle' => $duration ? "{$duration} mois" : 'Mensuel',
+            'date_debut' => $this->formatDateValue($start),
+            'date_fin' => $this->formatDateValue($end),
+            'statut' => $this->resolveStatus($start, $end),
+            'paiement' => $this->resolvePaymentStatus($start, $end),
+            'modules' => $this->extractModules($plan?->features ?? []),
+            'notes' => $notes,
+            'created_at' => optional($snapshot?->created_at ?? $agence->created_at)?->format('Y-m-d H:i:s'),
         ];
+    }
+
+    private function getPlans(): array
+    {
+        return $this->abonnementRepository
+            ->getActifs()
+            ->map(function (Abonnement $plan) {
+                return [
+                    'nom' => $plan->name,
+                    'prix' => $plan->prix_mensuel_ht,
+                    'description' => $plan->description,
+                    'cycle' => 'Mensuel',
+                    'modules' => $this->extractModules($plan->features ?? []),
+                    'highlight' => (bool) $plan->is_default,
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function buildStats($abonnements): array
@@ -173,26 +230,105 @@ class AbonnementController extends Controller
         ];
     }
 
-    private function buildHistory(array $abonnement): array
+    private function buildHistory(?string $agenceId): array
     {
-        $dateFin = \Carbon\Carbon::parse($abonnement['date_fin']);
+        if (!$agenceId) {
+            return [];
+        }
 
-        return [
-            [
-                'periode' => $dateFin->copy()->subMonths(2)->format('d/m/Y'),
-                'montant' => $abonnement['montant'],
-                'statut' => 'Paye',
-            ],
-            [
-                'periode' => $dateFin->copy()->subMonth()->format('d/m/Y'),
-                'montant' => $abonnement['montant'],
-                'statut' => 'Paye',
-            ],
-            [
-                'periode' => $dateFin->format('d/m/Y'),
-                'montant' => $abonnement['montant'],
-                'statut' => $abonnement['statut'] === 'Actif' ? 'Paye' : 'A confirmer',
-            ],
-        ];
+        return AbonnementHistorique::query()
+            ->where('agence_id', $agenceId)
+            ->orderByDesc('created_at')
+            ->take(12)
+            ->get()
+            ->map(function (AbonnementHistorique $historique) {
+                $periode = trim(
+                    $this->formatDateValue($historique->nouvelle_date_debut) .
+                    ' - ' .
+                    $this->formatDateValue($historique->nouvelle_date_fin)
+                );
+
+                return [
+                    'periode' => $periode,
+                    'montant' => $historique->montant_ht,
+                    'statut' => $historique->action === 'annulation' ? 'A confirmer' : 'Paye',
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function resolveStatus($start, $end): string
+    {
+        if (!$start || !$end) {
+            return 'En attente';
+        }
+
+        $startDate = Carbon::parse($start);
+        $endDate = Carbon::parse($end);
+
+        if (now()->lt($startDate)) {
+            return 'En attente';
+        }
+
+        if (now()->gt($endDate)) {
+            return 'Expire';
+        }
+
+        return 'Actif';
+    }
+
+    private function resolvePaymentStatus($start, $end): string
+    {
+        if (!$start || !$end) {
+            return 'A confirmer';
+        }
+
+        return $this->resolveStatus($start, $end) === 'Expire' ? 'A confirmer' : 'Paye';
+    }
+
+    private function formatDateValue($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function extractModules($features): array
+    {
+        if (is_string($features)) {
+            $decoded = json_decode($features, true);
+            $features = json_last_error() === JSON_ERROR_NONE ? $decoded : [$features];
+        }
+
+        if (!is_array($features)) {
+            return [];
+        }
+
+        return collect($features)
+            ->map(function ($item) {
+                if (is_string($item)) {
+                    return trim($item);
+                }
+
+                if (is_array($item)) {
+                    return $item['label']
+                        ?? $item['name']
+                        ?? $item['nom']
+                        ?? $item['libelle']
+                        ?? null;
+                }
+
+                return null;
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 }

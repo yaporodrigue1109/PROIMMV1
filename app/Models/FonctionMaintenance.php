@@ -16,7 +16,6 @@ class FonctionMaintenance extends Model
         'agence_id',
         'name',
         'description',
-        'categorie',
         'created_by',
         'updated_by'
     ];

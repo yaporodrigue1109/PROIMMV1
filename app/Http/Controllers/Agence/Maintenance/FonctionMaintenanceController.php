@@ -77,7 +77,6 @@ class FonctionMaintenanceController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'categorie' => 'nullable|string|max:255',
             'description' => 'nullable|string'
         ]);
 

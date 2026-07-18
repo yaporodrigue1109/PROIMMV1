@@ -59,6 +59,11 @@ interface MaintenanceRepositoryInterface
     public function updateStatut(string $id, string $statut): Maintenance;
 
     /**
+     * Recalcule le statut global d'une maintenance à partir de ses détails.
+     */
+    public function recalculateStatutFromDetails(string $id): Maintenance;
+
+    /**
      * Retourne les maintenances d'un propriétaire.
      */
     public function findByProprietaire(string $proprietaireId): Collection;

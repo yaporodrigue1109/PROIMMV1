@@ -16,15 +16,13 @@ class MaintenancierRepository implements MaintenancierRepositoryInterface
 
     public function all(array $filters = [])
     {
-        $query = $this->model->with(['fonction', 'agence']);
+        $query = $this->model->with(['fonction', 'agence', 'typePiece']);
 
         if (!empty($filters['fonction_id'])) {
             $query->where('fonction_maintenance_id', $filters['fonction_id']);
         }
 
-        if (!empty($filters['agence_id'])) {
-            $query->where('agence_id', $filters['agence_id']);
-        }
+        $query->where('agence_id', $this->agenceId());
 
         if (!empty($filters['statut'])) {
             $query->where('statut', $filters['statut']);
@@ -39,7 +37,9 @@ class MaintenancierRepository implements MaintenancierRepositoryInterface
 //    }
     public function find($id)
     {
-        return $this->model->withDefaultRelations()->find($id);
+        return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
+            ->find($id);
     }
 
     public function create(array $data)
@@ -68,7 +68,9 @@ class MaintenancierRepository implements MaintenancierRepositoryInterface
 
     public function getByFonction($fonctionId)
     {
-        return $this->model->where('fonction_maintenance_id', $fonctionId)->get();
+        return $this->model->where('agence_id', $this->agenceId())
+            ->where('fonction_maintenance_id', $fonctionId)
+            ->get();
     }
 
     public function getByAgence($agenceId)
@@ -83,10 +85,16 @@ class MaintenancierRepository implements MaintenancierRepositoryInterface
 
     public function getDisponibles()
     {
-        return $this->model->where('statut', true)
+        return $this->model->where('agence_id', $this->agenceId())
+            ->where('statut', true)
             ->whereDoesntHave('maintenances', function($q) {
                 $q->whereIn('statut', ['en_cours', 'en_attente']);
             })
             ->get();
+    }
+
+    private function agenceId(): string
+    {
+        return getInfoAgent()->users->agence_id;
     }
 }

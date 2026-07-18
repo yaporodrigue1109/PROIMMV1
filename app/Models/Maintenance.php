@@ -47,10 +47,10 @@ class Maintenance extends Model
     const PRISE_EN_CHARGE_AGENCE       = 'agence';
 
     // Statuts possibles
-    const STATUT_EN_ATTENTE  = 'en_attente';
-    const STATUT_EN_COURS    = 'en_cours';
-    const STATUT_TERMINE     = 'termine';
-    const STATUT_ANNULE      = 'annule';
+    const STATUT_EN_ATTENTE  = 'en attente';
+    const STATUT_EN_COURS    = 'en cours';
+    const STATUT_TERMINE     = 'terminer';
+    const STATUT_ANNULE      = 'annuler';
 
     // -------------------------------------------------------------------------
     // Relations
@@ -64,16 +64,22 @@ class Maintenance extends Model
             if (empty($model->{$model->getKeyName()})) {
                 $model->{$model->getKeyName()} = (string) Str::uuid();
             }
-            $model->created_by = getInfoAgent()->users->id_users ;
+            $model->created_by = getInfoAgent()?->users?->id_users
+                ?? getInfoAdmin()?->admin?->id_admin
+                ?? 'system';
         });
 
         static::updating(function ($model) {
-            $model->updated_by = getInfoAgent()->users->id_users ;
+            $model->updated_by = getInfoAgent()?->users?->id_users
+                ?? getInfoAdmin()?->admin?->id_admin
+                ?? 'system';
             $model->updated_at = now();
         });
 
         static::deleting(function ($model) {
-            $model->deleted_by = getInfoAgent()->users->id_users ;
+            $model->deleted_by = getInfoAgent()?->users?->id_users
+                ?? getInfoAdmin()?->admin?->id_admin
+                ?? 'system';
             $model->deleted_at = now();
         });
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Abonnement extends Model
@@ -30,6 +31,19 @@ class Abonnement extends Model
         'features',
         'created_by',
         'updated_by',
+        'type',
+        'agence_id',
+        'ancien_abonnement_id',
+        'nouvel_abonnement_id',
+        'ancienne_date_debut',
+        'ancienne_date_fin',
+        'nouvelle_date_debut',
+        'nouvelle_date_fin',
+        'duree_mois',
+        'montant_ht',
+        'action',
+        'action_par',
+        'notes',
     ];
 
     protected $casts = [
@@ -40,6 +54,11 @@ class Abonnement extends Model
         'module_api'          => 'boolean',
         'is_default'          => 'boolean',
         'features'            => 'array',
+        'ancienne_date_debut' => 'date',
+        'ancienne_date_fin'   => 'date',
+        'nouvelle_date_debut' => 'date',
+        'nouvelle_date_fin'   => 'date',
+        'montant_ht'          => 'decimal:2',
     ];
 
     // ─── Relations ───────────────────────────────────────────────────────────
@@ -57,6 +76,21 @@ class Abonnement extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class, 'abonnement_id', 'abonnement_id');
+    }
+
+    public function agence(): BelongsTo
+    {
+        return $this->belongsTo(Agence::class, 'agence_id', 'agence_id');
+    }
+
+    public function ancienAbonnement(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'ancien_abonnement_id', 'abonnement_id');
+    }
+
+    public function nouvelAbonnement(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'nouvel_abonnement_id', 'abonnement_id');
     }
 
     // ─── Scopes ──────────────────────────────────────────────────────────────

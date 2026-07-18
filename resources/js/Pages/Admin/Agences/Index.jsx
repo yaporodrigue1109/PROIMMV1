@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { Building2, Search } from 'lucide-react';
 
@@ -59,13 +59,38 @@ const initials = (name) => {
     );
 };
 
-export default function Index({ agences, agenceStats = {} }) {
+export default function Index({ agences, agenceStats = {}, selectedAgenceId = '' }) {
     const items = agences?.data ?? agences ?? [];
     const getAgenceRouteId = (agence) => agence?.agence_id ?? agence?.code_agence ?? '';
 
     const [query, setQuery] = useState('');
     const [status, setStatus] = useState('tous');
     const [selectedAgence, setSelectedAgence] = useState(items[0] ?? null);
+    const currentSubscription = selectedAgence?.subscription ?? selectedAgence?.abonnement ?? null;
+
+    useEffect(() => {
+        if (!items.length) {
+            setSelectedAgence(null);
+            return;
+        }
+
+        if (selectedAgenceId) {
+            const matchedAgence = items.find((agence) => String(getAgenceRouteId(agence)) === String(selectedAgenceId));
+
+            if (matchedAgence) {
+                setSelectedAgence(matchedAgence);
+                return;
+            }
+        }
+
+        setSelectedAgence((current) => {
+            if (current && items.some((agence) => agence.agence_id === current.agence_id)) {
+                return current;
+            }
+
+            return items[0] ?? null;
+        });
+    }, [items, selectedAgenceId]);
 
     const filteredItems = useMemo(() => {
         return items.filter((agence) => {
@@ -352,7 +377,7 @@ export default function Index({ agences, agenceStats = {} }) {
                                         <MetaItem
                                             label="Abonnement"
                                             value={
-                                                selectedAgence.abonnement?.name ??
+                                                currentSubscription?.name ??
                                                 'Aucun abonnement'
                                             }
                                         />
@@ -448,6 +473,44 @@ export default function Index({ agences, agenceStats = {} }) {
                                                 </div>
                                             </Section>
 
+                                            <Section title="Responsable">
+                                                <div className="grid gap-4 md:grid-cols-2">
+                                                    <Info
+                                                        label="Nom"
+                                                        value={
+                                                            selectedAgence.responsable?.name ??
+                                                            selectedAgence.responsable_name ??
+                                                            'Non défini'
+                                                        }
+                                                    />
+                                                    <Info
+                                                        label="Email"
+                                                        value={
+                                                            selectedAgence.responsable?.email ??
+                                                            selectedAgence.responsable_email ??
+                                                            'Non défini'
+                                                        }
+                                                    />
+                                                    <Info
+                                                        label="Téléphone principal"
+                                                        value={
+                                                            selectedAgence.responsable?.tel1 ??
+                                                            selectedAgence.responsable_phone ??
+                                                            selectedAgence.tel1 ??
+                                                            'Non défini'
+                                                        }
+                                                    />
+                                                    <Info
+                                                        label="Téléphone secondaire"
+                                                        value={
+                                                            selectedAgence.responsable?.tel2 ??
+                                                            selectedAgence.responsable_phone2 ??
+                                                            'Non défini'
+                                                        }
+                                                    />
+                                                </div>
+                                            </Section>
+
                                             <Section title="Informations légales">
                                                 <div className="grid gap-4 md:grid-cols-2">
                                                     <Info
@@ -481,32 +544,26 @@ export default function Index({ agences, agenceStats = {} }) {
                                             <Card className="rounded-2xl border-slate-200 bg-slate-50">
                                                 <CardContent className="p-5">
                                                     <Badge variant="secondary" className="mt-4">
-                                                        {selectedAgence.abonnement
+                                                        {currentSubscription
                                                             ? 'Actif'
                                                             : 'Aucun abonnement'}
                                                     </Badge>
 
                                                     <h4 className="mt-4 text-xl font-semibold text-slate-900">
-                                                        {selectedAgence.abonnement
-                                                            ?.name ??
+                                                        {currentSubscription?.name ??
                                                             'Aucun plan souscrit'}
                                                     </h4>
 
                                                     <p className="mt-2 text-sm text-slate-500">
-                                                        {selectedAgence.abonnement
-                                                            ?.description ??
+                                                        {currentSubscription?.description ??
                                                             "Cette agence n'a pas encore souscrit à un abonnement."}
                                                     </p>
 
                                                     <div className="mt-5 text-2xl font-semibold text-slate-900">
                                                         {formatMoney(
-                                                            selectedAgence
-                                                                .abonnement
-                                                                ?.prix_ht ??
-                                                                selectedAgence
-                                                                    .abonnement
-                                                                    ?.prix ??
-                                                                0
+                                                            currentSubscription?.prix_ht ??
+                                                            currentSubscription?.prix ??
+                                                            0
                                                         )}
                                                         <span className="text-sm font-normal text-slate-500">
                                                             {' '}

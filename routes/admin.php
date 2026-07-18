@@ -128,18 +128,21 @@ Route::middleware(['admin'])->group(function () {
         Route::get('/', [AbonnementController::class, 'index'])
             //->middleware('permission:view-abonnements')
             ->name('index');
-        Route::get('/plans', [AbonnementController::class, 'plans'])
-          //  ->middleware('permission:view-abonnements')
-            ->name('plans');
         Route::get('/create', [AbonnementController::class, 'create'])
          //   ->middleware('permission:create-abonnements')
             ->name('create');
+        Route::post('/', [AbonnementController::class, 'store'])
+         //   ->middleware('permission:create-abonnements')
+            ->name('store');
         Route::get('/{codeAgence}', [AbonnementController::class, 'show'])
          //   ->middleware('permission:view-abonnements')
             ->name('show');
         Route::get('/{codeAgence}/edit', [AbonnementController::class, 'edit'])
          //   ->middleware('permission:edit-abonnements')
             ->name('edit');
+        Route::put('/{codeAgence}', [AbonnementController::class, 'update'])
+         //   ->middleware('permission:edit-abonnements')
+            ->name('update');
     });
 
     /*

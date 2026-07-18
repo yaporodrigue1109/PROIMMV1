@@ -23,7 +23,7 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
 
     public function all(array $filters = [])
     {
-        $query = $this->model->query();
+        $query = $this->model->query()->where('agence_id', $this->agenceId());
 
         if (!empty($filters['statut'])) {
             $query->where('statut', $filters['statut']);
@@ -53,7 +53,9 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
 
     public function find($id)
     {
-        return $this->model->withDefaultRelations()->find($id);
+        return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
+            ->find($id);
     }
 
     public function create(array $data)
@@ -96,17 +98,25 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
 
     public function getByStatut($statut)
     {
-        return $this->model->withDefaultRelations()->where('statut', $statut)->get();
+        return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
+            ->where('statut', $statut)
+            ->get();
     }
 
     public function getByMaintenancier($maintenancierId)
     {
-        return $this->model->where('maintenancier_id', $maintenancierId)->get();
+        return $this->model->where('agence_id', $this->agenceId())
+            ->where('maintenancier_id', $maintenancierId)
+            ->get();
     }
 
     public function getByProprietaire($proprietaireId)
     {
-        return $this->model->withDefaultRelations()->where('proprietaire_id', $proprietaireId)->get();
+        return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
+            ->where('proprietaire_id', $proprietaireId)
+            ->get();
     }
 
     public function getByAgence($agenceId)
@@ -116,12 +126,16 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
 
     public function getByDateRange($startDate, $endDate)
     {
-        return $this->model->withDefaultRelations()->whereBetween('created_at', [$startDate, $endDate])->get();
+        return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get();
     }
 
     public function countByStatut()
     {
         return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
             ->select('statut', DB::raw('count(*) as total'))
             ->groupBy('statut')
             ->pluck('total', 'statut')
@@ -131,8 +145,9 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
     public function getMontantTotalParMois($year)
     {
         return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
             ->whereYear('created_at', $year)
-            ->where('statut', 'termine')
+            ->where('statut', 'terminer')
             ->select(
                 DB::raw('MONTH(created_at) as mois'),
                 DB::raw('SUM(montant_global) as total')
@@ -162,7 +177,7 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
             $query->withDefaultRelations();
         }
 
-        return $query->find($id);
+        return $query->where('agence_id', $this->agenceId())->find($id);
     }
 
     public function createWithDetails(array $data, array $details): Maintenance
@@ -172,7 +187,7 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
            // $data['created_by']     = Auth::id();
             $data['montant_global'] = collect($details)->sum('prix');
             unset($data['details']);
-           // dd($data,$details);
+            // dd($data,$details);
             /** @var Maintenance $maintenance */
             $maintenance = $this->model->create($data);
 
@@ -181,6 +196,10 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
                 $maintenance->details()->create($this->prepareDetail($detail));
             }
 
+            $maintenance->update([
+                'statut' => $this->deriveStatutFromDetails($maintenance->details()->get()),
+            ]);
+
             return $maintenance->load('details');
         });
     }
@@ -188,7 +207,7 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
     public function updateWithDetails(string $id, array $data, array $details = []): Maintenance
     {
         return DB::transaction(function () use ($id, $data, $details) {
-            $maintenance = $this->model->findOrFail($id);
+            $maintenance = $this->model->where('agence_id', $this->agenceId())->findOrFail($id);
 
             $data['updated_by'] = Auth::id();
 
@@ -210,24 +229,54 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
 
             $maintenance->update($data);
 
+            if (!empty($details)) {
+                $maintenance->update([
+                    'statut' => $this->deriveStatutFromDetails($maintenance->details()->get()),
+                ]);
+            }
+
             return $maintenance->load('details');
         });
     }
 
     public function updateStatut(string $id, string $statut): Maintenance
     {
-        $maintenance = $this->model->findOrFail($id);
+        $maintenance = $this->model->where('agence_id', $this->agenceId())->findOrFail($id);
+        $normalizedStatut = match ($statut) {
+            'en_cours' => 'en cours',
+            'en_attente' => 'en attente',
+            'termine' => 'terminer',
+            'annule' => 'annuler',
+            default => $statut,
+        };
+
         $maintenance->update([
-            'statut'     => $statut,
+            'statut'     => $normalizedStatut,
             'updated_by' => Auth::id(),
         ]);
 
         return $maintenance;
     }
 
+    public function recalculateStatutFromDetails(string $id): Maintenance
+    {
+        $maintenance = $this->model->with('details')
+            ->where('agence_id', $this->agenceId())
+            ->findOrFail($id);
+        $statut = $this->deriveStatutFromDetails($maintenance->details);
+
+        $maintenance->update([
+            'statut' => $statut,
+            'updated_by' => Auth::id(),
+        ]);
+
+        return $maintenance->fresh();
+    }
+
     public function findByProprietaire(string $proprietaireId): Collection
     {
         return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
             ->where('proprietaire_id', $proprietaireId)
             ->get();
     }
@@ -235,6 +284,7 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
     public function findByLot(string $lotId): Collection
     {
         return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
             ->where('lot_id', $lotId)
             ->get();
     }
@@ -242,6 +292,7 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
     public function findByBatiment(string $batimentId): Collection
     {
         return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
             ->where('batiment_id', $batimentId)
             ->get();
     }
@@ -249,6 +300,7 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
     public function findByPorte(string $porteId): Collection
     {
         return $this->model->withDefaultRelations()
+            ->where('agence_id', $this->agenceId())
             ->where('porte_id', $porteId)
             ->get();
     }
@@ -259,6 +311,8 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
 
     private function applyFilters($query, array $filters)
     {
+        $query->where('agence_id', $this->agenceId());
+
         if (!empty($filters['statut'])) {
             $query->where('statut', $filters['statut']);
         }
@@ -301,8 +355,34 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
             'priorite'             => $detail['priorite']             ?? 'normale',
             'montant'              => $detail['prix']                 ?? $detail['montant'] ?? 0,
             'note'                 => $detail['description']          ?? $detail['note']    ?? null,
-            'statut'               => $detail['statut']               ?? 'en_attente',
+            'statut'               => $detail['statut']               ?? \App\Models\MaintenanceDetail::STATUT_EN_ATTENTE,
           //  'created_by'           => Auth::id(),
         ];
+    }
+
+    private function deriveStatutFromDetails(Collection $details): string
+    {
+        $normalized = $details->map(function (MaintenanceDetail $detail) {
+            return strtolower(trim((string) $detail->statut));
+        });
+
+        if ($normalized->isNotEmpty() && $normalized->every(fn ($statut) => in_array($statut, ['annule', 'annuler'], true))) {
+            return 'annuler';
+        }
+
+        if ($normalized->isNotEmpty() && $normalized->every(fn ($statut) => in_array($statut, ['terminer', 'termine'], true))) {
+            return 'terminer';
+        }
+
+        if ($normalized->contains(fn ($statut) => in_array($statut, ['en cours', 'en_cours', 'terminer', 'termine'], true))) {
+            return 'en cours';
+        }
+
+        return 'en attente';
+    }
+
+    private function agenceId(): string
+    {
+        return getInfoAgent()->users->agence_id;
     }
 }
