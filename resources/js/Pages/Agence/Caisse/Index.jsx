@@ -87,8 +87,8 @@ const MOUVEMENT_OPTIONS = [
 
 export default function Caisse({
     caisseOuverte: caisseOuverteProp = true,
-    soldeOuverture = 125000,
-    totalEntrees = 299000,
+    soldeOuverture = 0,
+    totalEntrees = 0,
     totalSorties = 0,
     transactions = [
         { id: 'TRX-0001', date: '11/05/2026', time: '09:30', type: 'in', label: 'Paiement loyer — Kouamé Jean (Appt. B2, Mai 2026)', reference: 'TRX-0001', amount: 85000 },

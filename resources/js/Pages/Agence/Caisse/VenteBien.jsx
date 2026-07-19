@@ -43,58 +43,6 @@ const shortcuts = [
 
 const paymentModes = ['Espèces', 'Wave', 'Orange Money', 'Virement bancaire', 'Chèque'];
 
-const staticOwner = {
-    name: 'Koffi Bernard',
-    phone: '05 45 22 18 90',
-    properties: [
-        {
-            id: 1,
-            title: 'Villa basse 4 pièces',
-            location: 'Bingerville',
-            type: 'Villa',
-            price: 45000000,
-            commission: 2250000,
-            ownerAmount: 42750000,
-            buyer: 'Traoré Ibrahim',
-            status: 'Vente en cours',
-            badge: 'Disponible',
-            reference: 'VTE-2026-0001',
-            date: '04/06/2026',
-            observation: 'Vente directe avec paiement complet.',
-        },
-        {
-            id: 2,
-            title: 'Terrain 500 m²',
-            location: 'Songon',
-            type: 'Terrain',
-            price: 18000000,
-            commission: 900000,
-            ownerAmount: 17100000,
-            buyer: 'Aucun acheteur',
-            status: 'Non vendu',
-            badge: 'Disponible',
-            reference: 'VTE-2026-0002',
-            date: 'À définir',
-            observation: 'Bien disponible à la vente.',
-        },
-        {
-            id: 3,
-            title: 'Appartement 3 pièces',
-            location: 'Cocody Angré',
-            type: 'Appartement',
-            price: 32000000,
-            commission: 1600000,
-            ownerAmount: 30400000,
-            buyer: 'Yao Mireille',
-            status: 'Réservation',
-            badge: 'Réservé',
-            reference: 'VTE-2026-0003',
-            date: '06/06/2026',
-            observation: 'Acompte prévu avant validation finale.',
-        },
-    ],
-};
-
 const today = () => new Date().toISOString().slice(0, 10);
 
 function normalize(value) {
@@ -106,6 +54,14 @@ function normalize(value) {
 
 function makeLineId(prefix = 'line') {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function hasSaleEligibleItems(property) {
+    return Boolean(
+        property?.forSale ||
+        property?.buildings?.some((building) => building?.forSale || building?.doors?.some((door) => door?.forSale)) ||
+        property?.doors?.some((door) => door?.forSale)
+    );
 }
 
 function PropertyCard({ property, active, onClick }) {
@@ -302,7 +258,7 @@ function ScheduleLine({ line, onChange, onRemove, showRemove = true }) {
     );
 }
 
-export default function VenteBien({ caisseOuverte = true }) {
+export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
     const [ownerValue, setOwnerValue] = useState('');
     const [ownerSearch, setOwnerSearch] = useState('');
     const [ownerOpen, setOwnerOpen] = useState(false);
@@ -337,16 +293,50 @@ export default function VenteBien({ caisseOuverte = true }) {
         firstDate: '',
     });
 
-    const selectedProperty = staticOwner.properties[selectedIndex] || staticOwner.properties[0];
+    const saleEligibleOwners = useMemo(() => (Array.isArray(saleOwners) ? saleOwners : []), [saleOwners]);
+
+    const selectedOwner = useMemo(
+        () => saleEligibleOwners.find((owner) => owner.id === ownerValue) ?? null,
+        [ownerValue, saleEligibleOwners]
+    );
+
+    const saleProperties = useMemo(() => {
+        if (!selectedOwner) return [];
+        return selectedOwner.properties.filter(hasSaleEligibleItems);
+    }, [selectedOwner]);
+
+    const emptyProperty = useMemo(
+        () => ({
+            id: null,
+            title: 'Aucun bien disponible',
+            location: '',
+            type: '',
+            price: 0,
+            commission: 0,
+            ownerAmount: 0,
+            buyer: '',
+            status: '',
+            badge: 'Indisponible',
+            reference: '',
+            date: '',
+            observation: 'Aucun bien en vente n’est actuellement proposé pour ce propriétaire.',
+        }),
+        []
+    );
+
+    const selectedProperty = saleProperties[selectedIndex] || saleProperties[0] || emptyProperty;
+
+    useEffect(() => {
+        setSelectedIndex(0);
+    }, [ownerValue]);
 
     const ownerOptions = useMemo(
-        () => [
-            {
-                value: 'owner-1',
-                label: staticOwner.name,
-                search: `${staticOwner.name} ${staticOwner.phone}`.toLowerCase(),
-            },
-        ],
+        () =>
+            saleEligibleOwners.map((owner) => ({
+                value: owner.id,
+                label: owner.name,
+                search: `${owner.name} ${owner.phone}`.toLowerCase(),
+            })),
         []
     );
 
@@ -399,7 +389,7 @@ export default function VenteBien({ caisseOuverte = true }) {
         0
     );
 
-    const filteredProperties = staticOwner.properties;
+    const filteredProperties = saleProperties;
 
     const resetPaymentPlan = (type) => {
         setPaymentPlan(type);
@@ -489,13 +479,13 @@ export default function VenteBien({ caisseOuverte = true }) {
                         <ComboboxField
                             label="Propriétaire"
                             value={ownerValue}
-                            placeholder="Rechercher un propriétaire..."
+                            placeholder="Rechercher un propriétaire en vente..."
                             searchValue={ownerSearch}
                             open={ownerOpen}
                             onOpenChange={setOwnerOpen}
                             onSearchChange={setOwnerSearch}
                             options={searchableOwnerOptions}
-                            emptyLabel="Aucun propriétaire trouvé"
+                            emptyLabel="Aucun propriétaire disponible à la vente"
                             onSelect={(value) => setOwnerValue(value)}
                         />
                     </CardContent>
@@ -506,11 +496,11 @@ export default function VenteBien({ caisseOuverte = true }) {
                         <div className="rounded-2xl border border-[#c8d4de] bg-white shadow-sm">
                             <div className="flex items-center justify-between border-b border-[#e2e8f0] px-6 py-4">
                                 <div>
-                                    <h3 className="text-base font-semibold text-[#0f172a]">{staticOwner.name}</h3>
-                                    <p className="text-sm text-[#5f7182]">{staticOwner.phone}</p>
+                                    <h3 className="text-base font-semibold text-[#0f172a]">{selectedOwner?.name ?? 'Propriétaire'}</h3>
+                                    <p className="text-sm text-[#5f7182]">{selectedOwner?.phone ?? ''}</p>
                                 </div>
                                 <span className="rounded-full bg-[#eaf4fb] px-3 py-1 text-xs font-semibold text-[#00559b]">
-                                    {staticOwner.properties.length} bien(s)
+                                    {filteredProperties.length} bien(s)
                                 </span>
                             </div>
 
@@ -521,7 +511,7 @@ export default function VenteBien({ caisseOuverte = true }) {
                                             key={property.id}
                                             property={property}
                                             active={selectedProperty?.id === property.id}
-                                            onClick={() => setSelectedIndex(staticOwner.properties.findIndex((item) => item.id === property.id))}
+                                            onClick={() => setSelectedIndex(filteredProperties.findIndex((item) => item.id === property.id))}
                                         />
                                     ))}
                                 </div>

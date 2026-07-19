@@ -75,7 +75,7 @@ class ProprietaireAgence extends Model
     // RELATIONS
     // =============================================
 
-    public function proprietaire()
+    public function proprietaire() 
     {
         return $this->belongsTo(Proprietaire::class, 'proprietaire_id', 'proprietaire_id');
     }

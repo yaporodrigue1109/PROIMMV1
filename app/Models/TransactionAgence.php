@@ -19,16 +19,7 @@ class TransactionAgence extends Model
     protected $guarded    = [];
 
     
-//    protected $fillable = [
-//        'agence_id', 'propriete_id', 'batiment_id', 'porte_id',
-//        'locataire_id', 'loyer_id','proprietaire_id',
-//        'montant_total_verse', 'montant_loyer_payer', 'montant_arriere_paye',
-//        'arriere_precedent', 'arriere_restant',
-//        'is_reversement', 'date_reversement',
-//        'mois_payer', 'annee_payer',
-//        'date_transaction', 'mode_paiement', 'reference_paiement',
-//        'commentaire', 'created_by',
-//    ];
+
 
     protected $casts = [
         'montant_total_verse'   => 'decimal:2',
