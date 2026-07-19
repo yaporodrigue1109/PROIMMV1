@@ -26,6 +26,7 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { agenceButtonStyles } from '../../../lib/buttonStyles';
 import { cn } from '../../../lib/utils';
+import { ComboboxField as SharedComboboxField } from '../../../components/ui/combobox-field';
 
 const currency = (value) =>
     new Intl.NumberFormat('fr-FR', {
@@ -476,7 +477,7 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
 
                 <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
                     <CardContent className="mt-6 p-6">
-                        <ComboboxField
+                        <SharedComboboxField
                             label="Propriétaire"
                             value={ownerValue}
                             placeholder="Rechercher un propriétaire en vente..."

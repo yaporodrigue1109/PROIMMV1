@@ -56,7 +56,7 @@
                     </svg>
                     Retour
                 </a>
-                <a href="{{ route('admin.agences.show', $abonnement['code_agence']) }}"
+                <a href="{{ route('admin.agences.index', ['selected_agence_id' => $abonnement['agence_id'] ?? null]) }}"
                    class="btn btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                          fill="none" stroke="currentColor" stroke-width="2"

@@ -176,34 +176,21 @@ export default function Index({
                 <Card className="rounded-3xl border-slate-200 shadow-sm">
                     <CardContent className="flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between">
                         <div className="max-w-2xl">
-                            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#0f172a] md:text-4xl">
+                            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-[#0f172a] md:text-4xl">
                                 Gestion des abonnements
                             </h1>
 
-                            <p className="mt-3 max-w-xl text-sm leading-6 text-[#5f7182] md:text-base">
-                                Suivez les plans actifs, les paiements et les prochaines
-                                échéances des agences.
-                            </p>
+                        
                         </div>
 
                         <div className="flex flex-wrap gap-3">
                             <Button
                                 asChild
-                                variant="outline"
-                                className="h-11 rounded-xl border-slate-200 px-4"
-                            >
-                                <Link href="/admin/abonnements/plans">
-                                    Voir les plans
-                                </Link>
-                            </Button>
-
-                            <Button
-                                asChild
-                                className="h-11 rounded-xl bg-[#00559b] px-4 text-white hover:bg-[#004980]"
+                                className=" mt-4 h-11 rounded-xl bg-[#00559b] px-4 text-white hover:bg-[#004980]"
                             >
                                 <Link href="/admin/abonnements/create">
                                     <Ticket className="h-4 w-4" />
-                                    Nouvel abonnement
+                                    Abonner une agence
                                 </Link>
                             </Button>
                         </div>
@@ -372,28 +359,30 @@ export default function Index({
                                     </div>
 
                                     <div className="flex gap-2">
+                                        {selectedItem.statut === 'Expire' ? (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50"
+                                                onClick={() => {
+                                                    if (!selectedItem.code_agence) return;
+
+                                                    router.get(
+                                                        `/admin/abonnements/${selectedItem.code_agence}/edit?renew=1`
+                                                    );
+                                                }}
+                                            >
+                                                Renouveler
+                                            </Button>
+                                        ) : null}
+
                                         <Button
                                             type="button"
-                                            variant="outline"
-                                            className="rounded-xl"
                                             onClick={() => {
                                                 if (!selectedItem.code_agence) return;
 
                                                 router.get(
-                                                    `/admin/agences/${selectedItem.code_agence}`
-                                                );
-                                            }}
-                                        >
-                                            Voir l'agence
-                                        </Button>
-
-                                        <Button
-                                            type="button"
-                                            onClick={() => {
-                                                if (!selectedItem.code_agence) return;
-
-                                                router.get(
-                                                    `/admin/abonnements/${selectedItem.code_agence}/edit`
+                                                    `/admin/abonnements/${selectedItem.code_agence}/edit?renew=1`
                                                 );
                                             }}
                                             className="rounded-xl bg-[#00559b] text-white hover:bg-[#004980]"

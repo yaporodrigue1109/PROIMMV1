@@ -3,7 +3,7 @@
 namespace App\Repositories\Agence\Repository;
 
 use App\Models\MaintenanceDetail;
-use App\Repositories\Interfaces\MaintenanceDetailRepositoryInterface;
+use App\Repositories\Agence\Interfaces\MaintenanceDetailRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 
@@ -21,6 +21,7 @@ class MaintenanceDetailRepository implements MaintenanceDetailRepositoryInterfac
         return $this->model
             ->with(['maintenancier', 'typeIntervention'])
             ->where('maintenance_id', $maintenanceId)
+            ->whereHas('maintenance', fn ($q) => $q->where('agence_id', $this->agenceId()))
             ->get();
     }
 
@@ -28,6 +29,7 @@ class MaintenanceDetailRepository implements MaintenanceDetailRepositoryInterfac
     {
         return $this->model
             ->with(['maintenancier', 'typeIntervention', 'maintenance'])
+            ->whereHas('maintenance', fn ($q) => $q->where('agence_id', $this->agenceId()))
             ->find($id);
     }
 
@@ -40,7 +42,9 @@ class MaintenanceDetailRepository implements MaintenanceDetailRepositoryInterfac
 
     public function update(string $id, array $data): MaintenanceDetail
     {
-        $detail = $this->model->findOrFail($id);
+        $detail = $this->model
+            ->whereHas('maintenance', fn ($q) => $q->where('agence_id', $this->agenceId()))
+            ->findOrFail($id);
 
         $data['updated_by'] = Auth::id();
         $detail->update($data);
@@ -50,7 +54,9 @@ class MaintenanceDetailRepository implements MaintenanceDetailRepositoryInterfac
 
     public function delete(string $id): bool
     {
-        $detail = $this->model->findOrFail($id);
+        $detail = $this->model
+            ->whereHas('maintenance', fn ($q) => $q->where('agence_id', $this->agenceId()))
+            ->findOrFail($id);
         $detail->deleted_by = Auth::id();
         $detail->save();
 
@@ -59,7 +65,10 @@ class MaintenanceDetailRepository implements MaintenanceDetailRepositoryInterfac
 
     public function deleteByMaintenance(string $maintenanceId): int
     {
-        $details = $this->model->where('maintenance_id', $maintenanceId)->get();
+        $details = $this->model
+            ->where('maintenance_id', $maintenanceId)
+            ->whereHas('maintenance', fn ($q) => $q->where('agence_id', $this->agenceId()))
+            ->get();
 
         $count = 0;
         foreach ($details as $detail) {
@@ -88,7 +97,7 @@ class MaintenanceDetailRepository implements MaintenanceDetailRepositoryInterfac
                 'priorite'             => $detail['priorite']             ?? 'normale',
                 'montant'              => $detail['prix']                 ?? $detail['montant'] ?? 0,
                 'note'                 => $detail['description']          ?? $detail['note'] ?? null,
-                'statut'               => $detail['statut']               ?? 'en_attente',
+                'statut'               => $this->normalizeStatut($detail['statut'] ?? \App\Models\MaintenanceDetail::STATUT_EN_ATTENTE),
                 'created_by'           => $userId,
                 'created_at'           => $now,
                 'updated_at'           => $now,
@@ -100,13 +109,26 @@ class MaintenanceDetailRepository implements MaintenanceDetailRepositoryInterfac
 
     public function updateStatut(string $id, string $statut): MaintenanceDetail
     {
-        $detail = $this->model->findOrFail($id);
+        $detail = $this->model
+            ->whereHas('maintenance', fn ($q) => $q->where('agence_id', $this->agenceId()))
+            ->findOrFail($id);
         $detail->update([
-            'statut'     => $statut,
+            'statut'     => $this->normalizeStatut($statut),
             'updated_by' => Auth::id(),
         ]);
 
-        return $detail;
+        return $detail->fresh();
+    }
+
+    private function normalizeStatut(string $statut): string
+    {
+        return match (strtolower(trim($statut))) {
+            'en_attente' => 'en attente',
+            'en_cours' => 'en cours',
+            'terminer', 'termine' => 'terminer',
+            'annule' => 'annuler',
+            default => $statut,
+        };
     }
 
     public function findByMaintenancier(string $maintenancierId): Collection
@@ -114,6 +136,12 @@ class MaintenanceDetailRepository implements MaintenanceDetailRepositoryInterfac
         return $this->model
             ->with(['maintenance', 'typeIntervention'])
             ->where('maintenancier_id', $maintenancierId)
+            ->whereHas('maintenance', fn ($q) => $q->where('agence_id', $this->agenceId()))
             ->get();
+    }
+
+    private function agenceId(): string
+    {
+        return getInfoAgent()->users->agence_id;
     }
 }

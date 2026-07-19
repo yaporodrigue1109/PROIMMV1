@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Agence\Maintenance;
 
 use App\Http\Controllers\Controller;
+use App\Models\MaintenanceCategory;
 use App\Services\Agence\TypeMaintenanceService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 
 class TypeMaintenanceController extends Controller
@@ -50,12 +52,14 @@ class TypeMaintenanceController extends Controller
             // 'agence_id' => 'required|exists:agences,agence_id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'categorie' => 'nullable|string',
+            'categorie' => 'nullable|string|max:255',
+            'maintenance_category_id' => 'nullable|required_without:categorie|exists:maintenance_categories,maintenance_category_id',
             'duree_estimee' => 'nullable|numeric|min:0',
         ]);
 
         try {
             $validated['agence_id'] = $this->agenceId();
+            $validated = $this->applyCategoryPayload($validated);
             $type = $this->service->createType($validated);
 
             return back()->with('success' , 'Type de maintenance créée avec succès');
@@ -72,11 +76,13 @@ class TypeMaintenanceController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'categorie' => 'nullable|string|max:255',
+            'maintenance_category_id' => 'nullable|required_without:categorie|exists:maintenance_categories,maintenance_category_id',
             'description' => 'nullable|string',
             'duree_estimee' => 'nullable|numeric|min:0',
         ]);
 
         try {
+            $validated = $this->applyCategoryPayload($validated);
             $type = $this->service->updateType($id, $validated);
 
             if (!$type) {
@@ -127,5 +133,39 @@ class TypeMaintenanceController extends Controller
     private function userId(): string
     {
         return getInfoAgent()->users->id ?? 'system';
+    }
+
+    private function applyCategoryPayload(array $validated): array
+    {
+        $categoryId = $validated['maintenance_category_id'] ?? null;
+        $legacyCategory = trim((string) ($validated['categorie'] ?? ''));
+
+        if ($categoryId) {
+            $category = MaintenanceCategory::query()->find($categoryId);
+            if ($category) {
+                $validated['categorie'] = $category->name;
+                $validated['maintenance_category_id'] = $category->maintenance_category_id;
+                return $validated;
+            }
+        }
+
+        if ($legacyCategory !== '') {
+            $category = MaintenanceCategory::firstOrCreate(
+                ['name' => $legacyCategory],
+                [
+                    'slug' => Str::slug($legacyCategory),
+                    'description' => null,
+                    'is_active' => true,
+                ]
+            );
+
+            $validated['categorie'] = $category->name;
+            $validated['maintenance_category_id'] = $category->maintenance_category_id;
+            return $validated;
+        }
+
+        $validated['categorie'] = null;
+        $validated['maintenance_category_id'] = null;
+        return $validated;
     }
 }

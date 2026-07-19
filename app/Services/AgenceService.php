@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Agence;
 use App\Models\User;
+use App\Models\Abonnement;
 use App\Models\AbonnementHistorique;
 use App\Repositories\Interfaces\AgenceRepositoryInterface;
 use App\Repositories\Interfaces\TransactionRepositoryInterface;
@@ -13,6 +14,7 @@ use App\Events\AgenceCreated;
 use App\Events\AgenceUpdated;
 use App\Events\AgenceDeleted;
 use App\Events\AgenceStatutChange;
+use App\Services\ConfigurationTarifService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -26,6 +28,7 @@ class AgenceService
         protected TransactionRepositoryInterface $transactionRepository,
         protected UserRepositoryInterface $userRepository,
         protected AbonnementRepositoryInterface $abonnementRepository,
+        protected ConfigurationTarifService $configurationTarifService,
         protected NotificationService $notificationService,
     ) {}
 
@@ -221,21 +224,57 @@ class AgenceService
         $dateDebut = Carbon::parse($data['abonnement_start']);
         $dateFin   = Carbon::parse($data['abonnement_end']);
         $dureeMois = (int) ($data['duree_mois'] ?? $dateDebut->diffInMonths($dateFin));
+        $planSnapshot = $this->buildSubscriptionPlanSnapshot();
 
-        // Récupérer l'abonnement par défaut si non spécifié
-        $abonnementId = $data['abonnement_id'] ?? null;
-        if (!$abonnementId) {
-            $defaultAbonnement = $this->abonnementRepository->findDefault();
-            $abonnementId = $defaultAbonnement?->id;
-        }
+        $currentSnapshot = Abonnement::query()
+            ->where('type', 'subscription')
+            ->where('agence_id', $agence->agence_id)
+            ->first();
 
         $montantBaseHt    = (float) ($data['montant_base_total'] ?? 0);
         $montantOptionsHt = (float) ($data['montant_total'] ?? 0) - $montantBaseHt;
         $montantTotalHt   = (float) ($data['montant_total'] ?? 0);
 
+        $subscription = Abonnement::updateOrCreate(
+            [
+                'type' => 'subscription',
+                'agence_id' => $agence->agence_id,
+            ],
+            [
+                'code_abonnement'      => $this->generateSubscriptionCode($agence),
+                'name'                 => $planSnapshot['name'],
+                'description'          => $planSnapshot['description'],
+                'prix_mensuel_ht'      => $planSnapshot['prix_mensuel_ht'],
+                'prix_annuel_ht'       => $planSnapshot['prix_annuel_ht'],
+                'nb_proprietes_max'    => $planSnapshot['nb_proprietes_max'],
+                'nb_locataires_max'    => $planSnapshot['nb_locataires_max'],
+                'nb_utilisateurs_max'  => $planSnapshot['nb_utilisateurs_max'],
+                'module_comptabilite'  => $planSnapshot['module_comptabilite'],
+                'module_reporting'     => $planSnapshot['module_reporting'],
+                'module_api'           => $planSnapshot['module_api'],
+                'is_default'           => false,
+                'ordre'                => 0,
+                'features'             => $planSnapshot['features'],
+                'ancien_abonnement_id' => $currentSnapshot?->abonnement_id ?? ($isUpdate ? $agence->getOriginal('abonnement_id') : null),
+                'nouvel_abonnement_id' => $currentSnapshot?->abonnement_id ?? null,
+                'ancienne_date_debut'  => $currentSnapshot?->nouvelle_date_debut ?? ($isUpdate ? $agence->getOriginal('abonnement_start') : null),
+                'ancienne_date_fin'    => $currentSnapshot?->nouvelle_date_fin ?? ($isUpdate ? $agence->getOriginal('abonnement_end') : null),
+                'nouvelle_date_debut'  => $dateDebut,
+                'nouvelle_date_fin'    => $dateFin,
+                'duree_mois'           => $dureeMois,
+                'montant_ht'           => $montantTotalHt,
+                'action'               => $isUpdate ? 'renouvellement' : 'creation',
+                'action_par'           => getInfoAdmin()->admin->id_admin ?? 1,
+                'notes'                => $data['abonnement_notes'] ?? null,
+                'statut'               => 'actif',
+                'updated_by'           => getInfoAdmin()->admin->id_admin ?? 1,
+                'created_by'           => getInfoAdmin()->admin->id_admin ?? 1,
+            ]
+        );
+
         // 1. Mise à jour des dates d'abonnement sur l'agence
         $agence->update([
-            'abonnement_id'    => $abonnementId,
+            'abonnement_id'    => $subscription->abonnement_id,
             'abonnement_start' => $dateDebut,
             'abonnement_end'   => $dateFin,
             'duree_mois'       => $dureeMois,
@@ -244,8 +283,8 @@ class AgenceService
         // 2. Historique d'abonnement
         $historique = AbonnementHistorique::create([
             'agence_id'            => $agence->agence_id,
-            'ancien_abonnement_id' => $isUpdate ? $agence->getOriginal('abonnement_id') : null,
-            'nouvel_abonnement_id' => $abonnementId,
+            'ancien_abonnement_id' => $currentSnapshot?->abonnement_id ?? ($isUpdate ? $agence->getOriginal('abonnement_id') : null),
+            'nouvel_abonnement_id' => $subscription->abonnement_id,
             'ancienne_date_debut'  => $isUpdate ? $agence->getOriginal('abonnement_start') : null,
             'ancienne_date_fin'    => $isUpdate ? $agence->getOriginal('abonnement_end') : null,
             'nouvelle_date_debut'  => $dateDebut,
@@ -260,7 +299,7 @@ class AgenceService
         // 3. Transaction financière
         $this->transactionRepository->create([
             'agence_id'                => $agence->agence_id,
-            'abonnement_id'            => $abonnementId,
+            'abonnement_id'            => $subscription->abonnement_id,
             'abonnement_historique_id' => $historique->id,
             'montant_base_ht'          => $montantBaseHt,
             'montant_options_ht'       => max(0, $montantOptionsHt),
@@ -276,6 +315,51 @@ class AgenceService
             'statut'                   => 'en_attente',
             'created_by'               => getInfoAdmin()->admin->id_admin ?? 1,
         ]);
+    }
+
+    protected function buildSubscriptionPlanSnapshot(): array
+    {
+        $config = $this->configurationTarifService->getTarifsPourFormulaire();
+        $modules = collect($config['modules'] ?? [])
+            ->map(function ($module) {
+                return [
+                    'id' => $module['id'] ?? null,
+                    'label' => $module['label'] ?? $module['nom'] ?? null,
+                    'prix_mensuel' => (float) ($module['prix_mensuel'] ?? 0),
+                    'actif' => (bool) ($module['actif'] ?? true),
+                ];
+            })
+            ->filter(fn ($module) => !empty($module['label']) && ($module['actif'] ?? false))
+            ->values()
+            ->all();
+
+        return [
+            'name' => $config['plan_nom'] ?? 'Abonnement de base',
+            'description' => $config['plan_description'] ?? null,
+            'prix_mensuel_ht' => (float) ($config['plan_prix_mensuel'] ?? 0),
+            'prix_annuel_ht' => (float) (($config['plan_prix_mensuel'] ?? 0) * 12),
+            'nb_proprietes_max' => null,
+            'nb_locataires_max' => null,
+            'nb_utilisateurs_max' => null,
+            'module_comptabilite' => $this->hasModuleKeyword($modules, ['comptabil']),
+            'module_reporting' => $this->hasModuleKeyword($modules, ['report']),
+            'module_api' => $this->hasModuleKeyword($modules, ['api']),
+            'features' => $modules,
+        ];
+    }
+
+    protected function hasModuleKeyword(array $modules, array $keywords): bool
+    {
+        foreach ($modules as $module) {
+            $label = strtolower((string) ($module['label'] ?? ''));
+            foreach ($keywords as $keyword) {
+                if ($keyword !== '' && str_contains($label, strtolower($keyword))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -395,6 +479,16 @@ class AgenceService
 
         $agenceData = array_intersect_key($data, array_flip($columns));
 
+        // Normaliser les champs texte pour éviter les valeurs null en base
+        $agenceData['adresse'] = $this->normalizeTextValue($data['adresse'] ?? ($agenceData['adresse'] ?? ''));
+        if ($agenceData['adresse'] === '') {
+            $agenceData['adresse'] = 'Non spécifiée';
+        }
+        $agenceData['tel1'] = $this->normalizeTextValue($agenceData['tel1'] ?? '');
+        $agenceData['tel2'] = $this->normalizeTextValue($agenceData['tel2'] ?? '');
+        $agenceData['email1'] = $this->normalizeTextValue($agenceData['email1'] ?? '');
+        $agenceData['email2'] = $this->normalizeTextValue($agenceData['email2'] ?? '');
+
         // Mapper 'region' → 'region_id'
         if (!isset($agenceData['region_id']) && isset($data['region'])) {
             $agenceData['region_id'] = $data['region'];
@@ -405,6 +499,16 @@ class AgenceService
         }
 
         return $agenceData;
+    }
+
+    protected function normalizeTextValue(mixed $value): string
+    {
+        return trim((string) ($value ?? ''));
+    }
+
+    protected function generateSubscriptionCode(Agence $agence): string
+    {
+        return 'SUB-' . strtoupper($agence->code_agence ?? $agence->agence_id);
     }
 
     protected function validateBeforeCreate(array $data): void

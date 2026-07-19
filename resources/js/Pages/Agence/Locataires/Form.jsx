@@ -428,10 +428,10 @@ function buildInitialData(locataire, isEdit) {
     );
 
     return {
-        name: locataire?.name ? toTitleCase(locataire.name) : '',
+        name: locataire?.name ?? '',
         tel1: normalizePhoneValue(locataire?.tel1),
         tel2: normalizePhoneValue(locataire?.tel2),
-        email: locataire?.email ? String(locataire.email).toLowerCase() : '',
+        email: locataire?.email ?? '',
         genre_id: toId(locataire?.genre_id),
         date_naissance: toDateInput(locataire?.date_naissance),
         lieu_naissance: locataire?.lieu_naissance ?? '',
@@ -441,7 +441,7 @@ function buildInitialData(locataire, isEdit) {
         region_id: toId(locataire?.region_id),
         ville_id: toId(locataire?.ville_id),
         type_piece_id: toId(locataire?.type_piece_id),
-        num_piece: locataire?.num_piece ? String(locataire.num_piece).toUpperCase() : '',
+        num_piece: locataire?.num_piece ?? '',
         date_expiration_piece: toDateInput(locataire?.date_expiration_piece),
         photo: null,
         image_pice: null,
@@ -470,12 +470,39 @@ function buildInitialData(locataire, isEdit) {
             periodicite_paiement_id: toId(contrat?.periodicite_paiement_id ?? contrat?.mode_paiement_id ?? DEFAULT_PERIODICITE_PAIEMENT_ID),
             mode_paiement_id: toId(contrat?.mode_paiement_id),
             has_representant: hasRepresentant,
-            name_representant: contrat?.name_representant ? toTitleCase(contrat.name_representant) : '',
+            name_representant: contrat?.name_representant ?? '',
             adresse_representant: contrat?.adresse_representant ?? '',
             contant_representant: contrat?.contant_representant ?? '',
             versements_depot_garantie: versementsDepotGarantie.length
                 ? versementsDepotGarantie.map((versement) => normalizeDepotVersement(versement))
                 : [emptyDepotVersement()],
+        },
+    };
+}
+
+function normalizeLocataireSubmissionData(formData) {
+    const normalizeName = (value) => toTitleCase(String(value ?? '').trim().replace(/\s+/g, ' '));
+    const normalizeEmail = (value) => String(value ?? '').trim().toLowerCase();
+    const normalizePieceNumber = (value) => String(value ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
+    const normalizePhone = (value) => String(value ?? '').trim().replace(/\s+/g, ' ');
+    const normalizeText = (value) => String(value ?? '').trim().replace(/\s+/g, ' ');
+
+    return {
+        ...formData,
+        name: normalizeName(formData.name),
+        email: normalizeEmail(formData.email),
+        num_piece: normalizePieceNumber(formData.num_piece),
+        tel1: normalizePhone(formData.tel1),
+        tel2: normalizePhone(formData.tel2),
+        profession: normalizeName(formData.profession),
+        nationalite: String(formData.nationalite ?? '').trim().toUpperCase(),
+        lieu_naissance: normalizeName(formData.lieu_naissance),
+        adresse: normalizeText(formData.adresse),
+        contrat: {
+            ...formData.contrat,
+            name_representant: formData.contrat?.name_representant
+                ? normalizeName(formData.contrat.name_representant)
+                : '',
         },
     };
 }
@@ -495,7 +522,7 @@ export default function Form({
     const { flash } = usePage().props;
     const serverError = flash?.error ?? '';
 
-    const { data, setData, post, put, processing, errors } = useForm(buildInitialData(locataire, isEdit));
+    const { data, setData, post, put, processing, errors, transform } = useForm(buildInitialData(locataire, isEdit));
     const [showArrieres, setShowArrieres] = useState(Boolean(data.a_des_arrieres));
     const [current, setCurrent] = useState(0);
     const [completed, setCompleted] = useState([]);
@@ -705,6 +732,7 @@ export default function Form({
 
         const locataireId = locataire?.locataire_id ?? locataire?.id;
         const hasFiles = data.photo instanceof File || data.image_pice instanceof File;
+        transform(normalizeLocataireSubmissionData);
 
         if (isEdit && locataireId) {
             put(`/agence/locataires/${locataireId}`, {
@@ -1001,7 +1029,7 @@ export default function Form({
                             <Field label="Nom complet" required error={fieldErrors.name} className="mt-4 md:col-span-2">
                                 <Input
                                     value={data.name}
-                                    onChange={(e) => setData('name', toTitleCase(e.target.value))}
+                                    onChange={(e) => setData('name', e.target.value)}
                                     placeholder="Ex: KOUASSI Aya Marie"
                                 />
                             </Field>
@@ -1029,7 +1057,7 @@ export default function Form({
                                 <Input
                                     type="email"
                                     value={data.email}
-                                    onChange={(e) => setData('email', e.target.value.toLowerCase())}
+                                    onChange={(e) => setData('email', e.target.value)}
                                     placeholder="email@exemple.com"
                                 />
                             </Field>
@@ -1037,7 +1065,7 @@ export default function Form({
                             <Field label="Profession" className="md:col-span-2" error={fieldErrors.profession}>
                                 <Input
                                     value={data.profession}
-                                    onChange={(e) => setData('profession', toTitleCase(e.target.value))}
+                                    onChange={(e) => setData('profession', e.target.value)}
                                     placeholder="Ex: Commerçant"
                                 />
                             </Field>
@@ -1045,7 +1073,7 @@ export default function Form({
                             <Field label="Nationalité" className="md:col-span-2" error={fieldErrors.nationalite}>
                                 <Input
                                     value={data.nationalite}
-                                    onChange={(e) => setData('nationalite', e.target.value.toUpperCase())}
+                                    onChange={(e) => setData('nationalite', e.target.value)}
                                     placeholder="Ex: Ivoirien"
                                 />
                             </Field>
@@ -1135,7 +1163,7 @@ export default function Form({
                             <Field label="Numéro de pièce" className="mt-4" required error={fieldErrors.num_piece}>
                                 <Input
                                     value={data.num_piece}
-                                    onChange={(e) => setData('num_piece', e.target.value.toUpperCase())}
+                                    onChange={(e) => setData('num_piece', e.target.value)}
                                     placeholder="CNI, Passeport..."
                                 />
                             </Field>
@@ -1718,7 +1746,7 @@ export default function Form({
                                         <Field label="Nom du représentant" error={fieldErrors['contrat.name_representant']}>
                                             <Input
                                                 value={data.contrat.name_representant}
-                                                onChange={(e) => updateContrat({ name_representant: toTitleCase(e.target.value) })}
+                                                onChange={(e) => updateContrat({ name_representant: e.target.value })}
                                                 placeholder="Facultatif"
                                             />
                                         </Field>

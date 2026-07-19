@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ArrowLeft, Building2, CalendarClock, CreditCard, PencilLine, Ticket } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CreditCard, PencilLine, Ticket } from 'lucide-react';
 
 import AdminLayout from '../../../Layouts/AdminLayout';
 import { Badge } from '../../../components/ui/badge';
@@ -30,12 +30,17 @@ const daysRemaining = (value) => {
 };
 
 const paymentMeta = {
-    'Paye': { label: 'Paye', variant: 'success' },
+    Paye: { label: 'Paye', variant: 'success' },
     'A confirmer': { label: 'A confirmer', variant: 'warning' },
 };
 
 export default function Show({ abonnement = {}, history = [], plans = [] }) {
-    const selectedPlan = plans.find((plan) => plan.nom === abonnement.plan) ?? null;
+    const selectedPlan =
+        plans.find((plan) => plan.nom === abonnement.plan || plan.nom === abonnement.plan_label) ?? null;
+    const planName = abonnement.plan_label ?? abonnement.plan ?? selectedPlan?.nom ?? 'Plan inconnu';
+    const planDescription =
+        abonnement.plan_description ?? selectedPlan?.description ?? 'Aucune description disponible.';
+    const planModules = abonnement.plan_modules ?? abonnement.modules ?? [];
     const remaining = daysRemaining(abonnement.date_fin);
     const progress = remaining == null ? 0 : Math.max(8, Math.min(100, 100 - Math.max(0, remaining) * 3));
 
@@ -56,7 +61,7 @@ export default function Show({ abonnement = {}, history = [], plans = [] }) {
                                     {abonnement.agence ?? 'Abonnement sans agence'}
                                 </h1>
                                 <p className="mt-2 text-sm text-slate-500">
-                                    {abonnement.code_agence ?? 'N/A'} · {abonnement.plan ?? 'Plan inconnu'} · {formatMoney(abonnement.montant)}
+                                    {abonnement.code_agence ?? 'N/A'} - {planName} - {formatMoney(abonnement.montant)}
                                 </p>
                             </div>
                         </div>
@@ -68,12 +73,14 @@ export default function Show({ abonnement = {}, history = [], plans = [] }) {
                                     Retour
                                 </Link>
                             </Button>
-                            <Button asChild variant="outline" className="h-11 rounded-xl border-slate-200 px-4 text-slate-900">
-                                <Link href={`/admin/agences/${abonnement.code_agence}`}>
-                                    <Building2 className="h-4 w-4" />
-                                    Voir l'agence
-                                </Link>
-                            </Button>
+                            {abonnement.statut === 'Expire' || remaining <= 0 ? (
+                                <Button asChild variant="outline" className="h-11 rounded-xl border-rose-200 px-4 text-rose-700 hover:bg-rose-50">
+                                    <Link href={`/admin/abonnements/${abonnement.code_agence}/edit?renew=1`}>
+                                        <Ticket className="h-4 w-4" />
+                                        Renouveler
+                                    </Link>
+                                </Button>
+                            ) : null}
                             <Button asChild className="h-11 rounded-xl bg-[#00559b] px-4 text-white hover:bg-[#004980]">
                                 <Link href={`/admin/abonnements/${abonnement.code_agence}/edit`}>
                                     <PencilLine className="h-4 w-4" />
@@ -85,7 +92,7 @@ export default function Show({ abonnement = {}, history = [], plans = [] }) {
                 </Card>
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <StatCard label="Plan" value={abonnement.plan ?? 'N/A'} />
+                    <StatCard label="Plan" value={planName} />
                     <StatCard label="Montant" value={formatMoney(abonnement.montant)} />
                     <StatCard label="Cycle" value={abonnement.cycle ?? 'N/A'} />
                     <StatCard
@@ -134,13 +141,11 @@ export default function Show({ abonnement = {}, history = [], plans = [] }) {
                                 </p>
                             </div>
 
-                            {selectedPlan ? (
-                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                    <p className="text-sm font-medium text-slate-500">Plan associe</p>
-                                    <p className="mt-2 text-lg font-semibold text-slate-900">{selectedPlan.nom}</p>
-                                    <p className="mt-1 text-sm leading-6 text-slate-600">{selectedPlan.description}</p>
-                                </div>
-                            ) : null}
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <p className="text-sm font-medium text-slate-500">Plan associe</p>
+                                <p className="mt-2 text-lg font-semibold text-slate-900">{planName}</p>
+                                <p className="mt-1 text-sm leading-6 text-slate-600">{planDescription}</p>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -151,8 +156,8 @@ export default function Show({ abonnement = {}, history = [], plans = [] }) {
                         </CardHeader>
                         <CardContent className="space-y-4 p-6">
                             <div className="flex flex-wrap gap-2">
-                                {(abonnement.modules ?? []).length > 0 ? (
-                                    abonnement.modules.map((module) => (
+                                {planModules.length > 0 ? (
+                                    planModules.map((module) => (
                                         <Badge key={module} variant="outline" className="rounded-full">
                                             {module}
                                         </Badge>

@@ -13,7 +13,11 @@ class AbonnementRepository implements AbonnementRepositoryInterface
 
     public function getAll(array $filters = []): Collection
     {
-        $query = $this->model->newQuery();
+        $query = $this->model->newQuery()
+            ->where(function ($builder) {
+                $builder->whereNull('type')
+                    ->orWhere('type', 'plan');
+            });
 
         if (!empty($filters['statut'])) {
             $query->where('statut', $filters['statut']);
@@ -29,7 +33,11 @@ class AbonnementRepository implements AbonnementRepositoryInterface
 
     public function findDefault(): ?Abonnement
     {
-        return $this->model->where('is_default', true)
+        return $this->model->where(function ($builder) {
+                $builder->whereNull('type')
+                    ->orWhere('type', 'plan');
+            })
+            ->where('is_default', true)
             ->where('statut', 'actif')
             ->first();
     }
@@ -65,7 +73,11 @@ class AbonnementRepository implements AbonnementRepositoryInterface
 
     public function getActifs(): Collection
     {
-        return $this->model->where('statut', 'actif')
+        return $this->model->where(function ($builder) {
+                $builder->whereNull('type')
+                    ->orWhere('type', 'plan');
+            })
+            ->where('statut', 'actif')
             ->orderBy('ordre')
             ->get();
     }

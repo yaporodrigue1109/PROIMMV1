@@ -22,7 +22,7 @@
                 <div class="flex flex-wrap gap-3">
                     <a href="{{ route('admin.agences.index') }}" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 transition hover:bg-slate-50">Retour</a>
                     @if($isEdit)
-                        <a href="{{ route('admin.agences.show', $agence['code_agence']) }}" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 transition hover:bg-slate-50">Voir la fiche</a>
+                        <a href="{{ route('admin.agences.index', ['selected_agence_id' => $agence['agence_id']]) }}" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 transition hover:bg-slate-50">Voir la fiche</a>
                     @endif
                 </div>
             </div>
@@ -477,4 +477,3 @@
         </form>
     </section>
 @endsection
-

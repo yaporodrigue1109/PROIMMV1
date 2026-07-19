@@ -111,6 +111,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call(ModePaiementSeeder::class);
         $this->call(PeriodicitePaiementSeeder::class);
+        $this->call(MaintenanceCategorySeeder::class);
         $this->call(AgencePropertyFixturesSeeder::class);
         $this->call(LocataireDemoSeeder::class);
     }

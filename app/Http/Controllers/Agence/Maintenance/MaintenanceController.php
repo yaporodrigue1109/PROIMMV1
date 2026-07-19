@@ -7,7 +7,13 @@ use App\Services\Agence\MaintenanceService;
 use App\Services\Agence\TypeMaintenanceService;
 use App\Services\Agence\MaintenancierService;
 use App\Services\Agence\FonctionMaintenanceService;
+use App\Repositories\Agence\Interfaces\MaintenanceDetailRepositoryInterface;
 use App\Repositories\Interfaces\ProprietaireRepositoryInterface;
+use App\Models\MaintenanceCategory;
+use App\Models\Batiment;
+use App\Models\Porte;
+use App\Models\Propriete;
+use App\Models\ProprietaireLot;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,20 +24,23 @@ class MaintenanceController extends Controller
     protected               $service;
         protected           $typeMaintenanceService;
         protected             $maintenancierService;
-        protected       $fonctionMaintenanceService;
-        protected  $proprietaireRepo;
+     protected       $fonctionMaintenanceService;
+     protected  $proprietaireRepo;
+     protected  $maintenanceDetailRepo;
     public function __construct(
-         MaintenanceService              $service,
-         TypeMaintenanceService          $typeMaintenanceService,
-         MaintenancierService            $maintenancierService,
-         FonctionMaintenanceService      $fonctionMaintenanceService,
-         ProprietaireRepositoryInterface $proprietaireRepo
+          MaintenanceService              $service,
+          TypeMaintenanceService          $typeMaintenanceService,
+          MaintenancierService            $maintenancierService,
+          FonctionMaintenanceService      $fonctionMaintenanceService,
+          ProprietaireRepositoryInterface $proprietaireRepo,
+          MaintenanceDetailRepositoryInterface $maintenanceDetailRepo
     ) {
             $this->service = $service;
             $this->typeMaintenanceService = $typeMaintenanceService;
             $this->maintenancierService = $maintenancierService;
             $this->fonctionMaintenanceService = $fonctionMaintenanceService;
             $this->proprietaireRepo = $proprietaireRepo;
+            $this->maintenanceDetailRepo = $maintenanceDetailRepo;
 
     }
 
@@ -46,12 +55,79 @@ class MaintenanceController extends Controller
             'date_debut', 'date_fin', 'per_page',
         ]);
 
+        $agencyFilters = ['agence_id' => $this->agenceId()];
+        $filters = array_merge($filters, $agencyFilters);
+
         $maintenances        = $this->toArray($this->service->getAllMaintenances($filters));
-        $maintenancier       = $this->toArray($this->maintenancierService->getAllMaintenanciers([]));
-        $typeMaintenance     = $this->toArray($this->typeMaintenanceService->getAllTypes([]));
-        $fonctionMaintenance = $this->toArray($this->fonctionMaintenanceService->getAllFonctions([]));
-        $proprietaires       = $this->proprietaireRepo->getAllByAgence($this->agenceId());
+        $maintenancier       = $this->toArray($this->maintenancierService->getAllMaintenanciers($agencyFilters));
+        $typeMaintenance     = $this->toArray($this->typeMaintenanceService->getAllTypes($agencyFilters));
+        $fonctionMaintenance = $this->toArray($this->fonctionMaintenanceService->getAllFonctions($agencyFilters));
+        $proprietaires       = $this->toArray($this->proprietaireRepo->getAllByAgence($this->agenceId()));
+        $lots = $this->toArray(
+            ProprietaireLot::query()
+                ->with(['proprietaire'])
+                ->where('agence_id', $this->agenceId())
+                ->orderBy('name')
+                ->get([
+                    'propreietaire_lot_id',
+                    'name',
+                    'proprietaire_id',
+                    'agence_id',
+                    'num_lot',
+                    'num_ilot',
+                    'adresse',
+                ])
+        );
+        $proprietes = $this->toArray(
+            Propriete::query()
+                ->with(['proprietaire', 'lot'])
+                ->where('agence_id', $this->agenceId())
+                ->orderBy('reference')
+                ->get([
+                    'propriete_id',
+                    'proprietaire_id',
+                    'agence_id',
+                    'lot_id',
+                    'type_propriete_id',
+                    'reference',
+                    'description',
+                    'adresse_complete',
+                ])
+        );
+        $batiments = $this->toArray(
+            Batiment::query()
+                ->with(['propriete'])
+                ->whereHas('propriete', fn ($query) => $query->where('agence_id', $this->agenceId()))
+                ->orderBy('name')
+                ->get([
+                    'batiment_id',
+                    'propriete_id',
+                    'agence_id',
+                    'name',
+                    'description',
+                    'nbre_etages',
+                ])
+        );
+        $portes = $this->toArray(
+            Porte::query()
+                ->with(['batiment.propriete'])
+                ->whereHas('batiment.propriete', fn ($query) => $query->where('agence_id', $this->agenceId()))
+                ->orderBy('numero_porte')
+                ->get([
+                    'porte_id',
+                    'batiment_id',
+                    'type_porte_id',
+                    'numero_porte',
+                    'agence_id',
+                    'is_occupe',
+                    'is_actif',
+                ])
+        );
         $typePiece =TypePiece::all();
+        $maintenanceCategories = MaintenanceCategory::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['maintenance_category_id', 'name', 'description']);
 
         // Données statiques injectées dans le formulaire (select JS-chainé)
         $typesInterventionStatiques  = $typeMaintenance;
@@ -65,9 +141,14 @@ class MaintenanceController extends Controller
             'typesMaintenance' => $typeMaintenance,
             'fonctionsMaintenance' => $fonctionMaintenance,
             'proprietaires' => $proprietaires,
+            'lots' => $lots,
+            'proprietes' => $proprietes,
+            'batiments' => $batiments,
+            'portes' => $portes,
             'typesInterventionStatiques' => $typesInterventionStatiques,
             'maintenancierStatiques' => $maintenancierStatiques,
             'typePiece' => $typePiece,
+            'maintenanceCategories' => $maintenanceCategories,
             'filters' => $filters,
         ]);
     }
@@ -99,6 +180,7 @@ class MaintenanceController extends Controller
             'description_generale' => 'nullable|string',
             'proprietaire_id'    => 'required|exists:proprietaires,proprietaire_id',
             'lot_id'             => 'nullable|exists:propietaire_lots,propreietaire_lot_id',
+            'propriete_id'       => 'nullable|exists:propriete,propriete_id',
             'batiment_id'        => 'nullable|exists:batiment,batiment_id',
             'porte_id'           => 'nullable|exists:porte,porte_id',
             'prise_en_charge_par'=> ['nullable', Rule::in(['proprietaire', 'locataire', 'agence'])],
@@ -149,10 +231,11 @@ class MaintenanceController extends Controller
         $validated = $request->validate([
             'titre'               => 'sometimes|string|max:255',
             'description_generale'=> 'nullable|string',
-            'statut'              => ['sometimes', Rule::in(['en_attente', 'en_cours', 'termine', 'annule'])],
+            'statut'              => ['sometimes', Rule::in(['en_attente', 'en_cours', 'terminer', 'annule'])],
             'prise_en_charge_par' => ['nullable', Rule::in(['proprietaire', 'locataire', 'agence'])],
             'proprietaire_id'     => 'sometimes|exists:proprietaires,proprietaire_id',
             'lot_id'              => 'nullable|exists:propietaire_lots,propreietaire_lot_id',
+            'propriete_id'        => 'nullable|exists:propriete,propriete_id',
             'batiment_id'         => 'nullable|exists:batiment,batiment_id',
             'porte_id'            => 'nullable|exists:porte,porte_id',
 
@@ -220,7 +303,7 @@ class MaintenanceController extends Controller
     public function changerStatut(Request $request, $id)
     {
         $request->validate([
-            'statut' => ['required', Rule::in(['en_attente', 'en_cours', 'termine', 'annule'])],
+            'statut' => ['required', Rule::in(['en_attente', 'en_cours', 'terminer', 'annule'])],
         ]);
 
         try {
@@ -232,6 +315,27 @@ class MaintenanceController extends Controller
                 'data'    => $maintenance,
             ]);
 
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function changerDetailStatut(Request $request, $id)
+    {
+        $request->validate([
+            'statut' => ['required', Rule::in(['en_attente', 'en_cours', 'terminer', 'annule'])],
+        ]);
+
+        try {
+            $detail = $this->maintenanceDetailRepo->updateStatut($id, $request->statut);
+            $maintenance = $this->service->recalculerStatutDepuisDetails($detail->maintenance_id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Statut du detail mis a jour avec succes',
+                'data'    => $detail,
+                'maintenance' => $maintenance,
+            ]);
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }

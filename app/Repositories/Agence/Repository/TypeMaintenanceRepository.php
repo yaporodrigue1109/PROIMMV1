@@ -16,18 +16,18 @@ class TypeMaintenanceRepository implements TypeMaintenanceRepositoryInterface
 
     public function all(array $filters = [])
     {
-        $query = $this->model->with('agence');
+        $query = $this->model->with(['agence', 'maintenanceCategory']);
 
-        if (!empty($filters['agence_id'])) {
-            $query->where('agence_id', $filters['agence_id']);
-        }
+        $query->where('agence_id', $this->agenceId());
 
         return $query->latest()->paginate($filters['per_page'] ?? 15);
     }
 
     public function find($id)
     {
-        return $this->model->with(['agence', 'maintenances'])->find($id);
+        return $this->model->with(['agence', 'maintenances', 'maintenanceCategory'])
+            ->where('agence_id', $this->agenceId())
+            ->find($id);
     }
 
     public function create(array $data)
@@ -56,6 +56,11 @@ class TypeMaintenanceRepository implements TypeMaintenanceRepositoryInterface
 
     public function getByAgence($agenceId)
     {
-        return $this->model->where('agence_id', $agenceId)->get();
+        return $this->model->with('maintenanceCategory')->where('agence_id', $agenceId)->get();
+    }
+
+    private function agenceId(): string
+    {
+        return getInfoAgent()->users->agence_id;
     }
 }

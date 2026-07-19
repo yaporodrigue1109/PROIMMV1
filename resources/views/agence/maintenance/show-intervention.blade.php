@@ -345,15 +345,15 @@
                 <div class="intervention-tasks-list">
                     @foreach($intervention['details'] as $index => $detail)
                         @php
-                            $detailStatutClass = match($detail['statut'] ?? 'planifie') {
-                                'planifie' => 'info',
+                            $detailStatutClass = match($detail['statut'] ?? 'en attente') {
+                                'en attente' => 'info',
                                 'en_cours' => 'warning',
                                 'termine' => 'success',
                                 'annule' => 'danger',
                                 default => 'neutral'
                             };
-                            $detailStatutLabel = match($detail['statut'] ?? 'planifie') {
-                                'planifie' => 'Planifié',
+                            $detailStatutLabel = match($detail['statut'] ?? 'en attente') {
+                                'en attente' => 'Planifié',
                                 'en_cours' => 'En cours',
                                 'termine' => 'Terminé',
                                 'annule' => 'Annulé',

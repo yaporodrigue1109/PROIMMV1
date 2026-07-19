@@ -57,6 +57,11 @@ class MaintenanceService
         return $this->repository->updateStatut($id, $statut);
     }
 
+    public function recalculerStatutDepuisDetails(string $id)
+    {
+        return $this->repository->recalculateStatutFromDetails($id);
+    }
+
     public function getStatistiques(): array
     {
         return [

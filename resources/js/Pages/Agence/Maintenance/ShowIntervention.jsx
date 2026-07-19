@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     ClipboardList,
@@ -62,12 +62,39 @@ function Tile({ label, value }) {
 }
 
 export default function ShowIntervention({ intervention = {} }) {
+    const currentAgenceId = String(usePage()?.props?.auth?.user?.agence_id ?? '');
+    const interventionAgenceId = String(intervention?.agence_id ?? intervention?.agence?.agence_id ?? '');
     const details = asArray(intervention.details);
     const status = statusMeta(intervention.statut);
     const charge = chargeMeta(intervention.prise_en_charge_par);
     const owner = intervention?.proprietaire?.name ?? 'Non defini';
     const typeIntervention = intervention?.type_intervention?.name ?? 'Type non defini';
     const progress = Number(intervention?.pourcentage_avancement ?? 0);
+
+    if (currentAgenceId && interventionAgenceId && interventionAgenceId !== currentAgenceId) {
+        return (
+            <AgenceLayout title="Detail intervention">
+                <Head title="Detail intervention" />
+                <div className="mx-auto max-w-3xl pb-10">
+                    <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
+                        <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
+                            <ClipboardList className="h-10 w-10 text-[#94a3b8]" />
+                            <p className="text-lg font-semibold text-[#0f172a]">Intervention introuvable</p>
+                            <p className="text-sm text-[#5f7182]">
+                                Cette intervention n&apos;appartient pas à votre agence.
+                            </p>
+                            <Button asChild variant="outline" className={agenceButtonStyles.outline}>
+                                <Link href="/agence/maintenance">
+                                    <ArrowLeft className="h-4 w-4" />
+                                    Retour
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            </AgenceLayout>
+        );
+    }
 
     return (
         <AgenceLayout title="Detail intervention">

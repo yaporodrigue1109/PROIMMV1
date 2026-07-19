@@ -4,10 +4,80 @@ namespace App\Http\Requests\Agence;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class StoreLocataireRequest extends FormRequest
 {
    // public function authorize(): bool { return true; }
+
+    protected function prepareForValidation(): void
+    {
+        $contrat = $this->input('contrat', []);
+
+        $this->merge([
+            'name' => $this->normalizeName($this->input('name')),
+            'email' => $this->normalizeEmail($this->input('email')),
+            'tel1' => $this->normalizePhone($this->input('tel1')),
+            'tel2' => $this->normalizePhone($this->input('tel2')),
+            'profession' => $this->normalizeName($this->input('profession')),
+            'nationalite' => $this->normalizeUpperText($this->input('nationalite')),
+            'lieu_naissance' => $this->normalizeName($this->input('lieu_naissance')),
+            'adresse' => $this->normalizeText($this->input('adresse')),
+            'num_piece' => $this->normalizePieceNumber($this->input('num_piece')),
+            'contrat' => array_merge($contrat, [
+                'name_representant' => $this->normalizeName(data_get($contrat, 'name_representant')),
+            ]),
+        ]);
+    }
+
+    private function normalizeName(mixed $value): string
+    {
+        return Str::of((string) $value)
+            ->squish()
+            ->title()
+            ->toString();
+    }
+
+    private function normalizeEmail(mixed $value): string
+    {
+        return Str::of((string) $value)
+            ->trim()
+            ->lower()
+            ->toString();
+    }
+
+    private function normalizePieceNumber(mixed $value): string
+    {
+        return Str::of((string) $value)
+            ->squish()
+            ->upper()
+            ->toString();
+    }
+
+    private function normalizePhone(mixed $value): string
+    {
+        return Str::of((string) $value)
+            ->trim()
+            ->squish()
+            ->toString();
+    }
+
+    private function normalizeUpperText(mixed $value): string
+    {
+        return Str::of((string) $value)
+            ->trim()
+            ->squish()
+            ->upper()
+            ->toString();
+    }
+
+    private function normalizeText(mixed $value): string
+    {
+        return Str::of((string) $value)
+            ->trim()
+            ->squish()
+            ->toString();
+    }
 
     public function rules(): array
     {

@@ -7,6 +7,7 @@ use App\Http\Requests\AgenceRequest;
 use App\Services\AgenceService;
 
 use App\Services\TransactionService;
+use App\Models\Abonnement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -53,9 +54,11 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
             'statut', 'region_id', 'ville_id', 'is_principale',
             'search', 'sort_by', 'sort_order',
         ]);
+        $selectedAgenceId = $request->string('selected_agence_id')->toString();
 
        // $agences = $this->agenceService->repository->getAll($filters, 15);
         $agences = $this->agenceService->getAll($filters, 15);
+        $agences = $this->hydrateAgenceSubscriptions($agences);
         $agenceItems = collect($agences instanceof \Illuminate\Pagination\AbstractPaginator ? $agences->items() : $agences);
         $hasFilters = collect($filters)->filter(fn ($value) => filled($value))->isNotEmpty();
 
@@ -79,6 +82,7 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
         return Inertia::render('Admin/Agences/Index', [
             'agences' => $agences,
             'filters' => $filters,
+            'selectedAgenceId' => $selectedAgenceId,
             'stats' => [
                 'total' => $agenceItems->count(),
                 'active' => $agenceItems->where('statut', 'active')->count(),
@@ -106,7 +110,7 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
             'responsables'   => $responsables,
             'tarifications'  => $tarifications,
             'responsable_mode' => 'existing',
-            'villes'         =>[]
+            'villes'         => $villes,
         ]);
     }
 
@@ -130,7 +134,7 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
             $agence = $this->agenceService->createAgence($request->all());
            // dd($request->all());
             return redirect()
-                ->route('admin.agences.show', $agence->code_agence)
+                ->route('admin.agences.index', ['selected_agence_id' => $agence->agence_id])
                 ->with('success', "L'agence « {$agence->name} » a été créée avec succès.");
 
         } catch (\Exception $e) {
@@ -142,17 +146,15 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
 
     // ─── Détail ───────────────────────────────────────────────────────────────
 
-    public function show(string $codeAgence): Response
+    public function show(string $codeAgence): RedirectResponse
     {
         $agence = $this->agenceService->findByCode($codeAgence);
 
         abort_if(!$agence, 404, 'Agence introuvable.');
 
-        $agence       = $this->agenceService->findWithRelations($agence->agence_id);
-        $transactions = $this->transactionService->getTransactionsPourAgence($agence->agence_id, 10);
-        $totalEncaisse = $this->transactionService->getTotalEncaisseParAgence($agence->agence_id);
-
-        return Inertia::render('Admin/Agences/Show', compact('agence', 'transactions', 'totalEncaisse'));
+        return redirect()->route('admin.agences.index', [
+            'selected_agence_id' => $agence->agence_id,
+        ]);
     }
 
     // ─── Formulaire édition ───────────────────────────────────────────────────
@@ -189,7 +191,9 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
             $agence = $this->agenceService->updateAgence($id, $request->validated());
 
             return redirect()
-                ->route('admin.agences.show', $agence->code_agence)
+                ->route('admin.agences.index', [
+                    'selected_agence_id' => $agence->agence_id,
+                ])
                 ->with('success', "L'agence a été mise à jour avec succès.");
 
         } catch (\Exception $e) {
@@ -366,6 +370,90 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
                 'tickets_resolus' => 3,
             ],
         ]);
+    }
+
+    private function hydrateAgenceSubscriptions($agences)
+    {
+        if ($agences instanceof \Illuminate\Pagination\AbstractPaginator) {
+            $agences->setCollection($agences->getCollection()->map(fn ($agence) => $this->hydrateAgenceSubscription($agence)));
+
+            return $agences;
+        }
+
+        return collect($agences)->map(fn ($agence) => $this->hydrateAgenceSubscription($agence));
+    }
+
+    private function hydrateAgenceSubscription($agence)
+    {
+        if (!is_object($agence) || !isset($agence->agence_id)) {
+            return $agence;
+        }
+
+        $snapshot = Abonnement::query()
+            ->where('type', 'subscription')
+            ->where('agence_id', $agence->agence_id)
+            ->with(['nouvelAbonnement'])
+            ->first();
+
+        $subscriptionSource = $snapshot ?? $agence->abonnement ?? null;
+        if ($subscriptionSource) {
+            $subscriptionSource->setAttribute('prix_ht', $subscriptionSource->prix_ht ?? $subscriptionSource->prix_mensuel_ht ?? 0);
+            $subscriptionSource->setAttribute('modules', $this->extractModulesFromFeatures($subscriptionSource->features ?? []));
+            $agence->setRelation('subscription', $subscriptionSource);
+        }
+
+        $agence->setAttribute(
+            'modules_payants',
+            $this->extractModulesAsItems($subscriptionSource?->features ?? [])
+        );
+
+        if ($snapshot) {
+            $agence->setAttribute('abonnement_start', $snapshot->nouvelle_date_debut ?? $agence->abonnement_start ?? null);
+            $agence->setAttribute('abonnement_end', $snapshot->nouvelle_date_fin ?? $agence->abonnement_end ?? null);
+            $agence->setAttribute('duree_mois', $snapshot->duree_mois ?? $agence->duree_mois ?? null);
+            $agence->setAttribute('montant_total', $snapshot->montant_ht ?? $agence->montant_total ?? 0);
+        }
+
+        return $agence;
+    }
+
+    private function extractModulesFromFeatures($features): array
+    {
+        if (is_string($features)) {
+            $decoded = json_decode($features, true);
+            $features = json_last_error() === JSON_ERROR_NONE ? $decoded : [$features];
+        }
+
+        if (!is_array($features)) {
+            return [];
+        }
+
+        return collect($features)
+            ->map(function ($item) {
+                if (is_string($item)) {
+                    return trim($item);
+                }
+
+                if (is_array($item)) {
+                    return $item['label']
+                        ?? $item['name']
+                        ?? $item['nom']
+                        ?? $item['libelle']
+                        ?? null;
+                }
+
+                return null;
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function extractModulesAsItems($features): array
+    {
+        return collect($this->extractModulesFromFeatures($features))
+            ->map(fn ($name) => ['nom' => $name])
+            ->all();
     }
 
     private function getFormDependencies(): array

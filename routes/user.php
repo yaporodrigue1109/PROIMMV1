@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Agence\Auth\AuthController;
@@ -71,43 +71,43 @@ Route::middleware(['user'])->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
 
-            // ⚠️ IMPORTANT : Les routes statiques DOIVENT être AVANT la route dynamique /{id}
+            // âš ï¸ IMPORTANT : Les routes statiques DOIVENT Ãªtre AVANT la route dynamique /{id}
 
             Route::get('/intervention/{id}', 'showIntervention')->name('intervention.show');
 
-            // 🆕 Routes JSON pour les modales de modification
+            // ðŸ†• Routes JSON pour les modales de modification
             Route::get('/maintenancier/{id}/json', 'getMaintenancierJson')->name('maintenancier.json');
             Route::get('/intervention/{id}/json', 'getInterventionJson')->name('intervention.json');
             Route::get('/intervention/{id}/tasks', 'getInterventionTasks')->name('intervention.tasks');
+            Route::patch('/{id}/statut', 'changerStatut')->name('statut');
+            Route::patch('/detail/{id}/statut', 'changerDetailStatut')->name('detail.statut');
 
-            // 🆕 Routes de mise à jour
+            // ðŸ†• Routes de mise Ã  jour
             Route::put('/maintenancier/{id}', 'updateMaintenancier')->name('maintenancier.update');
             Route::put('/fonction/{id}', 'updateFonction')->name('fonction.update');
             Route::put('/type-intervention/{id}', 'updateTypeIntervention')->name('type.update');
 
-            // ⚠️ Cette route doit être la DERNIÈRE car elle capture tout ce qui n'est pas matché avant
+            // âš ï¸ Cette route doit Ãªtre la DERNIÃˆRE car elle capture tout ce qui n'est pas matchÃ© avant
             Route::get('/{id}', 'show')->name('show.json'); // pour AJAX
         });
 
         Route::controller(FonctionMaintenanceController::class)->prefix('fonction')->name('fonction.')->group(function () {
             Route::post('/store', 'store')->name('store');
-            Route::delete('/delete', 'destroy')->name('delete');
-            Route::put('/update/{id}', 'update')->name('update');
+            Route::put('/{id}', 'update')->name('update');
+            Route::delete('/{id}', 'destroy')->name('delete');
         });
 
         Route::controller(TypeMaintenanceController::class)->prefix('type')->name('type.')->group(function () {
             Route::post('/store', 'store')->name('store');
-            Route::delete('/delete', 'destroy')->name('delete');
-            // ⚠️ Correction : utilisez PUT au lieu de DELETE pour la mise à jour
-            Route::put('/update/{id}', 'update')->name('update');
+            Route::put('/{id}', 'update')->name('update');
+            Route::delete('/{id}', 'destroy')->name('delete');
         });
 
         Route::controller(MaintenancierController::class)->prefix('maintenancier')->name('maintenancier.')->group(function () {
             Route::post('/store', 'store')->name('store');
-            Route::delete('/delete', 'destroy')->name('delete');
             Route::get('/maintenancier/{id}', 'showMaintenancier')->name('show');
-            // ⚠️ Correction : utilisez PUT au lieu de DELETE pour la mise à jour
-            Route::put('/update/{id}', 'update')->name('update');
+            Route::put('/{id}', 'update')->name('update');
+            Route::delete('/{id}', 'destroy')->name('delete');
         });
 
     });
