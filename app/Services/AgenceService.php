@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Exception;
 
 class AgenceService
@@ -315,6 +316,143 @@ class AgenceService
             'statut'                   => 'en_attente',
             'created_by'               => getInfoAdmin()->admin->id_admin ?? 1,
         ]);
+    }
+
+    public function validateSubscriptionDraft(Agence $agence, array $draft, string $actorId, ?string $modePaiement = 'test'): array
+    {
+        $modePaiement = $this->normalizePaymentMode($modePaiement);
+        $dureeMois = max(1, (int) ($draft['duree_mois'] ?? 0));
+        $dateDebut = now()->startOfDay();
+        $dateFin = now()->copy()->addMonthsNoOverflow($dureeMois)->startOfDay();
+        $baseValue = (float) ($draft['prix_base'] ?? $draft['prix_base_ht'] ?? 0);
+        $modulesValue = (float) ($draft['prix_modules'] ?? 0);
+        $totalValue = (float) ($draft['prix_total'] ?? ($baseValue + $modulesValue));
+
+        $payload = [
+            'abonnement_start' => $dateDebut,
+            'abonnement_end' => $dateFin,
+            'duree_mois' => $dureeMois,
+            'montant_base_total' => $baseValue,
+            'montant_total' => $totalValue,
+            'options' => $draft['modules_ids'] ?? [],
+            'abonnement_notes' => 'Validation test depuis le portail agence',
+        ];
+
+        $planSnapshot = $this->buildSubscriptionPlanSnapshot();
+        $currentSnapshot = Abonnement::query()
+            ->where('type', 'subscription')
+            ->where('agence_id', $agence->agence_id)
+            ->first();
+
+        $subscription = Abonnement::updateOrCreate(
+            [
+                'type' => 'subscription',
+                'agence_id' => $agence->agence_id,
+            ],
+            [
+                'code_abonnement'      => $this->generateSubscriptionCode($agence),
+                'name'                 => $planSnapshot['name'],
+                'description'          => $planSnapshot['description'],
+                'prix_mensuel_ht'      => $planSnapshot['prix_mensuel_ht'],
+                'prix_annuel_ht'       => $planSnapshot['prix_annuel_ht'],
+                'nb_proprietes_max'    => $planSnapshot['nb_proprietes_max'],
+                'nb_locataires_max'    => $planSnapshot['nb_locataires_max'],
+                'nb_utilisateurs_max'  => $planSnapshot['nb_utilisateurs_max'],
+                'module_comptabilite'  => $planSnapshot['module_comptabilite'],
+                'module_reporting'     => $planSnapshot['module_reporting'],
+                'module_api'           => $planSnapshot['module_api'],
+                'is_default'           => false,
+                'ordre'                => 0,
+                'features'             => $planSnapshot['features'],
+                'ancien_abonnement_id' => $currentSnapshot?->abonnement_id,
+                'nouvel_abonnement_id' => $currentSnapshot?->abonnement_id ?? null,
+                'ancienne_date_debut'  => $currentSnapshot?->nouvelle_date_debut,
+                'ancienne_date_fin'    => $currentSnapshot?->nouvelle_date_fin,
+                'nouvelle_date_debut'  => $dateDebut,
+                'nouvelle_date_fin'    => $dateFin,
+                'duree_mois'           => $dureeMois,
+                'montant_ht'           => $totalValue,
+                'action'               => 'creation',
+                'action_par'           => $actorId,
+                'notes'                => $payload['abonnement_notes'],
+                'statut'               => 'actif',
+                'updated_by'           => $actorId,
+                'created_by'           => $actorId,
+            ]
+        );
+
+        $agence->update([
+            'abonnement_id'    => $subscription->abonnement_id,
+            'abonnement_start' => $dateDebut,
+            'abonnement_end'   => $dateFin,
+            'duree_mois'       => $dureeMois,
+        ]);
+
+        $historique = AbonnementHistorique::create([
+            'agence_id'            => $agence->agence_id,
+            'ancien_abonnement_id' => $currentSnapshot?->abonnement_id,
+            'nouvel_abonnement_id' => $subscription->abonnement_id,
+            'ancienne_date_debut'  => $currentSnapshot?->nouvelle_date_debut,
+            'ancienne_date_fin'    => $currentSnapshot?->nouvelle_date_fin,
+            'nouvelle_date_debut'  => $dateDebut,
+            'nouvelle_date_fin'    => $dateFin,
+            'duree_mois'           => $dureeMois,
+            'montant_ht'           => $totalValue,
+            'action'               => 'creation',
+            'action_par'           => $actorId,
+            'notes'                => $payload['abonnement_notes'],
+        ]);
+
+        $transaction = $this->transactionRepository->create([
+            'agence_id'                => $agence->agence_id,
+            'abonnement_id'            => $subscription->abonnement_id,
+            'abonnement_historique_id' => $historique->id,
+            'montant_base_ht'          => $baseValue,
+            'montant_options_ht'       => max(0, $modulesValue),
+            'montant_total_ht'         => $totalValue,
+            'taux_tva'                 => 0,
+            'montant_tva'              => 0,
+            'montant_ttc'              => $totalValue,
+            'duree_mois'               => $dureeMois,
+            'periode_debut'            => $dateDebut,
+            'periode_fin'              => $dateFin,
+            'options_souscrites'       => $payload['options'],
+            'mode_paiement'            => $modePaiement,
+            'type_operation'           => 'souscription',
+            'statut'                   => 'validee',
+            'date_paiement'            => now(),
+            'date_validation'          => now(),
+            'created_by'               => $actorId,
+            'updated_by'               => $actorId,
+            'notes'                    => $payload['abonnement_notes'],
+        ]);
+
+        return [
+            'subscription' => $subscription->fresh(),
+            'historique' => $historique->fresh(),
+            'transaction' => $transaction->fresh(),
+        ];
+    }
+
+    protected function normalizePaymentMode(?string $modePaiement): string
+    {
+        $normalized = Str::of((string) $modePaiement)
+            ->lower()
+            ->trim()
+            ->ascii()
+            ->replaceMatches('/[^a-z0-9]+/', '_')
+            ->trim('_')
+            ->toString();
+
+        return match ($normalized) {
+            'orange_money', 'wave', 'mobile_money', 'mobilemoney', 'mtn_momo', 'moov_money' => 'mobile_money',
+            'carte', 'carte_bancaire', 'credit_card', 'card' => 'carte',
+            'virement', 'virement_bancaire', 'bank_transfer' => 'virement',
+            'especes', 'cash' => 'especes',
+            'cheque', 'check' => 'cheque',
+            'autre', 'other', 'test' => 'autre',
+            default => 'autre',
+        };
     }
 
     protected function buildSubscriptionPlanSnapshot(): array

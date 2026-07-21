@@ -13,6 +13,7 @@ use App\Http\Controllers\Agence\Personnel\PersonnelController;
 use App\Http\Controllers\Agence\Locataire\LocataireController;
 use App\Http\Controllers\Agence\Proprietaire\ProprietaireController;
 use App\Http\Controllers\Agence\Proprietaire\LotController;
+use App\Http\Controllers\Agence\Abonnement\AbonnementController;
 use App\Http\Controllers\Agence\Caisse\CaisseController;
 use App\Http\Controllers\Agence\Reversement\ReversementController;
 use App\Http\Controllers\Agence\Loyer\LoyerController;
@@ -36,6 +37,13 @@ Route::controller(AuthController::class)->group(function () {
 Route::middleware(['user'])->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::controller(AbonnementController::class)->prefix('abonnement')->name('abonnement.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/checkout', 'checkout')->name('checkout');
+        Route::get('/paiement', 'payment')->name('paiement');
+        Route::post('/paiement/test', 'testValidate')->name('paiement.test');
+    });
 
     Route::get('/profile', function () {
         return Inertia::render('Agence/Profile/Index', [

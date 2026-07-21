@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Hôte : localhost
--- Généré le : mar. 21 juil. 2026 à 22:55
--- Version du serveur : 10.4.28-MariaDB
--- Version de PHP : 8.2.4
+-- Host: 127.0.0.1
+-- Generation Time: Jul 22, 2026 at 01:16 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Base de données : `ryapo_prosImmoB`
+-- Database: `ryapo_prosimmob`
 --
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `abonnements`
+-- Table structure for table `abonnements`
 --
 
 CREATE TABLE `abonnements` (
@@ -65,18 +65,19 @@ CREATE TABLE `abonnements` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `abonnements`
+-- Dumping data for table `abonnements`
 --
 
 INSERT INTO `abonnements` (`abonnement_id`, `type`, `agence_id`, `ancien_abonnement_id`, `nouvel_abonnement_id`, `ancienne_date_debut`, `ancienne_date_fin`, `nouvelle_date_debut`, `nouvelle_date_fin`, `duree_mois`, `montant_ht`, `action`, `action_par`, `notes`, `code_abonnement`, `name`, `description`, `prix_mensuel_ht`, `prix_annuel_ht`, `nb_proprietes_max`, `nb_locataires_max`, `nb_utilisateurs_max`, `module_comptabilite`, `module_reporting`, `module_api`, `statut`, `is_default`, `ordre`, `features`, `created_by`, `updated_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
 (1, 'subscription', '4c61c27c-e380-45f1-9847-79c070bb3a86', NULL, NULL, NULL, NULL, '2026-07-17', '2026-08-17', 1, 79000.00, 'creation', '11111111-1111-1111-1111-111111111111', NULL, 'SUB-AG-2026-0003', 'Centrale', NULL, 0.00, NULL, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, NULL, NULL, NULL, '2026-07-17 22:45:17', '2026-07-17 22:45:17', NULL),
 (2, 'subscription', 'c3ee22ef-5fb2-4a43-8af8-50128f324e9e', NULL, NULL, NULL, NULL, '2026-07-17', '2027-01-17', 6, 462000.00, 'creation', '11111111-1111-1111-1111-111111111111', NULL, 'SUB-AG-2026-0004', 'Tuba', NULL, 0.00, NULL, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, NULL, NULL, NULL, '2026-07-17 23:07:53', '2026-07-17 23:07:53', NULL),
-(3, 'subscription', '9959861e-03c6-45c4-a3ba-fc9edd90e88a', NULL, NULL, NULL, NULL, '2026-07-17', '2026-10-17', 3, 165000.00, 'creation', '11111111-1111-1111-1111-111111111111', NULL, 'SUB-AG-2026-0005', 'Abonnement de base', 'Notre plan de base offre accès complet à la plateforme avec support standard.', 50000.00, 600000.00, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, '[{\"id\":1,\"label\":\"SMS (Illimit\\u00e9)\",\"prix_mensuel\":25000,\"actif\":true},{\"id\":2,\"label\":\"WhatsApp Business\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":3,\"label\":\"Portail web\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":4,\"label\":\"Statistiques avanc\\u00e9es\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":5,\"label\":\"Portail propri\\u00e9taire\",\"prix_mensuel\":1000,\"actif\":true},{\"id\":6,\"label\":\"Portail locataire\",\"prix_mensuel\":1000,\"actif\":true}]', '11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', '2026-07-17 23:30:39', '2026-07-17 23:30:39', NULL);
+(3, 'subscription', '9959861e-03c6-45c4-a3ba-fc9edd90e88a', NULL, NULL, NULL, NULL, '2026-07-17', '2026-10-17', 3, 165000.00, 'creation', '11111111-1111-1111-1111-111111111111', NULL, 'SUB-AG-2026-0005', 'Abonnement de base', 'Notre plan de base offre accès complet à la plateforme avec support standard.', 50000.00, 600000.00, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, '[{\"id\":1,\"label\":\"SMS (Illimit\\u00e9)\",\"prix_mensuel\":25000,\"actif\":true},{\"id\":2,\"label\":\"WhatsApp Business\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":3,\"label\":\"Portail web\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":4,\"label\":\"Statistiques avanc\\u00e9es\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":5,\"label\":\"Portail propri\\u00e9taire\",\"prix_mensuel\":1000,\"actif\":true},{\"id\":6,\"label\":\"Portail locataire\",\"prix_mensuel\":1000,\"actif\":true}]', '11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', '2026-07-17 23:30:39', '2026-07-17 23:30:39', NULL),
+(4, 'subscription', 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 4, 4, '2026-07-21', '2026-08-21', '2026-07-21', '2026-08-21', 1, 79000.00, 'creation', '8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Validation test depuis le portail agence', 'SUB-AG-2026-0003', 'Abonnement de base', 'Notre plan de base offre accès complet à la plateforme avec support standard.', 50000.00, 600000.00, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, '[{\"id\":1,\"label\":\"SMS (Illimit\\u00e9)\",\"prix_mensuel\":25000,\"actif\":true},{\"id\":2,\"label\":\"WhatsApp Business\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":3,\"label\":\"Portail web\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":4,\"label\":\"Statistiques avanc\\u00e9es\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":5,\"label\":\"Portail propri\\u00e9taire\",\"prix_mensuel\":1000,\"actif\":true},{\"id\":6,\"label\":\"Portail locataire\",\"prix_mensuel\":1000,\"actif\":true}]', '8b1fc91c-966b-4bba-acba-46f4de717c6e', '8b1fc91c-966b-4bba-acba-46f4de717c6e', '2026-07-21 22:55:16', '2026-07-21 23:00:29', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `abonnement_historiques`
+-- Table structure for table `abonnement_historiques`
 --
 
 CREATE TABLE `abonnement_historiques` (
@@ -98,16 +99,18 @@ CREATE TABLE `abonnement_historiques` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `abonnement_historiques`
+-- Dumping data for table `abonnement_historiques`
 --
 
 INSERT INTO `abonnement_historiques` (`id`, `agence_id`, `ancien_abonnement_id`, `nouvel_abonnement_id`, `ancienne_date_debut`, `ancienne_date_fin`, `nouvelle_date_debut`, `nouvelle_date_fin`, `duree_mois`, `montant_ht`, `action`, `action_par`, `notes`, `created_at`, `updated_at`) VALUES
-(6, 'a299981a-d1c1-4690-8e96-d6ddb5df0874', NULL, NULL, NULL, NULL, '2026-05-11', '2027-05-11', 12, 1440000.00, 'creation', 'ADM-001', NULL, '2026-05-11 16:49:43', '2026-05-11 16:49:43');
+(6, 'a299981a-d1c1-4690-8e96-d6ddb5df0874', NULL, NULL, NULL, NULL, '2026-05-11', '2027-05-11', 12, 1440000.00, 'creation', 'ADM-001', NULL, '2026-05-11 16:49:43', '2026-05-11 16:49:43'),
+(7, 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', NULL, 4, NULL, NULL, '2026-07-21', '2026-08-21', 1, 79000.00, 'creation', '8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Validation test depuis le portail agence', '2026-07-21 22:55:16', '2026-07-21 22:55:16'),
+(8, 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 4, 4, '2026-07-21', '2026-08-21', '2026-07-21', '2026-08-21', 1, 79000.00, 'creation', '8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Validation test depuis le portail agence', '2026-07-21 23:00:29', '2026-07-21 23:00:29');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `acheteurs`
+-- Table structure for table `acheteurs`
 --
 
 CREATE TABLE `acheteurs` (
@@ -129,7 +132,7 @@ CREATE TABLE `acheteurs` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `admins`
+-- Table structure for table `admins`
 --
 
 CREATE TABLE `admins` (
@@ -149,7 +152,7 @@ CREATE TABLE `admins` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `admins`
+-- Dumping data for table `admins`
 --
 
 INSERT INTO `admins` (`id_admin`, `name`, `phone`, `email`, `statut`, `password`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`, `remember_token`) VALUES
@@ -159,7 +162,7 @@ INSERT INTO `admins` (`id_admin`, `name`, `phone`, `email`, `statut`, `password`
 -- --------------------------------------------------------
 
 --
--- Structure de la table `agences`
+-- Table structure for table `agences`
 --
 
 CREATE TABLE `agences` (
@@ -199,17 +202,18 @@ CREATE TABLE `agences` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `agences`
+-- Dumping data for table `agences`
 --
 
 INSERT INTO `agences` (`agence_id`, `name`, `code_agence`, `adresse`, `tel1`, `tel2`, `email1`, `email2`, `region_id`, `ville_id`, `statut`, `is_principale`, `parent_id`, `responsable_id`, `abonnement_id`, `abonnement_start`, `abonnement_end`, `duree_mois`, `rib`, `agence_bancaire`, `banque`, `site_web`, `bp`, `regime_fiscal`, `num_contribuable`, `rccm`, `sigle`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
 ('22222222-2222-2222-2222-222222222222', 'Agence Demo', 'AG-DEMO-001', 'Abidjan', '0102030405', NULL, 'agence.demo@pros-immobilier.test', NULL, NULL, NULL, 'active', 1, NULL, '33333333-3333-3333-3333-333333333333', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', NULL, '2026-07-09 11:41:01', '2026-07-09 11:41:01', NULL),
-('2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Agence de bingerville', 'AG-2026-\n0001', 'Bingerville', '0707902963', NULL, 'agence@bingerville.ci', NULL, 1, 1, 'active', 1, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'BP 123 Abidjan 01', 'SARL', NULL, NULL, NULL, NULL, 'ADM-001', NULL, '2026-04-27 00:01:07', '2026-06-09 08:47:56', NULL);
+('2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Agence de bingerville', 'AG-2026-\n0001', 'Bingerville', '0707902963', NULL, 'agence@bingerville.ci', NULL, 1, 1, 'active', 1, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'BP 123 Abidjan 01', 'SARL', NULL, NULL, NULL, NULL, 'ADM-001', NULL, '2026-04-27 00:01:07', '2026-06-09 08:47:56', NULL),
+('bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 'FROTA', 'AG-2026-0003', 'Cocody', '+2250788965877', '+2250533655878', 'frota@gmail.com', 'frota2@gmail.com', 1, 13, 'en_demo', 1, NULL, '8b1fc91c-966b-4bba-acba-46f4de717c6e', '4', '2026-07-21 00:00:00', '2026-08-21 00:00:00', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', NULL, '2026-07-21 22:05:16', '2026-07-21 22:55:16', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `batiment`
+-- Table structure for table `batiment`
 --
 
 CREATE TABLE `batiment` (
@@ -226,7 +230,7 @@ CREATE TABLE `batiment` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `batiment`
+-- Dumping data for table `batiment`
 --
 
 INSERT INTO `batiment` (`batiment_id`, `propriete_id`, `agence_id`, `name`, `description`, `nbre_etages`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -243,7 +247,7 @@ INSERT INTO `batiment` (`batiment_id`, `propriete_id`, `agence_id`, `name`, `des
 -- --------------------------------------------------------
 
 --
--- Structure de la table `cache`
+-- Table structure for table `cache`
 --
 
 CREATE TABLE `cache` (
@@ -255,7 +259,7 @@ CREATE TABLE `cache` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `caisses`
+-- Table structure for table `caisses`
 --
 
 CREATE TABLE `caisses` (
@@ -273,7 +277,7 @@ CREATE TABLE `caisses` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `configurations`
+-- Table structure for table `configurations`
 --
 
 CREATE TABLE `configurations` (
@@ -308,7 +312,7 @@ CREATE TABLE `configurations` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Déchargement des données de la table `configurations`
+-- Dumping data for table `configurations`
 --
 
 INSERT INTO `configurations` (`id`, `name`, `boite_postal`, `contact1`, `contact2`, `contact3`, `langue`, `adresse`, `raison_social`, `site_web`, `politique_confidentialite`, `condition_generale`, `cgu`, `email1`, `email2`, `logo`, `flavicon`, `num_rccm`, `capital`, `num_cnps`, `num_cc`, `facebook`, `instagram`, `linkedin`, `google`, `twitter`, `created_at`, `updated_at`) VALUES
@@ -317,7 +321,7 @@ INSERT INTO `configurations` (`id`, `name`, `boite_postal`, `contact1`, `contact
 -- --------------------------------------------------------
 
 --
--- Structure de la table `configuration_tarifs`
+-- Table structure for table `configuration_tarifs`
 --
 
 CREATE TABLE `configuration_tarifs` (
@@ -332,7 +336,7 @@ CREATE TABLE `configuration_tarifs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `configuration_tarifs`
+-- Dumping data for table `configuration_tarifs`
 --
 
 INSERT INTO `configuration_tarifs` (`id`, `plan_nom`, `plan_prix_mensuel`, `delai_grace`, `cycle_facturation`, `plan_description`, `created_at`, `updated_at`) VALUES
@@ -341,7 +345,7 @@ INSERT INTO `configuration_tarifs` (`id`, `plan_nom`, `plan_prix_mensuel`, `dela
 -- --------------------------------------------------------
 
 --
--- Structure de la table `configuration_tarif_durees`
+-- Table structure for table `configuration_tarif_durees`
 --
 
 CREATE TABLE `configuration_tarif_durees` (
@@ -354,7 +358,7 @@ CREATE TABLE `configuration_tarif_durees` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `configuration_tarif_durees`
+-- Dumping data for table `configuration_tarif_durees`
 --
 
 INSERT INTO `configuration_tarif_durees` (`id`, `tarif_id`, `nombre_mois`, `prix_reduit`, `created_at`, `updated_at`) VALUES
@@ -368,7 +372,7 @@ INSERT INTO `configuration_tarif_durees` (`id`, `tarif_id`, `nombre_mois`, `prix
 -- --------------------------------------------------------
 
 --
--- Structure de la table `configuration_tarif_modules`
+-- Table structure for table `configuration_tarif_modules`
 --
 
 CREATE TABLE `configuration_tarif_modules` (
@@ -383,7 +387,7 @@ CREATE TABLE `configuration_tarif_modules` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `configuration_tarif_modules`
+-- Dumping data for table `configuration_tarif_modules`
 --
 
 INSERT INTO `configuration_tarif_modules` (`id`, `tarif_id`, `label`, `prix_mensuel`, `actif`, `ordre`, `created_at`, `updated_at`) VALUES
@@ -397,7 +401,7 @@ INSERT INTO `configuration_tarif_modules` (`id`, `tarif_id`, `label`, `prix_mens
 -- --------------------------------------------------------
 
 --
--- Structure de la table `equipement_proprietes`
+-- Table structure for table `equipement_proprietes`
 --
 
 CREATE TABLE `equipement_proprietes` (
@@ -410,7 +414,7 @@ CREATE TABLE `equipement_proprietes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Déchargement des données de la table `equipement_proprietes`
+-- Dumping data for table `equipement_proprietes`
 --
 
 INSERT INTO `equipement_proprietes` (`id`, `name`, `agence_id`, `description`, `created_at`, `updated_at`) VALUES
@@ -427,7 +431,7 @@ INSERT INTO `equipement_proprietes` (`id`, `name`, `agence_id`, `description`, `
 -- --------------------------------------------------------
 
 --
--- Structure de la table `fonction_maintenance`
+-- Table structure for table `fonction_maintenance`
 --
 
 CREATE TABLE `fonction_maintenance` (
@@ -442,7 +446,7 @@ CREATE TABLE `fonction_maintenance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `fonction_maintenance`
+-- Dumping data for table `fonction_maintenance`
 --
 
 INSERT INTO `fonction_maintenance` (`fonction_maintenance_id`, `agence_id`, `name`, `description`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -453,7 +457,7 @@ INSERT INTO `fonction_maintenance` (`fonction_maintenance_id`, `agence_id`, `nam
 -- --------------------------------------------------------
 
 --
--- Structure de la table `genres`
+-- Table structure for table `genres`
 --
 
 CREATE TABLE `genres` (
@@ -465,7 +469,7 @@ CREATE TABLE `genres` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `genres`
+-- Dumping data for table `genres`
 --
 
 INSERT INTO `genres` (`id`, `name`, `abreviation`, `created_at`, `updated_at`) VALUES
@@ -475,7 +479,7 @@ INSERT INTO `genres` (`id`, `name`, `abreviation`, `created_at`, `updated_at`) V
 -- --------------------------------------------------------
 
 --
--- Structure de la table `locataire`
+-- Table structure for table `locataire`
 --
 
 CREATE TABLE `locataire` (
@@ -504,7 +508,7 @@ CREATE TABLE `locataire` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `locataire`
+-- Dumping data for table `locataire`
 --
 
 INSERT INTO `locataire` (`locataire_id`, `name`, `code`, `tel1`, `tel2`, `email`, `region_id`, `ville_id`, `adresse`, `nationalite`, `type_piece_id`, `num_piece`, `date_expiration_piece`, `date_naissance`, `lieu_naissance`, `genre_id`, `photo`, `image_pice`, `profession`, `password`, `created_at`, `updated_at`) VALUES
@@ -513,7 +517,7 @@ INSERT INTO `locataire` (`locataire_id`, `name`, `code`, `tel1`, `tel2`, `email`
 -- --------------------------------------------------------
 
 --
--- Structure de la table `locataire_agence`
+-- Table structure for table `locataire_agence`
 --
 
 CREATE TABLE `locataire_agence` (
@@ -555,7 +559,7 @@ CREATE TABLE `locataire_agence` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `locataire_agence`
+-- Dumping data for table `locataire_agence`
 --
 
 INSERT INTO `locataire_agence` (`locataire_agence_id`, `agence_id`, `locataire_id`, `proprietaire_id`, `loyer_net`, `caution`, `avance`, `agence`, `caution_cie`, `caution_sodeci`, `frais_annexe`, `propriete_id`, `batiment_id`, `lot_id`, `porte_id`, `nbre_personne`, `date_debut_bail`, `date_entree`, `is_active`, `is_new`, `civilite_representant_id`, `name_representant`, `adresse_representant`, `contant_representant`, `nbre_enfant`, `created_by`, `updated_by`, `created_at`, `updated_at`, `pas_de_porte`, `montant_global_garantie`, `date_signature_bail`, `versements_depot_garantie`, `periodicite_paiement_id`, `mode_paiement_id`) VALUES
@@ -564,7 +568,7 @@ INSERT INTO `locataire_agence` (`locataire_agence_id`, `agence_id`, `locataire_i
 -- --------------------------------------------------------
 
 --
--- Structure de la table `loyer`
+-- Table structure for table `loyer`
 --
 
 CREATE TABLE `loyer` (
@@ -600,7 +604,7 @@ CREATE TABLE `loyer` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `loyer`
+-- Dumping data for table `loyer`
 --
 
 INSERT INTO `loyer` (`loyer_id`, `locataire_id`, `proprietaire_id`, `lot_id`, `agence_id`, `propriete_id`, `batiment_id`, `porte_id`, `statut`, `montant_a_payer`, `montant_payer`, `montant_restant`, `montant_proprio`, `montant_agence`, `montant_global_proprio`, `montant_global_agence`, `arriere_precedent`, `montant_penalite`, `is_first`, `mode_paiement_id`, `date_paiement`, `mois_paiement`, `annee_paiement`, `date_limit_paiement`, `commentaire`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -616,7 +620,7 @@ INSERT INTO `loyer` (`loyer_id`, `locataire_id`, `proprietaire_id`, `lot_id`, `a
 -- --------------------------------------------------------
 
 --
--- Structure de la table `maintenance`
+-- Table structure for table `maintenance`
 --
 
 CREATE TABLE `maintenance` (
@@ -641,7 +645,7 @@ CREATE TABLE `maintenance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `maintenance`
+-- Dumping data for table `maintenance`
 --
 
 INSERT INTO `maintenance` (`maintenance_id`, `agence_id`, `proprietaire_id`, `lot_id`, `propriete_id`, `batiment_id`, `porte_id`, `titre`, `description`, `statut`, `montant_global`, `prise_en_charge_par`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -650,7 +654,7 @@ INSERT INTO `maintenance` (`maintenance_id`, `agence_id`, `proprietaire_id`, `lo
 -- --------------------------------------------------------
 
 --
--- Structure de la table `maintenance_categories`
+-- Table structure for table `maintenance_categories`
 --
 
 CREATE TABLE `maintenance_categories` (
@@ -664,7 +668,7 @@ CREATE TABLE `maintenance_categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `maintenance_categories`
+-- Dumping data for table `maintenance_categories`
 --
 
 INSERT INTO `maintenance_categories` (`maintenance_category_id`, `name`, `slug`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
@@ -678,7 +682,7 @@ INSERT INTO `maintenance_categories` (`maintenance_category_id`, `name`, `slug`,
 -- --------------------------------------------------------
 
 --
--- Structure de la table `maintenance_detail`
+-- Table structure for table `maintenance_detail`
 --
 
 CREATE TABLE `maintenance_detail` (
@@ -701,7 +705,7 @@ CREATE TABLE `maintenance_detail` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `maintenance_detail`
+-- Dumping data for table `maintenance_detail`
 --
 
 INSERT INTO `maintenance_detail` (`maintenance_detail_id`, `maintenance_id`, `maintenancier_id`, `type_intervention_id`, `date_debut`, `date_fin`, `priorite`, `montant`, `note`, `statut`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -711,7 +715,7 @@ INSERT INTO `maintenance_detail` (`maintenance_detail_id`, `maintenance_id`, `ma
 -- --------------------------------------------------------
 
 --
--- Structure de la table `maintenanciers`
+-- Table structure for table `maintenanciers`
 --
 
 CREATE TABLE `maintenanciers` (
@@ -735,7 +739,7 @@ CREATE TABLE `maintenanciers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `maintenanciers`
+-- Dumping data for table `maintenanciers`
 --
 
 INSERT INTO `maintenanciers` (`maintenancier_id`, `fonction_maintenance_id`, `agence_id`, `name`, `tel1`, `tel2`, `email`, `statut`, `adresse`, `entreprise`, `type_piece_id`, `numero_piece`, `date_validite_piece`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -745,7 +749,7 @@ INSERT INTO `maintenanciers` (`maintenancier_id`, `fonction_maintenance_id`, `ag
 -- --------------------------------------------------------
 
 --
--- Structure de la table `migrations`
+-- Table structure for table `migrations`
 --
 
 CREATE TABLE `migrations` (
@@ -755,7 +759,7 @@ CREATE TABLE `migrations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `migrations`
+-- Dumping data for table `migrations`
 --
 
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
@@ -772,12 +776,15 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (11, '2026_07_09_000002_add_periodicite_paiement_id_to_locataire_agence_table', 10),
 (12, '2026_07_09_000003_add_loyer_net_to_locataire_agence_table', 11),
 (13, '2026_07_09_000004_add_contract_amount_fields_to_locataire_agence_table', 12),
-(14, '2026_07_09_000005_add_mode_paiement_id_to_locataire_agence_table', 13);
+(14, '2026_07_09_000005_add_mode_paiement_id_to_locataire_agence_table', 13),
+(15, '2026_07_16_000001_create_maintenance_categories_table', 14),
+(16, '2026_07_16_000002_add_duree_estimee_to_type_maintenances_table', 14),
+(17, '2026_07_21_000001_align_maintenance_module_tables', 15);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `mode_paiements`
+-- Table structure for table `mode_paiements`
 --
 
 CREATE TABLE `mode_paiements` (
@@ -788,7 +795,7 @@ CREATE TABLE `mode_paiements` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Déchargement des données de la table `mode_paiements`
+-- Dumping data for table `mode_paiements`
 --
 
 INSERT INTO `mode_paiements` (`id`, `name`, `created_at`, `updated_at`) VALUES
@@ -802,7 +809,7 @@ INSERT INTO `mode_paiements` (`id`, `name`, `created_at`, `updated_at`) VALUES
 -- --------------------------------------------------------
 
 --
--- Structure de la table `mouvements_caisse`
+-- Table structure for table `mouvements_caisse`
 --
 
 CREATE TABLE `mouvements_caisse` (
@@ -827,7 +834,7 @@ CREATE TABLE `mouvements_caisse` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `parametrages_agence`
+-- Table structure for table `parametrages_agence`
 --
 
 CREATE TABLE `parametrages_agence` (
@@ -887,16 +894,17 @@ CREATE TABLE `parametrages_agence` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `parametrages_agence`
+-- Dumping data for table `parametrages_agence`
 --
 
 INSERT INTO `parametrages_agence` (`parametrages_agence_id`, `agence_id`, `devise`, `langue`, `format_date`, `timezone`, `sauvegarde_auto`, `double_validation`, `journal_activites`, `multi_session`, `periode_facturation`, `jour_emission`, `delai_paiement`, `penalite_retard`, `prefixe_facture`, `sequence_facture`, `commission`, `base_commission`, `tva`, `aib`, `ras`, `acompte_min`, `mode_reglement_id`, `logo`, `logo_largeur`, `logo_position`, `logo_tutelle`, `logo_partenaire`, `cachet`, `signature_dg`, `dg_nom`, `dg_titre`, `signature_sg`, `sg_nom`, `sg_titre`, `signature_cpt`, `cpt_nom`, `cpt_titre`, `sig_dg_facture`, `sig_double`, `cachet_auto`, `notif_rappel`, `notif_retard`, `notif_recu`, `email_compta`, `email_dg`, `delai_rappel`, `seuil_dg`, `created_by`, `updated_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
+('64d53a99-2b0d-45c6-bc43-2f48d32f9473', 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 'XOF', 'fr', 'd/m/Y', 'Africa/Abidjan', 1, 1, 1, 0, 'mensuelle', '1', 30, 1.50, 'FAC-', 1, 15.00, 'ht', 18.00, 5.00, 2.00, 30.00, 1, NULL, 200, 'gauche', NULL, NULL, NULL, NULL, NULL, 'Directeur Général', NULL, NULL, 'Secrétaire Général(e)', NULL, NULL, 'Responsable Comptable', 1, 1, 0, 1, 1, 0, NULL, NULL, 7, 1000000, '8b1fc91c-966b-4bba-acba-46f4de717c6e', NULL, '2026-07-21 22:48:04', '2026-07-21 22:48:04', NULL),
 ('93577165-0a54-483a-acf8-7d838da4f883', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'XOF', 'fr', 'd/m/Y', 'Africa/Abidjan', 0, 0, 0, 0, 'mensuelle', '1', 10, 1.60, 'FAC-', 1, 10.00, 'ht', 0.00, 0.00, 0.00, 30.00, 1, NULL, 200, 'gauche', NULL, NULL, NULL, NULL, NULL, 'Directeur Général', NULL, NULL, 'Secrétaire Général(e)', NULL, NULL, 'Responsable Comptable', 1, 1, 0, 1, 1, 0, NULL, NULL, 7, 1000000, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-06-01 01:50:59', '2026-06-09 12:57:31', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `periodicite_paiements`
+-- Table structure for table `periodicite_paiements`
 --
 
 CREATE TABLE `periodicite_paiements` (
@@ -909,7 +917,7 @@ CREATE TABLE `periodicite_paiements` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `periodicite_paiements`
+-- Dumping data for table `periodicite_paiements`
 --
 
 INSERT INTO `periodicite_paiements` (`id`, `name`, `description`, `is_actif`, `created_at`, `updated_at`) VALUES
@@ -923,7 +931,7 @@ INSERT INTO `periodicite_paiements` (`id`, `name`, `description`, `is_actif`, `c
 -- --------------------------------------------------------
 
 --
--- Structure de la table `porte`
+-- Table structure for table `porte`
 --
 
 CREATE TABLE `porte` (
@@ -953,7 +961,7 @@ CREATE TABLE `porte` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `porte`
+-- Dumping data for table `porte`
 --
 
 INSERT INTO `porte` (`porte_id`, `batiment_id`, `type_porte_id`, `agence_id`, `numero_porte`, `superficie_m2`, `etage`, `is_allocation`, `description`, `is_occupe`, `is_actif`, `caution`, `avance`, `agence`, `mt_caution_cie`, `mt_caution_sodeci`, `mt_autre_frais`, `mt_loyer`, `equipements`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -974,7 +982,7 @@ INSERT INTO `porte` (`porte_id`, `batiment_id`, `type_porte_id`, `agence_id`, `n
 -- --------------------------------------------------------
 
 --
--- Structure de la table `propietaire_lots`
+-- Table structure for table `propietaire_lots`
 --
 
 CREATE TABLE `propietaire_lots` (
@@ -997,7 +1005,7 @@ CREATE TABLE `propietaire_lots` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Déchargement des données de la table `propietaire_lots`
+-- Dumping data for table `propietaire_lots`
 --
 
 INSERT INTO `propietaire_lots` (`propreietaire_lot_id`, `name`, `superficie`, `region_id`, `ville_id`, `adresse`, `num_lot`, `num_ilot`, `proprietaire_id`, `agence_id`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -1010,7 +1018,7 @@ INSERT INTO `propietaire_lots` (`propreietaire_lot_id`, `name`, `superficie`, `r
 -- --------------------------------------------------------
 
 --
--- Structure de la table `proprietaires`
+-- Table structure for table `proprietaires`
 --
 
 CREATE TABLE `proprietaires` (
@@ -1039,7 +1047,7 @@ CREATE TABLE `proprietaires` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `proprietaires`
+-- Dumping data for table `proprietaires`
 --
 
 INSERT INTO `proprietaires` (`proprietaire_id`, `code`, `genre_id`, `name`, `tel1`, `tel2`, `type_pieces_id`, `type_proprietaire`, `numpiece`, `date_expiration_piece`, `email`, `profession`, `nationalite`, `date_naiss`, `lieu_naiss`, `region_id`, `ville_id`, `adresse`, `photo`, `created_at`, `updated_at`, `password`) VALUES
@@ -1052,7 +1060,7 @@ INSERT INTO `proprietaires` (`proprietaire_id`, `code`, `genre_id`, `name`, `tel
 -- --------------------------------------------------------
 
 --
--- Structure de la table `proprietaire_agences`
+-- Table structure for table `proprietaire_agences`
 --
 
 CREATE TABLE `proprietaire_agences` (
@@ -1082,7 +1090,7 @@ CREATE TABLE `proprietaire_agences` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `proprietaire_agences`
+-- Dumping data for table `proprietaire_agences`
 --
 
 INSERT INTO `proprietaire_agences` (`proprietaire_agence_id`, `proprietaire_id`, `agence_id`, `is_active`, `date_activation`, `date_desactivation`, `agent_activation_id`, `agent_desactivation_id`, `name_representant`, `genre_representant_id`, `adresse_representant`, `tel1_representant`, `tel2_representant`, `email_representant`, `type_pieces_representant_id`, `numpiece_representant`, `photo_representant`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -1095,7 +1103,7 @@ INSERT INTO `proprietaire_agences` (`proprietaire_agence_id`, `proprietaire_id`,
 -- --------------------------------------------------------
 
 --
--- Structure de la table `propriete`
+-- Table structure for table `propriete`
 --
 
 CREATE TABLE `propriete` (
@@ -1120,7 +1128,7 @@ CREATE TABLE `propriete` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `propriete`
+-- Dumping data for table `propriete`
 --
 
 INSERT INTO `propriete` (`propriete_id`, `proprietaire_id`, `agence_id`, `lot_id`, `type_propriete_id`, `reference`, `description`, `adresse_complete`, `videos_url`, `is_allocation`, `is_actif`, `prossimites`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -1135,7 +1143,7 @@ INSERT INTO `propriete` (`propriete_id`, `proprietaire_id`, `agence_id`, `lot_id
 -- --------------------------------------------------------
 
 --
--- Structure de la table `propriete_proximites`
+-- Table structure for table `propriete_proximites`
 --
 
 CREATE TABLE `propriete_proximites` (
@@ -1153,7 +1161,7 @@ CREATE TABLE `propriete_proximites` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `propriete_proximites`
+-- Dumping data for table `propriete_proximites`
 --
 
 INSERT INTO `propriete_proximites` (`propriete_proximite_id`, `propriete_id`, `proximite_id`, `distance`, `unite`, `created_by`, `updated_by`, `deleted_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
@@ -1167,7 +1175,7 @@ INSERT INTO `propriete_proximites` (`propriete_proximite_id`, `propriete_id`, `p
 -- --------------------------------------------------------
 
 --
--- Structure de la table `prossimite_proprietes`
+-- Table structure for table `prossimite_proprietes`
 --
 
 CREATE TABLE `prossimite_proprietes` (
@@ -1180,7 +1188,7 @@ CREATE TABLE `prossimite_proprietes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Déchargement des données de la table `prossimite_proprietes`
+-- Dumping data for table `prossimite_proprietes`
 --
 
 INSERT INTO `prossimite_proprietes` (`id`, `name`, `agence_id`, `description`, `created_at`, `updated_at`) VALUES
@@ -1196,7 +1204,7 @@ INSERT INTO `prossimite_proprietes` (`id`, `name`, `agence_id`, `description`, `
 -- --------------------------------------------------------
 
 --
--- Structure de la table `regions`
+-- Table structure for table `regions`
 --
 
 CREATE TABLE `regions` (
@@ -1207,7 +1215,7 @@ CREATE TABLE `regions` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Déchargement des données de la table `regions`
+-- Dumping data for table `regions`
 --
 
 INSERT INTO `regions` (`id`, `name`, `created_at`, `updated_at`) VALUES
@@ -1248,7 +1256,7 @@ INSERT INTO `regions` (`id`, `name`, `created_at`, `updated_at`) VALUES
 -- --------------------------------------------------------
 
 --
--- Structure de la table `roles`
+-- Table structure for table `roles`
 --
 
 CREATE TABLE `roles` (
@@ -1263,7 +1271,7 @@ CREATE TABLE `roles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `roles`
+-- Dumping data for table `roles`
 --
 
 INSERT INTO `roles` (`role_id`, `name`, `description`, `agence_id`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -1272,7 +1280,7 @@ INSERT INTO `roles` (`role_id`, `name`, `description`, `agence_id`, `created_by`
 -- --------------------------------------------------------
 
 --
--- Structure de la table `sessions`
+-- Table structure for table `sessions`
 --
 
 CREATE TABLE `sessions` (
@@ -1285,7 +1293,7 @@ CREATE TABLE `sessions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `sessions`
+-- Dumping data for table `sessions`
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
@@ -1294,7 +1302,7 @@ INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `tarif_porte`
+-- Table structure for table `tarif_porte`
 --
 
 CREATE TABLE `tarif_porte` (
@@ -1314,7 +1322,7 @@ CREATE TABLE `tarif_porte` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `tarif_porte`
+-- Dumping data for table `tarif_porte`
 --
 
 INSERT INTO `tarif_porte` (`tarif_id`, `porte_id`, `mt_loyer`, `mt_vente`, `mt_caution`, `mt_avance`, `mt_frais_agence`, `mt_caution_cie`, `mt_caution_sodeci`, `date_effet`, `is_actif`, `created_at`, `mt_frais_dossier`) VALUES
@@ -1342,7 +1350,7 @@ INSERT INTO `tarif_porte` (`tarif_id`, `porte_id`, `mt_loyer`, `mt_vente`, `mt_c
 -- --------------------------------------------------------
 
 --
--- Structure de la table `test`
+-- Table structure for table `test`
 --
 
 CREATE TABLE `test` (
@@ -1352,7 +1360,7 @@ CREATE TABLE `test` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `transactions`
+-- Table structure for table `transactions`
 --
 
 CREATE TABLE `transactions` (
@@ -1386,16 +1394,17 @@ CREATE TABLE `transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `transactions`
+-- Dumping data for table `transactions`
 --
 
 INSERT INTO `transactions` (`transaction_id`, `reference`, `agence_id`, `abonnement_id`, `abonnement_historique_id`, `montant_base_ht`, `montant_options_ht`, `montant_total_ht`, `taux_tva`, `montant_tva`, `montant_ttc`, `duree_mois`, `periode_debut`, `periode_fin`, `options_souscrites`, `mode_paiement`, `statut`, `reference_paiement`, `date_paiement`, `date_validation`, `type_operation`, `created_by`, `updated_by`, `notes`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(6, 'TXN-2026-7858D8', 'a299981a-d1c1-4690-8e96-d6ddb5df0874', NULL, 6, 600000.00, 840000.00, 1440000.00, 0.00, 0.00, 1440000.00, 12, '2026-05-11', '2027-05-11', '[\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"]', NULL, 'en_attente', NULL, NULL, NULL, 'souscription', 'ADM-001', NULL, NULL, '2026-05-11 16:49:43', '2026-05-11 16:49:43', NULL);
+(6, 'TXN-2026-7858D8', 'a299981a-d1c1-4690-8e96-d6ddb5df0874', NULL, 6, 600000.00, 840000.00, 1440000.00, 0.00, 0.00, 1440000.00, 12, '2026-05-11', '2027-05-11', '[\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"]', NULL, 'en_attente', NULL, NULL, NULL, 'souscription', 'ADM-001', NULL, NULL, '2026-05-11 16:49:43', '2026-05-11 16:49:43', NULL),
+(7, 'TXN-2026-D3A717', 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 4, 8, 0.00, 29000.00, 79000.00, 0.00, 0.00, 79000.00, 1, '2026-07-21', '2026-08-21', '[1,2,3]', 'mobile_money', 'validee', NULL, '2026-07-21 23:00:29', '2026-07-21 23:00:29', 'souscription', '8b1fc91c-966b-4bba-acba-46f4de717c6e', '8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Validation test depuis le portail agence', '2026-07-21 23:00:29', '2026-07-21 23:00:29', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `transaction_agences`
+-- Table structure for table `transaction_agences`
 --
 
 CREATE TABLE `transaction_agences` (
@@ -1425,7 +1434,7 @@ CREATE TABLE `transaction_agences` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `transaction_agences`
+-- Dumping data for table `transaction_agences`
 --
 
 INSERT INTO `transaction_agences` (`transaction_agence_id`, `locataire_id`, `agence_id`, `proprietaire_id`, `propriete_id`, `batiment_id`, `porte_id`, `montant_global_verser`, `mois_payer`, `arriere_actuel`, `montant_arriere_payer`, `montant_arriere_actuel`, `montant_loyer_payer`, `montant_avance_payer`, `is_first`, `type_transaction`, `mode_paiement_id`, `is_reversement`, `date_transaction`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -1438,7 +1447,7 @@ INSERT INTO `transaction_agences` (`transaction_agence_id`, `locataire_id`, `age
 -- --------------------------------------------------------
 
 --
--- Structure de la table `type_maintenances`
+-- Table structure for table `type_maintenances`
 --
 
 CREATE TABLE `type_maintenances` (
@@ -1446,6 +1455,8 @@ CREATE TABLE `type_maintenances` (
   `agence_id` varchar(150) NOT NULL,
   `name` varchar(150) NOT NULL,
   `categorie` varchar(150) DEFAULT NULL,
+  `maintenance_category_id` char(36) DEFAULT NULL,
+  `duree_estimee` decimal(8,2) DEFAULT NULL,
   `description` varchar(250) DEFAULT NULL,
   `created_by` varchar(150) DEFAULT NULL,
   `updated_by` varchar(150) DEFAULT NULL,
@@ -1454,16 +1465,17 @@ CREATE TABLE `type_maintenances` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `type_maintenances`
+-- Dumping data for table `type_maintenances`
 --
 
-INSERT INTO `type_maintenances` (`type_maintenance_id`, `agence_id`, `name`, `categorie`, `description`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
-('54a4124d-4bdb-4dd7-931f-851279eecea3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Réparation 🧑‍🔧', NULL, 'Réparation Electricite🧑‍🔧', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-06-02 21:21:45', '2026-06-02 21:21:45');
+INSERT INTO `type_maintenances` (`type_maintenance_id`, `agence_id`, `name`, `categorie`, `maintenance_category_id`, `duree_estimee`, `description`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+('1fbac4bc-b728-40dd-966a-c1e264af53b1', 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 'DDD', 'Équipements', 'f33c0383-bf35-4225-9d54-3d2b1318f759', 3.00, 'aa', '8b1fc91c-966b-4bba-acba-46f4de717c6e', NULL, '2026-07-21 23:10:27', '2026-07-21 23:10:27'),
+('54a4124d-4bdb-4dd7-931f-851279eecea3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Réparation 🧑‍🔧', NULL, NULL, NULL, 'Réparation Electricite🧑‍🔧', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-06-02 21:21:45', '2026-06-02 21:21:45');
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `type_pieces`
+-- Table structure for table `type_pieces`
 --
 
 CREATE TABLE `type_pieces` (
@@ -1474,7 +1486,7 @@ CREATE TABLE `type_pieces` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `type_pieces`
+-- Dumping data for table `type_pieces`
 --
 
 INSERT INTO `type_pieces` (`type_pieces_id`, `name`, `created_at`, `deleted_at`) VALUES
@@ -1486,7 +1498,7 @@ INSERT INTO `type_pieces` (`type_pieces_id`, `name`, `created_at`, `deleted_at`)
 -- --------------------------------------------------------
 
 --
--- Structure de la table `type_porte`
+-- Table structure for table `type_porte`
 --
 
 CREATE TABLE `type_porte` (
@@ -1497,7 +1509,7 @@ CREATE TABLE `type_porte` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `type_porte`
+-- Dumping data for table `type_porte`
 --
 
 INSERT INTO `type_porte` (`type_porte_id`, `libelle`, `description`, `created_at`) VALUES
@@ -1513,7 +1525,7 @@ INSERT INTO `type_porte` (`type_porte_id`, `libelle`, `description`, `created_at
 -- --------------------------------------------------------
 
 --
--- Structure de la table `type_proprietes`
+-- Table structure for table `type_proprietes`
 --
 
 CREATE TABLE `type_proprietes` (
@@ -1526,7 +1538,7 @@ CREATE TABLE `type_proprietes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Déchargement des données de la table `type_proprietes`
+-- Dumping data for table `type_proprietes`
 --
 
 INSERT INTO `type_proprietes` (`id`, `agence_id`, `name`, `description`, `created_at`, `updated_at`) VALUES
@@ -1540,7 +1552,7 @@ INSERT INTO `type_proprietes` (`id`, `agence_id`, `name`, `description`, `create
 -- --------------------------------------------------------
 
 --
--- Structure de la table `users`
+-- Table structure for table `users`
 --
 
 CREATE TABLE `users` (
@@ -1567,7 +1579,7 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Déchargement des données de la table `users`
+-- Dumping data for table `users`
 --
 
 INSERT INTO `users` (`id_users`, `name`, `email`, `adresse`, `agence_id`, `is_responsable`, `role_id`, `tel1`, `tel2`, `statut`, `email_verified_at`, `password`, `remember_token`, `created_by`, `photo`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -1575,12 +1587,13 @@ INSERT INTO `users` (`id_users`, `name`, `email`, `adresse`, `agence_id`, `is_re
 ('4fb6adb2-c847-44ac-83e7-4c64c033caed', 'Mon Agence', 'agence@test.com', NULL, '', 0, '', '', NULL, 'actif', NULL, '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, NULL, NULL, NULL, '2026-05-02 12:25:29', '2026-05-02 12:26:29', NULL),
 ('4fb6adb2-c847-44ac-83e7-4c64c033caef', 'Rodrigue', 'rodrigue.yapo@soumafe.ci', 'Abidjan', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 1, '1', '0707902962', NULL, 'actif', NULL, '$2y$12$AVLFXIQ7HXGshGXhPBpl2.nPQVq34bq.Tg1ciFz4cRST01H.kuSk2', NULL, NULL, NULL, NULL, NULL, '2026-04-26 23:59:04', '2026-05-11 15:01:19', NULL),
 ('6b97e65c-42eb-4695-a85d-0a2b1302d73e', 'Ouattara Junior', 'junior.ouattara@prosimmobilier.ci', 'Cocody angre', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 0, '1', '0707902909', NULL, 'actif', NULL, '$2y$12$kAyHVpvE1Dx2bMdU.259.ewPp9q2Pd04kW0aM9KyFusApfRC3WQum', NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-05-16 22:35:08', '2026-05-16 23:00:07', NULL),
+('8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Ouattara Junior', 'junior@gmail.com', NULL, 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 1, '1', '+2250788963300', '+2256689365577', 'actif', NULL, '$2y$12$yJpddBHUARxmfErHe0xvAuK8qmQ83CzYCY0TS8ILfERYxz.iEKBri', NULL, '', NULL, '', NULL, '2026-07-21 22:05:16', '2026-07-21 22:05:16', NULL),
 ('ac9b87f2-33a8-4df2-a96e-575edff2b9c4', 'Jonas Kouadio', 'jonask@gmail.com', 'Abobo', 'f2b4c17f-1d74-47fc-975b-49f62e64f9b4', 1, '1', '0707902492', '0709902904', 'actif', NULL, '$2y$12$ILFtC5P8hKfdZEpZKENmWekdnoHsSE4iVIQ3yKZWfRxor8NJrDPAW', NULL, 'ADM-001', '/admin/assets/images/users_photo/6a0248c9ba42c4.27078193.png', NULL, NULL, '2026-05-11 21:23:21', '2026-05-11 21:48:20', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `ventes_biens`
+-- Table structure for table `ventes_biens`
 --
 
 CREATE TABLE `ventes_biens` (
@@ -1611,7 +1624,7 @@ CREATE TABLE `ventes_biens` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `villes`
+-- Table structure for table `villes`
 --
 
 CREATE TABLE `villes` (
@@ -1623,7 +1636,7 @@ CREATE TABLE `villes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Déchargement des données de la table `villes`
+-- Dumping data for table `villes`
 --
 
 INSERT INTO `villes` (`id`, `name`, `region_id`, `created_at`, `updated_at`) VALUES
@@ -1753,11 +1766,11 @@ INSERT INTO `villes` (`id`, `name`, `region_id`, `created_at`, `updated_at`) VAL
 (124, 'Yamoussoukro', 33, '2024-12-24 07:05:30', '2024-12-24 07:05:30');
 
 --
--- Index pour les tables déchargées
+-- Indexes for dumped tables
 --
 
 --
--- Index pour la table `abonnements`
+-- Indexes for table `abonnements`
 --
 ALTER TABLE `abonnements`
   ADD PRIMARY KEY (`abonnement_id`),
@@ -1768,7 +1781,7 @@ ALTER TABLE `abonnements`
   ADD KEY `idx_statut` (`statut`);
 
 --
--- Index pour la table `abonnement_historiques`
+-- Indexes for table `abonnement_historiques`
 --
 ALTER TABLE `abonnement_historiques`
   ADD PRIMARY KEY (`id`),
@@ -1777,155 +1790,155 @@ ALTER TABLE `abonnement_historiques`
   ADD KEY `abonnement_historiques_nouvel_abonnement_id_foreign` (`nouvel_abonnement_id`);
 
 --
--- Index pour la table `acheteurs`
+-- Indexes for table `acheteurs`
 --
 ALTER TABLE `acheteurs`
   ADD PRIMARY KEY (`id_acheteur`);
 
 --
--- Index pour la table `admins`
+-- Indexes for table `admins`
 --
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`id_admin`),
   ADD KEY `email` (`email`);
 
 --
--- Index pour la table `agences`
+-- Indexes for table `agences`
 --
 ALTER TABLE `agences`
   ADD PRIMARY KEY (`agence_id`);
 
 --
--- Index pour la table `batiment`
+-- Indexes for table `batiment`
 --
 ALTER TABLE `batiment`
   ADD PRIMARY KEY (`batiment_id`);
 
 --
--- Index pour la table `cache`
+-- Indexes for table `cache`
 --
 ALTER TABLE `cache`
   ADD PRIMARY KEY (`key`);
 
 --
--- Index pour la table `caisses`
+-- Indexes for table `caisses`
 --
 ALTER TABLE `caisses`
   ADD PRIMARY KEY (`caisse_id`);
 
 --
--- Index pour la table `configurations`
+-- Indexes for table `configurations`
 --
 ALTER TABLE `configurations`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `configuration_tarifs`
+-- Indexes for table `configuration_tarifs`
 --
 ALTER TABLE `configuration_tarifs`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `configuration_tarif_durees`
+-- Indexes for table `configuration_tarif_durees`
 --
 ALTER TABLE `configuration_tarif_durees`
   ADD PRIMARY KEY (`id`),
   ADD KEY `tarif_durees_tarif_id_foreign` (`tarif_id`);
 
 --
--- Index pour la table `configuration_tarif_modules`
+-- Indexes for table `configuration_tarif_modules`
 --
 ALTER TABLE `configuration_tarif_modules`
   ADD PRIMARY KEY (`id`),
   ADD KEY `tarif_modules_tarif_id_foreign` (`tarif_id`);
 
 --
--- Index pour la table `equipement_proprietes`
+-- Indexes for table `equipement_proprietes`
 --
 ALTER TABLE `equipement_proprietes`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `fonction_maintenance`
+-- Indexes for table `fonction_maintenance`
 --
 ALTER TABLE `fonction_maintenance`
   ADD PRIMARY KEY (`fonction_maintenance_id`);
 
 --
--- Index pour la table `genres`
+-- Indexes for table `genres`
 --
 ALTER TABLE `genres`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `locataire`
+-- Indexes for table `locataire`
 --
 ALTER TABLE `locataire`
   ADD PRIMARY KEY (`locataire_id`);
 
 --
--- Index pour la table `locataire_agence`
+-- Indexes for table `locataire_agence`
 --
 ALTER TABLE `locataire_agence`
   ADD PRIMARY KEY (`locataire_agence_id`);
 
 --
--- Index pour la table `loyer`
+-- Indexes for table `loyer`
 --
 ALTER TABLE `loyer`
   ADD PRIMARY KEY (`loyer_id`);
 
 --
--- Index pour la table `maintenance`
+-- Indexes for table `maintenance`
 --
 ALTER TABLE `maintenance`
   ADD PRIMARY KEY (`maintenance_id`);
 
 --
--- Index pour la table `maintenance_detail`
+-- Indexes for table `maintenance_detail`
 --
 ALTER TABLE `maintenance_detail`
   ADD PRIMARY KEY (`maintenance_detail_id`);
 
 --
--- Index pour la table `maintenanciers`
+-- Indexes for table `maintenanciers`
 --
 ALTER TABLE `maintenanciers`
   ADD PRIMARY KEY (`maintenancier_id`);
 
 --
--- Index pour la table `migrations`
+-- Indexes for table `migrations`
 --
 ALTER TABLE `migrations`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `mode_paiements`
+-- Indexes for table `mode_paiements`
 --
 ALTER TABLE `mode_paiements`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `mouvements_caisse`
+-- Indexes for table `mouvements_caisse`
 --
 ALTER TABLE `mouvements_caisse`
   ADD PRIMARY KEY (`mouvement_id`);
 
 --
--- Index pour la table `parametrages_agence`
+-- Indexes for table `parametrages_agence`
 --
 ALTER TABLE `parametrages_agence`
   ADD PRIMARY KEY (`parametrages_agence_id`);
 
 --
--- Index pour la table `periodicite_paiements`
+-- Indexes for table `periodicite_paiements`
 --
 ALTER TABLE `periodicite_paiements`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `periodicite_paiements_name_unique` (`name`);
 
 --
--- Index pour la table `porte`
+-- Indexes for table `porte`
 --
 ALTER TABLE `porte`
   ADD PRIMARY KEY (`porte_id`),
@@ -1933,13 +1946,13 @@ ALTER TABLE `porte`
   ADD UNIQUE KEY `batiment_id` (`batiment_id`,`numero_porte`);
 
 --
--- Index pour la table `propietaire_lots`
+-- Indexes for table `propietaire_lots`
 --
 ALTER TABLE `propietaire_lots`
   ADD PRIMARY KEY (`propreietaire_lot_id`);
 
 --
--- Index pour la table `proprietaires`
+-- Indexes for table `proprietaires`
 --
 ALTER TABLE `proprietaires`
   ADD PRIMARY KEY (`proprietaire_id`),
@@ -1948,20 +1961,20 @@ ALTER TABLE `proprietaires`
   ADD UNIQUE KEY `code` (`code`);
 
 --
--- Index pour la table `proprietaire_agences`
+-- Indexes for table `proprietaire_agences`
 --
 ALTER TABLE `proprietaire_agences`
   ADD PRIMARY KEY (`proprietaire_agence_id`);
 
 --
--- Index pour la table `propriete`
+-- Indexes for table `propriete`
 --
 ALTER TABLE `propriete`
   ADD PRIMARY KEY (`propriete_id`),
   ADD UNIQUE KEY `reference` (`reference`);
 
 --
--- Index pour la table `propriete_proximites`
+-- Indexes for table `propriete_proximites`
 --
 ALTER TABLE `propriete_proximites`
   ADD PRIMARY KEY (`propriete_proximite_id`),
@@ -1969,37 +1982,37 @@ ALTER TABLE `propriete_proximites`
   ADD KEY `propriete_proximites_proximite_id_index` (`proximite_id`);
 
 --
--- Index pour la table `prossimite_proprietes`
+-- Indexes for table `prossimite_proprietes`
 --
 ALTER TABLE `prossimite_proprietes`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `regions`
+-- Indexes for table `regions`
 --
 ALTER TABLE `regions`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `roles`
+-- Indexes for table `roles`
 --
 ALTER TABLE `roles`
   ADD PRIMARY KEY (`role_id`);
 
 --
--- Index pour la table `sessions`
+-- Indexes for table `sessions`
 --
 ALTER TABLE `sessions`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `tarif_porte`
+-- Indexes for table `tarif_porte`
 --
 ALTER TABLE `tarif_porte`
   ADD UNIQUE KEY `tarif_id` (`tarif_id`);
 
 --
--- Index pour la table `transactions`
+-- Indexes for table `transactions`
 --
 ALTER TABLE `transactions`
   ADD PRIMARY KEY (`transaction_id`),
@@ -2012,199 +2025,199 @@ ALTER TABLE `transactions`
   ADD KEY `transactions_reference_index` (`reference`);
 
 --
--- Index pour la table `transaction_agences`
+-- Indexes for table `transaction_agences`
 --
 ALTER TABLE `transaction_agences`
   ADD PRIMARY KEY (`transaction_agence_id`);
 
 --
--- Index pour la table `type_maintenances`
+-- Indexes for table `type_maintenances`
 --
 ALTER TABLE `type_maintenances`
   ADD PRIMARY KEY (`type_maintenance_id`);
 
 --
--- Index pour la table `type_pieces`
+-- Indexes for table `type_pieces`
 --
 ALTER TABLE `type_pieces`
   ADD PRIMARY KEY (`type_pieces_id`);
 
 --
--- Index pour la table `type_porte`
+-- Indexes for table `type_porte`
 --
 ALTER TABLE `type_porte`
   ADD PRIMARY KEY (`type_porte_id`),
   ADD UNIQUE KEY `type_porte_id` (`type_porte_id`);
 
 --
--- Index pour la table `type_proprietes`
+-- Indexes for table `type_proprietes`
 --
 ALTER TABLE `type_proprietes`
   ADD PRIMARY KEY (`id`);
 
 --
--- Index pour la table `users`
+-- Indexes for table `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id_users`),
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- Index pour la table `ventes_biens`
+-- Indexes for table `ventes_biens`
 --
 ALTER TABLE `ventes_biens`
   ADD PRIMARY KEY (`id_vente`),
   ADD UNIQUE KEY `reference` (`reference`);
 
 --
--- Index pour la table `villes`
+-- Indexes for table `villes`
 --
 ALTER TABLE `villes`
   ADD PRIMARY KEY (`id`);
 
 --
--- AUTO_INCREMENT pour les tables déchargées
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT pour la table `abonnement_historiques`
+-- AUTO_INCREMENT for table `abonnement_historiques`
 --
 ALTER TABLE `abonnement_historiques`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT pour la table `caisses`
+-- AUTO_INCREMENT for table `caisses`
 --
 ALTER TABLE `caisses`
   MODIFY `caisse_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `configurations`
+-- AUTO_INCREMENT for table `configurations`
 --
 ALTER TABLE `configurations`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT pour la table `configuration_tarifs`
+-- AUTO_INCREMENT for table `configuration_tarifs`
 --
 ALTER TABLE `configuration_tarifs`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT pour la table `configuration_tarif_durees`
+-- AUTO_INCREMENT for table `configuration_tarif_durees`
 --
 ALTER TABLE `configuration_tarif_durees`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
--- AUTO_INCREMENT pour la table `configuration_tarif_modules`
+-- AUTO_INCREMENT for table `configuration_tarif_modules`
 --
 ALTER TABLE `configuration_tarif_modules`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT pour la table `equipement_proprietes`
+-- AUTO_INCREMENT for table `equipement_proprietes`
 --
 ALTER TABLE `equipement_proprietes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
--- AUTO_INCREMENT pour la table `genres`
+-- AUTO_INCREMENT for table `genres`
 --
 ALTER TABLE `genres`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT pour la table `migrations`
+-- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
--- AUTO_INCREMENT pour la table `mode_paiements`
+-- AUTO_INCREMENT for table `mode_paiements`
 --
 ALTER TABLE `mode_paiements`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT pour la table `mouvements_caisse`
+-- AUTO_INCREMENT for table `mouvements_caisse`
 --
 ALTER TABLE `mouvements_caisse`
   MODIFY `mouvement_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `periodicite_paiements`
+-- AUTO_INCREMENT for table `periodicite_paiements`
 --
 ALTER TABLE `periodicite_paiements`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT pour la table `prossimite_proprietes`
+-- AUTO_INCREMENT for table `prossimite_proprietes`
 --
 ALTER TABLE `prossimite_proprietes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT pour la table `regions`
+-- AUTO_INCREMENT for table `regions`
 --
 ALTER TABLE `regions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
--- AUTO_INCREMENT pour la table `transactions`
+-- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `transaction_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `transaction_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT pour la table `type_pieces`
+-- AUTO_INCREMENT for table `type_pieces`
 --
 ALTER TABLE `type_pieces`
   MODIFY `type_pieces_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT pour la table `type_porte`
+-- AUTO_INCREMENT for table `type_porte`
 --
 ALTER TABLE `type_porte`
   MODIFY `type_porte_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT pour la table `type_proprietes`
+-- AUTO_INCREMENT for table `type_proprietes`
 --
 ALTER TABLE `type_proprietes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
--- AUTO_INCREMENT pour la table `villes`
+-- AUTO_INCREMENT for table `villes`
 --
 ALTER TABLE `villes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=126;
 
 --
--- Contraintes pour les tables déchargées
+-- Constraints for dumped tables
 --
 
 --
--- Contraintes pour la table `abonnement_historiques`
+-- Constraints for table `abonnement_historiques`
 --
 ALTER TABLE `abonnement_historiques`
   ADD CONSTRAINT `abonnement_historiques_ancien_abonnement_id_foreign` FOREIGN KEY (`ancien_abonnement_id`) REFERENCES `abonnements` (`abonnement_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `abonnement_historiques_nouvel_abonnement_id_foreign` FOREIGN KEY (`nouvel_abonnement_id`) REFERENCES `abonnements` (`abonnement_id`) ON DELETE SET NULL;
 
 --
--- Contraintes pour la table `configuration_tarif_durees`
+-- Constraints for table `configuration_tarif_durees`
 --
 ALTER TABLE `configuration_tarif_durees`
   ADD CONSTRAINT `tarif_durees_tarif_id_foreign` FOREIGN KEY (`tarif_id`) REFERENCES `configuration_tarifs` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `configuration_tarif_modules`
+-- Constraints for table `configuration_tarif_modules`
 --
 ALTER TABLE `configuration_tarif_modules`
   ADD CONSTRAINT `tarif_modules_tarif_id_foreign` FOREIGN KEY (`tarif_id`) REFERENCES `configuration_tarifs` (`id`) ON DELETE CASCADE;
 
 --
--- Contraintes pour la table `transactions`
+-- Constraints for table `transactions`
 --
 ALTER TABLE `transactions`
   ADD CONSTRAINT `transactions_abonnement_historique_id_foreign` FOREIGN KEY (`abonnement_historique_id`) REFERENCES `abonnement_historiques` (`id`) ON DELETE SET NULL,
