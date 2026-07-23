@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     BarChart3,
+    BadgeCheck,
     Building2,
     ChevronDown,
     HardHat,
@@ -154,18 +155,27 @@ function AccountFooter({ currentUser, onLogout }) {
                 </div>
             </div>
 
-            <div className="mt-4 flex gap-2">
-                <Button asChild variant="outline" className="h-11 flex-1 rounded-xl border-[#c8d4de]">
-                    <Link href="/agence/profile">
-                        <UserRound className="mr-2 h-4 w-4" />
-                        Profil
+            <div className="mt-4 space-y-2">
+                <Button asChild className="h-11 w-full rounded-xl bg-[#00559b] font-semibold text-white hover:bg-[#00457c]">
+                    <Link href="/agence/abonnement/consultation">
+                        <BadgeCheck className="mr-2 h-4 w-4" />
+                        Mon abonnement
                     </Link>
                 </Button>
 
-                <Button variant="destructive" className="h-11 flex-1 rounded-xl" onClick={onLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sortir
-                </Button>
+                <div className="flex gap-2">
+                    <Button asChild variant="outline" className="h-11 flex-1 rounded-xl border-[#c8d4de]">
+                        <Link href="/agence/profile">
+                            <UserRound className="mr-2 h-4 w-4" />
+                            Profil
+                        </Link>
+                    </Button>
+
+                    <Button variant="destructive" className="h-11 flex-1 rounded-xl" onClick={onLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sortir
+                    </Button>
+                </div>
             </div>
         </div>
     );
@@ -422,6 +432,13 @@ export default function AgenceLayout({ title, children }) {
                                     <Link href="/agence/profile" className="flex w-full items-center gap-2">
                                         <UserRound className="h-4 w-4" />
                                         <span>Mon profil</span>
+                                    </Link>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem asChild>
+                                    <Link href="/agence/abonnement/consultation" className="flex w-full items-center gap-2">
+                                        <BadgeCheck className="h-4 w-4" />
+                                        <span>Mon abonnement</span>
                                     </Link>
                                 </DropdownMenuItem>
 

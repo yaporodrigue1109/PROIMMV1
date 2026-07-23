@@ -39,6 +39,8 @@ Route::middleware(['user'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::controller(AbonnementController::class)->prefix('abonnement')->name('abonnement.')->group(function () {
+        Route::get('/consultation', 'consultation')->name('consultation');
+        Route::get('/receipt/{transaction}', 'receipt')->name('receipt');
         Route::get('/', 'index')->name('index');
         Route::post('/checkout', 'checkout')->name('checkout');
         Route::get('/paiement', 'payment')->name('paiement');

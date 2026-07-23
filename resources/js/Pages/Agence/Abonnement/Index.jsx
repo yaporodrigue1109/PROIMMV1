@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { ArrowRight, BadgeCheck, CalendarDays, Check, CircleDollarSign, Sparkles, WalletCards } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import AgenceLayout from '../../../Layouts/AgenceLayout';
@@ -22,7 +22,9 @@ const toInt = (value, fallback = 0) => {
 export default function Index({ tarifs = {}, draft = null }) {
     const page = usePage();
     const agency = page?.props?.auth?.user?.agence ?? null;
+    const subscriptionFlow = page?.props?.subscription_flow ?? {};
     const agencyName = agency?.name ?? agency?.nom ?? agency?.raison_sociale ?? agency?.nom_agence ?? 'Mon agence';
+    const pageTitle = subscriptionFlow.title ?? 'Souscrire a un abonnement';
 
     const plan = tarifs.plan ?? {};
     const durations = Array.isArray(tarifs.durees) ? tarifs.durees : [];
@@ -55,6 +57,7 @@ export default function Index({ tarifs = {}, draft = null }) {
     }, 0);
 
     const total = baseTotal + modulesTotal;
+    const badgeLabel = getSubscriptionFlowBadgeLabel(subscriptionFlow.state);
 
     function getModuleTotal(module, months = durationMonths) {
         const monthlyPrice = Number(module?.prix_mensuel ?? 0);
@@ -82,11 +85,30 @@ export default function Index({ tarifs = {}, draft = null }) {
     };
 
     return (
-        <AgenceLayout title="Souscrire a un abonnement">
-            <Head title="Souscrire a un abonnement" />
+        <AgenceLayout title={pageTitle}>
+            <Head title={pageTitle} />
 
             <div className="mx-auto flex max-w-7xl flex-col gap-6 pb-10">
-                
+                <Card className="rounded-[1.5rem] border-[#d7e3ee] bg-[#f8fbfe] shadow-sm">
+                    <CardContent className="mt-4 flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-xl font-semibold text-[#0f172a]">{pageTitle}</h1>
+                                {subscriptionFlow.state ? (
+                                    <Badge
+                                        variant={subscriptionFlow.tone === 'danger' ? 'destructive' : 'secondary'}
+                                        className="rounded-full px-3 py-1"
+                                    >
+                                        {badgeLabel}
+                                    </Badge>
+                                ) : null}
+                            </div>
+                            <p className="max-w-3xl text-sm leading-6 text-[#5f7182]">
+                                {subscriptionFlow.description ?? 'Choisissez votre formule, les modules utiles, puis passez au paiement.'}
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <section className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_360px]">
                     <div className="space-y-6">
@@ -229,7 +251,7 @@ export default function Index({ tarifs = {}, draft = null }) {
                                     onClick={submitCheckout}
                                     className="h-11 w-full rounded-2xl bg-[#00559b] font-semibold text-white hover:bg-[#00457c]"
                                 >
-                                    Continuer
+                                    {subscriptionFlow.button_label ?? 'Continuer'}
                                 </Button>
                             </CardContent>
                         </Card>
@@ -247,4 +269,19 @@ function SummaryLine({ label, value, strong = false }) {
             <span className={cn('text-right text-[#0f172a]', strong && 'font-semibold')}>{value}</span>
         </div>
     );
+}
+
+function getSubscriptionFlowBadgeLabel(state) {
+    switch (state) {
+        case 'new':
+            return 'Nouvelle souscription';
+        case 'expired':
+            return 'Réactivation';
+        case 'urgent_renewal':
+            return 'Renouvellement urgent';
+        case 'renewal':
+            return 'Renouvellement anticipé';
+        default:
+            return 'Abonnement';
+    }
 }

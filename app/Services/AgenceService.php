@@ -6,6 +6,7 @@ use App\Models\Agence;
 use App\Models\User;
 use App\Models\Abonnement;
 use App\Models\AbonnementHistorique;
+use App\Models\Transaction;
 use App\Repositories\Interfaces\AgenceRepositoryInterface;
 use App\Repositories\Interfaces\TransactionRepositoryInterface;
 use App\Repositories\Interfaces\UserRepositoryInterface;
@@ -322,8 +323,18 @@ class AgenceService
     {
         $modePaiement = $this->normalizePaymentMode($modePaiement);
         $dureeMois = max(1, (int) ($draft['duree_mois'] ?? 0));
-        $dateDebut = now()->startOfDay();
-        $dateFin = now()->copy()->addMonthsNoOverflow($dureeMois)->startOfDay();
+        $today = now()->startOfDay();
+        $currentEnd = $agence->abonnement_end ? Carbon::parse($agence->abonnement_end)->startOfDay() : null;
+        $isActiveSubscription = (bool) ($agence->abonnement_id && $currentEnd && $currentEnd->greaterThanOrEqualTo($today));
+
+        if ($isActiveSubscription && $currentEnd) {
+            $dateDebut = $currentEnd->copy();
+            $dateFin = $currentEnd->copy()->addMonthsNoOverflow($dureeMois)->startOfDay();
+        } else {
+            $dateDebut = $today;
+            $dateFin = $today->copy()->addMonthsNoOverflow($dureeMois)->startOfDay();
+        }
+
         $baseValue = (float) ($draft['prix_base'] ?? $draft['prix_base_ht'] ?? 0);
         $modulesValue = (float) ($draft['prix_modules'] ?? 0);
         $totalValue = (float) ($draft['prix_total'] ?? ($baseValue + $modulesValue));
@@ -343,6 +354,12 @@ class AgenceService
             ->where('type', 'subscription')
             ->where('agence_id', $agence->agence_id)
             ->first();
+        $existingPendingTransaction = $this->findPendingSubscriptionTransaction(
+            $agence->agence_id,
+            $dateDebut,
+            $dateFin,
+            $totalValue
+        );
 
         $subscription = Abonnement::updateOrCreate(
             [
@@ -388,44 +405,84 @@ class AgenceService
             'duree_mois'       => $dureeMois,
         ]);
 
-        $historique = AbonnementHistorique::create([
-            'agence_id'            => $agence->agence_id,
-            'ancien_abonnement_id' => $currentSnapshot?->abonnement_id,
-            'nouvel_abonnement_id' => $subscription->abonnement_id,
-            'ancienne_date_debut'  => $currentSnapshot?->nouvelle_date_debut,
-            'ancienne_date_fin'    => $currentSnapshot?->nouvelle_date_fin,
-            'nouvelle_date_debut'  => $dateDebut,
-            'nouvelle_date_fin'    => $dateFin,
-            'duree_mois'           => $dureeMois,
-            'montant_ht'           => $totalValue,
-            'action'               => 'creation',
-            'action_par'           => $actorId,
-            'notes'                => $payload['abonnement_notes'],
-        ]);
+        if ($existingPendingTransaction && $existingPendingTransaction->abonnementHistorique) {
+            $historique = $existingPendingTransaction->abonnementHistorique;
 
-        $transaction = $this->transactionRepository->create([
-            'agence_id'                => $agence->agence_id,
-            'abonnement_id'            => $subscription->abonnement_id,
-            'abonnement_historique_id' => $historique->id,
-            'montant_base_ht'          => $baseValue,
-            'montant_options_ht'       => max(0, $modulesValue),
-            'montant_total_ht'         => $totalValue,
-            'taux_tva'                 => 0,
-            'montant_tva'              => 0,
-            'montant_ttc'              => $totalValue,
-            'duree_mois'               => $dureeMois,
-            'periode_debut'            => $dateDebut,
-            'periode_fin'              => $dateFin,
-            'options_souscrites'       => $payload['options'],
-            'mode_paiement'            => $modePaiement,
-            'type_operation'           => 'souscription',
-            'statut'                   => 'validee',
-            'date_paiement'            => now(),
-            'date_validation'          => now(),
-            'created_by'               => $actorId,
-            'updated_by'               => $actorId,
-            'notes'                    => $payload['abonnement_notes'],
-        ]);
+            $historique->update([
+                'ancien_abonnement_id' => $currentSnapshot?->abonnement_id,
+                'nouvel_abonnement_id' => $subscription->abonnement_id,
+                'ancienne_date_debut'  => $currentSnapshot?->nouvelle_date_debut,
+                'ancienne_date_fin'    => $currentSnapshot?->nouvelle_date_fin,
+                'nouvelle_date_debut'   => $dateDebut,
+                'nouvelle_date_fin'     => $dateFin,
+                'duree_mois'           => $dureeMois,
+                'montant_ht'           => $totalValue,
+                'action'               => 'creation',
+                'action_par'           => $actorId,
+                'notes'                => $payload['abonnement_notes'],
+            ]);
+
+            $existingPendingTransaction->update([
+                'abonnement_id'      => $subscription->abonnement_id,
+                'montant_base_ht'    => $baseValue,
+                'montant_options_ht' => max(0, $modulesValue),
+                'montant_total_ht'   => $totalValue,
+                'taux_tva'           => 0,
+                'montant_tva'        => 0,
+                'montant_ttc'        => $totalValue,
+                'duree_mois'         => $dureeMois,
+                'periode_debut'      => $dateDebut,
+                'periode_fin'        => $dateFin,
+                'options_souscrites' => $payload['options'],
+                'mode_paiement'      => $modePaiement,
+                'statut'             => 'validee',
+                'date_paiement'      => now(),
+                'date_validation'    => now(),
+                'updated_by'         => $actorId,
+                'notes'              => $payload['abonnement_notes'],
+            ]);
+
+            $transaction = $existingPendingTransaction->fresh(['abonnement', 'abonnementHistorique']);
+        } else {
+            $historique = AbonnementHistorique::create([
+                'agence_id'            => $agence->agence_id,
+                'ancien_abonnement_id' => $currentSnapshot?->abonnement_id,
+                'nouvel_abonnement_id' => $subscription->abonnement_id,
+                'ancienne_date_debut'  => $currentSnapshot?->nouvelle_date_debut,
+                'ancienne_date_fin'    => $currentSnapshot?->nouvelle_date_fin,
+                'nouvelle_date_debut'  => $dateDebut,
+                'nouvelle_date_fin'    => $dateFin,
+                'duree_mois'           => $dureeMois,
+                'montant_ht'           => $totalValue,
+                'action'               => 'creation',
+                'action_par'           => $actorId,
+                'notes'                => $payload['abonnement_notes'],
+            ]);
+
+            $transaction = $this->transactionRepository->create([
+                'agence_id'                => $agence->agence_id,
+                'abonnement_id'            => $subscription->abonnement_id,
+                'abonnement_historique_id' => $historique->id,
+                'montant_base_ht'          => $baseValue,
+                'montant_options_ht'       => max(0, $modulesValue),
+                'montant_total_ht'         => $totalValue,
+                'taux_tva'                 => 0,
+                'montant_tva'              => 0,
+                'montant_ttc'              => $totalValue,
+                'duree_mois'               => $dureeMois,
+                'periode_debut'            => $dateDebut,
+                'periode_fin'              => $dateFin,
+                'options_souscrites'       => $payload['options'],
+                'mode_paiement'            => $modePaiement,
+                'type_operation'           => 'souscription',
+                'statut'                   => 'validee',
+                'date_paiement'            => now(),
+                'date_validation'          => now(),
+                'created_by'               => $actorId,
+                'updated_by'               => $actorId,
+                'notes'                    => $payload['abonnement_notes'],
+            ]);
+        }
 
         return [
             'subscription' => $subscription->fresh(),
@@ -453,6 +510,24 @@ class AgenceService
             'autre', 'other', 'test' => 'autre',
             default => 'autre',
         };
+    }
+
+    protected function findPendingSubscriptionTransaction(
+        string $agenceId,
+        Carbon $dateDebut,
+        Carbon $dateFin,
+        float $montantTtc
+    ): ?Transaction {
+        return Transaction::query()
+            ->with(['abonnementHistorique'])
+            ->where('agence_id', $agenceId)
+            ->where('type_operation', 'souscription')
+            ->where('statut', 'en_attente')
+            ->whereDate('periode_debut', $dateDebut->toDateString())
+            ->whereDate('periode_fin', $dateFin->toDateString())
+            ->whereRaw('ROUND(montant_ttc, 2) = ?', [round($montantTtc, 2)])
+            ->latest('created_at')
+            ->first();
     }
 
     protected function buildSubscriptionPlanSnapshot(): array
