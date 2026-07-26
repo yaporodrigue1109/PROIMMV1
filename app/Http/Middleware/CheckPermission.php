@@ -13,17 +13,15 @@ class CheckPermission
         // Déterminer le guard selon la route
         $guard = $this->getGuardFromRoute($request);
 
-        // Vérifier si l'utilisateur est authentifié
-        if ($guard === 'admin') {
-            return redirect()->route('admin.dashboard');
+        $auth = Auth::guard($guard);
+
+        // Bloquer proprement les visiteurs non connectés avant de tester la permission
+        if (!$auth->check()) {
+            return redirect()->route($guard === 'admin' ? 'admin.login' : 'agence.login');
         }
 
-        if ($guard === 'user') {
-            return redirect()->route('agence.dashboard');
-        }
-      //  dd(Auth::guard($guard)->user()->hasPermission($permission),$permission);
-        // Vérifier si l'utilisateur a la permission
-        if (!Auth::guard($guard)->user()->hasPermission($permission)) {
+        // Vérifier si l'utilisateur a la permission demandée
+        if (!$auth->user()->hasPermission($permission)) {
             abort(403, 'Vous n\'avez pas la permission nécessaire.');
         }
 

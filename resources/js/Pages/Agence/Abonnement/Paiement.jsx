@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Banknote, Check, CreditCard, Smartphone, WalletCards } from 'lucide-react';
+import { ArrowLeft, Banknote, Check, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 
 import AgenceLayout from '../../../Layouts/AgenceLayout';
@@ -25,10 +25,12 @@ function SummaryLine({ label, value, strong = false }) {
 export default function Paiement({ draft = {}, tarifs = {} }) {
     const page = usePage();
     const agency = page?.props?.auth?.user?.agence ?? null;
+    const subscriptionContext = draft.subscription_context ?? {};
     const modules = Array.isArray(draft.modules) ? draft.modules : [];
     const [selectedMethod, setSelectedMethod] = useState('orange_money');
     const plan = tarifs.plan ?? {};
     const agencyName = agency?.name ?? agency?.nom ?? agency?.raison_sociale ?? agency?.nom_agence ?? 'Mon agence';
+    const pageTitle = subscriptionContext.title ?? 'Portail de paiement';
     const duration = Number(draft.duree_mois ?? 0);
     const baseValue =
         Number(draft.prix_base ?? draft.prix_base_ht ?? 0) > 0
@@ -76,8 +78,8 @@ export default function Paiement({ draft = {}, tarifs = {} }) {
     ];
 
     return (
-        <AgenceLayout title="Portail de paiement">
-            <Head title="Portail de paiement" />
+        <AgenceLayout title={pageTitle}>
+            <Head title={pageTitle} />
 
             <div className="mx-auto flex max-w-7xl flex-col gap-6 pb-10">
                 <div className="flex items-center gap-3">
@@ -87,7 +89,10 @@ export default function Paiement({ draft = {}, tarifs = {} }) {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-xl font-semibold text-[#0f172a]">Portail de paiement</h1>
+                        <h1 className="text-xl font-semibold text-[#0f172a]">{pageTitle}</h1>
+                        <p className="mt-1 text-sm text-[#5f7182]">
+                            {subscriptionContext.description ?? 'Selectionnez la methode de paiement puis validez votre demande.'}
+                        </p>
                     </div>
                 </div>
 
@@ -188,7 +193,7 @@ export default function Paiement({ draft = {}, tarifs = {} }) {
                                 onClick={submitTestValidation}
                                 className="h-11 w-full rounded-2xl bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
                             >
-                                Valider test
+                                {subscriptionContext.button_label ?? 'Valider test'}
                             </Button>
                         </CardContent>
                     </Card>
