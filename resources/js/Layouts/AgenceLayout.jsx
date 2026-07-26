@@ -11,6 +11,7 @@ import {
     LogOut,
     Menu,
     PanelLeftClose,
+    MessageSquareMore,
     Settings2,
     UserRound,
     UsersRound,
@@ -79,6 +80,12 @@ const navigation = [
         href: '/agence/statistiques',
         icon: BarChart3,
         activeMatch: '/agence/statistiques',
+    },
+    {
+        label: 'Support',
+        href: '/agence/support',
+        icon: MessageSquareMore,
+        activeMatch: '/agence/support',
     },
     {
         label: 'Parametrage',

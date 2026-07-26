@@ -53,6 +53,189 @@ Route::middleware(['user'])->group(function () {
         ]);
     })->name('profile');
 
+    Route::get('/support', function () {
+        $phone = company_phone() ?: null;
+        $email = company_email() ?: null;
+
+        $digits = $phone ? preg_replace('/\D+/', '', $phone) : '';
+
+        return Inertia::render('Agence/Support/Index', [
+            'support' => [
+                'phone' => $phone,
+                'email' => $email,
+                'whatsapp' => $digits !== '' ? 'https://wa.me/' . $digits : null,
+                'hours' => 'Lun - Ven, 08h00 - 18h00',
+            ],
+        ]);
+    })->name('support');
+
+    Route::get('/support/nouveau', function () {
+        $phone = company_phone() ?: null;
+        $email = company_email() ?: null;
+
+        $digits = $phone ? preg_replace('/\D+/', '', $phone) : '';
+
+        return Inertia::render('Agence/Support/Form', [
+            'support' => [
+                'phone' => $phone,
+                'email' => $email,
+                'whatsapp' => $digits !== '' ? 'https://wa.me/' . $digits : null,
+                'hours' => 'Lun - Ven, 08h00 - 18h00',
+            ],
+        ]);
+    })->name('support.create');
+
+    Route::get('/support/{ticket}', function (string $ticket) {
+        $phone = company_phone() ?: null;
+        $email = company_email() ?: null;
+        $digits = $phone ? preg_replace('/\D+/', '', $phone) : '';
+
+        $tickets = [
+            'T-1042' => [
+                'id' => 'T-1042',
+                'subject' => "Impossible d'accéder à mon abonnement",
+                'category' => 'Abonnement',
+                'status' => 'open',
+                'priority' => 'high',
+                'createdAt' => '26 juil. 2026',
+                'updatedAt' => 'Il y a 12 min',
+                'requester' => 'Société KAN',
+                'email' => 'contact@kan-immobilier.ci',
+                'phone' => '+225 07 11 22 33 44',
+                'description' => "Depuis ce matin, l'espace abonnement renvoie une erreur 403 dès l'ouverture de la page.",
+                'messages' => [
+                    [
+                        'author' => 'Client',
+                        'time' => '09:12',
+                        'body' => "Bonjour, je n'arrive plus à accéder à notre abonnement depuis ce matin.",
+                    ],
+                    [
+                        'author' => 'Agence',
+                        'time' => '09:24',
+                        'body' => "Nous avons bien reçu votre demande et nous vérifions l'état de votre espace.",
+                    ],
+                    [
+                        'author' => 'Client',
+                        'time' => '09:35',
+                        'body' => "Merci, je reste disponible si vous avez besoin d'autres informations.",
+                    ],
+                ],
+            ],
+            'T-1037' => [
+                'id' => 'T-1037',
+                'subject' => 'Export des mandats en PDF',
+                'category' => 'Technique',
+                'status' => 'pending',
+                'priority' => 'medium',
+                'createdAt' => '25 juil. 2026',
+                'updatedAt' => 'Il y a 2 h',
+                'requester' => 'Agence Horizon',
+                'email' => 'support@agence-horizon.ci',
+                'phone' => '+225 01 02 03 04 05',
+                'description' => 'Le PDF généré pour les mandats de plus de 20 pages arrive vide.',
+                'messages' => [
+                    [
+                        'author' => 'Client',
+                        'time' => '10:05',
+                        'body' => 'Le document est téléchargé correctement, mais il ne contient aucune page.',
+                    ],
+                    [
+                        'author' => 'Agence',
+                        'time' => '10:18',
+                        'body' => 'Merci, nous avons relancé la génération côté serveur pour analyse.',
+                    ],
+                ],
+            ],
+            'T-1030' => [
+                'id' => 'T-1030',
+                'subject' => 'Mise à jour des coordonnées bancaires',
+                'category' => 'Facturation',
+                'status' => 'resolved',
+                'priority' => 'low',
+                'createdAt' => '23 juil. 2026',
+                'updatedAt' => 'Hier',
+                'requester' => 'Immobilière du Centre',
+                'email' => 'compta@ic.ci',
+                'phone' => '+225 05 55 55 55 55',
+                'description' => 'Merci de mettre à jour l’IBAN pour les prochains prélèvements.',
+                'messages' => [
+                    [
+                        'author' => 'Client',
+                        'time' => '14:10',
+                        'body' => 'Voici le nouvel IBAN à prendre en compte pour nos prochains paiements.',
+                    ],
+                    [
+                        'author' => 'Agence',
+                        'time' => '15:05',
+                        'body' => 'La mise à jour a été appliquée et votre dossier est désormais à jour.',
+                    ],
+                ],
+            ],
+            'T-1021' => [
+                'id' => 'T-1021',
+                'subject' => 'Ajout de trois collaborateurs',
+                'category' => 'Compte',
+                'status' => 'closed',
+                'priority' => 'low',
+                'createdAt' => '18 juil. 2026',
+                'updatedAt' => '20 juil. 2026',
+                'requester' => 'Syndic Bleu',
+                'email' => 'admin@syndicbleu.ci',
+                'phone' => '+225 01 09 09 09 09',
+                'description' => 'Nous souhaitons ajouter trois nouveaux agents à notre espace.',
+                'messages' => [
+                    [
+                        'author' => 'Client',
+                        'time' => '08:40',
+                        'body' => 'Pouvez-vous créer les accès pour trois nouveaux utilisateurs ?',
+                    ],
+                    [
+                        'author' => 'Agence',
+                        'time' => '09:05',
+                        'body' => 'C’est fait, les invitations ont été envoyées.',
+                    ],
+                ],
+            ],
+            'T-1018' => [
+                'id' => 'T-1018',
+                'subject' => 'Problème de synchronisation du calendrier',
+                'category' => 'Technique',
+                'status' => 'open',
+                'priority' => 'medium',
+                'createdAt' => '16 juil. 2026',
+                'updatedAt' => 'Il y a 5 h',
+                'requester' => 'Résidences Avenir',
+                'email' => 'contact@residencesavenir.ci',
+                'phone' => '+225 01 77 77 77 77',
+                'description' => 'Les rendez-vous créés sur mobile ne remontent pas sur le portail.',
+                'messages' => [
+                    [
+                        'author' => 'Client',
+                        'time' => '11:25',
+                        'body' => 'Les événements saisis sur mobile disparaissent de l’agenda web.',
+                    ],
+                    [
+                        'author' => 'Agence',
+                        'time' => '12:10',
+                        'body' => 'Nous analysons la synchronisation entre les deux interfaces.',
+                    ],
+                ],
+            ],
+        ];
+
+        abort_unless(isset($tickets[$ticket]), 404);
+
+        return Inertia::render('Agence/Support/Show', [
+            'support' => [
+                'phone' => $phone,
+                'email' => $email,
+                'whatsapp' => $digits !== '' ? 'https://wa.me/' . $digits : null,
+                'hours' => 'Lun - Ven, 08h00 - 18h00',
+            ],
+            'ticket' => $tickets[$ticket],
+        ]);
+    })->name('support.show');
+
     Route::prefix('dashboard')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     });

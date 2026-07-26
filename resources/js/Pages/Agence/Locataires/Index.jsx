@@ -544,7 +544,6 @@ export default function Index({
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p className="text-sm text-[#5f7182]">Suivi des occupants et contrats de location</p>
                         <h2 className="text-2xl font-semibold text-[#0f172a]">Gestion des locataires</h2>
                     </div>
 
@@ -662,7 +661,7 @@ export default function Index({
                 </Card>
 
                 <DataTable
-                    title="Catalogue des locataires"
+                    title="Tous les locataires"
                    
                     columns={columns}
                     data={rows}

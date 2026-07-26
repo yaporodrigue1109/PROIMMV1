@@ -172,7 +172,7 @@ Route::middleware(['admin'])->group(function () {
     */
     Route::prefix('tickets')->name('tickets.')->group(function () {
         Route::get('/', [TicketController::class, 'index'])
-            ->middleware('permission:view-tickets')
+            ->middleware('permission:view_tickets')
             ->name('index');
     });
 

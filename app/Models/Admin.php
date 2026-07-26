@@ -260,6 +260,9 @@ class Admin extends Authenticatable
             'view_rapports',
             'export_rapports',
 
+            // Permissions support
+            'view_tickets',
+
             // Permissions paramètres
             'manage_settings',
             'manage_backups',
@@ -284,6 +287,7 @@ class Admin extends Authenticatable
                 'create_users',
                 'edit_users',
                 'delete_users',
+                'view_tickets',
                 'view_rapports',
                 'export_rapports',
                 'manage_settings',
