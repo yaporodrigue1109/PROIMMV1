@@ -71,4 +71,14 @@ class Batiment extends Model
     {
         return $this->portes->where('is_occupe', false)->count();
     }
+
+        public static function withDefaultRelations(): \Illuminate\Database\Eloquent\Builder
+    {
+        return static::with([
+            'propriete',
+            'portes', 
+            'portesLibres',
+              
+        ]);
+    }
 }

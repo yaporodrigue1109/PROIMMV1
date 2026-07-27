@@ -121,7 +121,7 @@ class MaintenanceRepository implements MaintenanceRepositoryInterface
 
     public function getByAgence($agenceId)
     {
-        return $this->model->withDefaultRelations()->where('agence_id', $agenceId)->get();
+        return $this->model->withDefaultRelations()->where('agence_id', $agenceId)->orderBy('created_at', 'desc')->get();
     }
 
     public function getByDateRange($startDate, $endDate)

@@ -65,7 +65,7 @@ const MOUVEMENT_OPTIONS = [
     {
         title: 'Vente de biens',
         description: 'Enregistrer une vente de bien immobilier',
-        href: '/agence/caisse/vente',
+        href: '/agence/caisse/vente-bien',
         icon: Banknote,
         accent: 'bg-[#eef8df] text-[#4d8500]',
     },

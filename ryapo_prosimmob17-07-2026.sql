@@ -30,7 +30,7 @@ SET time_zone = "+00:00";
 
 -- --------------------------------------------------------
 
---
+-- 
 -- Structure de la table `abonnements`
 --
 
@@ -68,7 +68,14 @@ CREATE TABLE `abonnements` (
   `updated_by` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `deleted_at` timestamp NULL DEFAULT NULL
+  `deleted_at` timestamp NULL DEFAULT NULL,
+   -- Clé primaire
+  PRIMARY KEY (`abonnement_id`),
+  KEY `idx_agence_id` (`agence_id`),
+  KEY `idx_ancien_abonnement` (`ancien_abonnement_id`),
+  KEY `idx_nouvel_abonnement` (`nouvel_abonnement_id`),
+  KEY `idx_code_abonnement` (`code_abonnement`),
+  KEY `idx_statut` (`statut`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --

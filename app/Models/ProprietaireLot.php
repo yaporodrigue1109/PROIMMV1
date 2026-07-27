@@ -90,7 +90,10 @@ class ProprietaireLot extends Model
     {
         return $this->belongsTo(User::class, 'created_by', 'id_users');
     }
-
+    public function baux()
+    {
+        return $this->hasMany(ProprietaireAgence::class, 'proprietaire_id', 'proprietaire_id');
+    }
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by', 'id_users');

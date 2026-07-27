@@ -6,12 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Abonnement extends Model
 {
     use SoftDeletes;
 
     protected $primaryKey = 'abonnement_id';
+    public $incrementing = false;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'code_abonnement',
@@ -61,7 +64,15 @@ class Abonnement extends Model
         'montant_ht'          => 'decimal:2',
     ];
 
-    // ─── Relations ───────────────────────────────────────────────────────────
+    protected static function booted(): void
+    {
+        static::creating(function (self $abonnement) {
+            if (empty($abonnement->{$abonnement->getKeyName()})) {
+                $nextId = (int) (DB::table($abonnement->getTable())->max($abonnement->getKeyName()) ?? 0) + 1;
+                $abonnement->{$abonnement->getKeyName()} = $nextId;
+            }
+        });
+    }
 
     public function agences(): HasMany
     {
@@ -93,14 +104,10 @@ class Abonnement extends Model
         return $this->belongsTo(self::class, 'nouvel_abonnement_id', 'abonnement_id');
     }
 
-    // ─── Scopes ──────────────────────────────────────────────────────────────
-
     public function scopeActifs($query)
     {
         return $query->where('statut', 'actif');
     }
-
-    // ─── Accessors ───────────────────────────────────────────────────────────
 
     public function getPrixMensuelFormateAttribute(): string
     {

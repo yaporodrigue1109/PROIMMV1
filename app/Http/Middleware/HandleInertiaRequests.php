@@ -14,6 +14,7 @@ class HandleInertiaRequests extends Middleware
     {
         $admin = Auth::guard('admin')->user();
         $user = Auth::guard('user')->user();
+        $user?->loadMissing(['agence']);
 
         return array_merge(parent::share($request), [
             'appName' => config('app.name'),
@@ -32,6 +33,14 @@ class HandleInertiaRequests extends Middleware
                     'phone' => $user->phone,
                     'statut' => $user->statut,
                     'agence_id' => $user->agence_id,
+                    'agence' => $user->agence ? [
+                        'agence_id' => $user->agence->agence_id,
+                        'name' => $user->agence->name,
+                        'code_agence' => $user->agence->code_agence,
+                        'abonnement_id' => $user->agence->abonnement_id,
+                        'abonnement_start' => $user->agence->abonnement_start,
+                        'abonnement_end' => $user->agence->abonnement_end,
+                    ] : null,
                 ] : null,
             ],
             'flash' => [
