@@ -19,7 +19,11 @@ class TicketController extends Controller
             'id' => $ticket->reference, 'uuid' => $ticket->support_ticket_id, 'subject' => $ticket->sujet,
             'status' => $ticket->statut, 'priority' => $ticket->priorite, 'category' => $ticket->categorie,
             'updatedAt' => $ticket->updated_at?->diffForHumans(),
-            'requester' => ['name' => $ticket->demandeur?->name ?? 'Agence', 'email' => $ticket->demandeur?->email ?? null, 'agency' => $ticket->agence_id],
+            'requester' => [
+                'name' => $ticket->demandeur?->name ?? 'Utilisateur inconnu',
+                'email' => $ticket->demandeur?->email ?? null,
+                'agency' => $ticket->agence?->name ?? $ticket->agence?->code_agence ?? 'Agence inconnue',
+            ],
             'messages' => collect([['id' => 'description', 'author' => $ticket->demandeur?->name ?? 'Agence', 'role' => 'client', 'at' => $ticket->created_at?->diffForHumans(), 'body' => $ticket->description]])->concat($ticket->messages->map(fn ($message) => ['id' => $message->support_message_id, 'author' => $message->auteur_type === 'agence' ? ($ticket->demandeur?->name ?? 'Agence') : 'Support Pros Immobilier', 'role' => $message->auteur_type === 'agence' ? 'client' : 'agent', 'at' => $message->created_at?->diffForHumans(), 'body' => $message->contenu]))->values(),
         ])->values();
         return Inertia::render('Admin/Tickets/Index', ['tickets' => $tickets, 'stats' => $this->tickets->globalStatistics()]);

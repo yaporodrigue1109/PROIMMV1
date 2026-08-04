@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { router } from '@inertiajs/react';
 import {
     ArrowLeft,
+    Building2,
     CheckCircle2,
     Circle,
     Clock,
@@ -206,14 +207,20 @@ function TicketList({ tickets, activeId, onSelect }) {
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2">
                                 {ticket.unread ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#00559b]" /> : null}
-                                <span
-                                    className={cn(
-                                        'truncate text-sm',
-                                        ticket.unread ? 'font-semibold text-[#0f172a]' : 'font-medium text-[#334155]'
-                                    )}
-                                >
-                                    {ticket.requester.name}
-                                </span>
+                                <div className="min-w-0">
+                                    <p
+                                        className={cn(
+                                            'truncate text-sm',
+                                            ticket.unread ? 'font-semibold text-[#0f172a]' : 'font-medium text-[#334155]'
+                                        )}
+                                    >
+                                        {ticket.requester.name}
+                                    </p>
+                                    <p className="flex items-center gap-1 truncate text-[11px] text-[#5f7182]">
+                                        <Building2 className="h-3 w-3 shrink-0" />
+                                        {ticket.requester.agency ?? 'Agence inconnue'}
+                                    </p>
+                                </div>
                             </div>
                             <span className="shrink-0 text-[11px] text-[#5f7182]">{ticket.updatedAt}</span>
                         </div>
@@ -278,6 +285,10 @@ function Conversation({ ticket, onBack, onSend, onStatusChange }) {
                             <span className="inline-flex items-center gap-1">
                                 <UserIcon className="h-3.5 w-3.5" />
                                 {ticket.requester.name}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                                <Building2 className="h-3.5 w-3.5" />
+                                {ticket.requester.agency ?? 'Agence inconnue'}
                             </span>
                             <span className="inline-flex items-center gap-1">
                                 <Tag className="h-3.5 w-3.5" />
