@@ -427,3 +427,18 @@ if (!function_exists('getArrierePrecedentLocataire')) {
 
 }
 
+if (!function_exists('getparametrageAgence')) {
+    function getparametrageAgence(?string $agenceId = null)
+    {
+        $id = $agenceId ?? getInfoAgent()->users->agence_id;
+        return \App\Models\ParametrageAgence::getForAgence($id);
+    }
+}
+
+if (!function_exists('getInfoAgence')) {
+    function getInfoAgence(?string $agenceId = null)
+    {
+        $id = $agenceId ?? getInfoAgent()->users->agence_id;
+        return \App\Models\Agence::where('agence_id', $id)->first();
+    }
+}

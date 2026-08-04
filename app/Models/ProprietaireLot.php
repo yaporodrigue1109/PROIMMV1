@@ -99,6 +99,21 @@ class ProprietaireLot extends Model
         return $this->belongsTo(User::class, 'updated_by', 'id_users');
     }
 
+
+    public static function withDefaultRelations(): \Illuminate\Database\Eloquent\Builder
+    {
+        return static::with([
+            'ville',
+            'proprietes',
+            'creator',
+            'baux',
+            'updater',
+            'region',
+            'agence',
+            'proprietaire',
+        ]);
+    }
+
     // =============================================
     // SCOPES
     // =============================================
