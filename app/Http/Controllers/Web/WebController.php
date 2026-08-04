@@ -24,6 +24,22 @@ class WebController extends Controller
 
     public function home(): Response { return Inertia::render('Web/Home', ['properties' => $this->listProperties(6)]); }
     public function properties(Request $request): Response { return Inertia::render('Web/Properties', ['properties' => $this->listProperties(24), 'mode' => $request->string('mode')->toString()]); }
+    public function propertyDetails(Propriete $property): Response
+    {
+        abort_unless($property->is_actif, 404);
+
+        $property->load([
+            'typePropriete',
+            'agence',
+            'batiments.portes.typePorte',
+            'batiments.portes.tarifActif',
+            'proprieteProximites.proximite',
+        ]);
+
+        return Inertia::render('Web/PropertyDetails', [
+            'property' => $this->mapProperty($property, true),
+        ]);
+    }
     public function pricing(): Response
     {
         return Inertia::render('Web/Pricing', [
@@ -127,5 +143,74 @@ class WebController extends Controller
 
         return back()->with('success', 'Votre message a bien été envoyé. Notre équipe vous répondra rapidement.');
     }
-    private function listProperties(int $limit): array { return Propriete::query()->where('is_actif', true)->with(['typePropriete','batiments.portes.tarifActif'])->latest()->limit($limit)->get()->map(function ($property) { $door=$property->batiments->flatMap->portes->firstWhere('is_occupe', false) ?? $property->batiments->flatMap->portes->first(); return ['id'=>$property->propriete_id,'reference'=>$property->reference,'title'=>$property->typePropriete?->name ?? 'Propriété','address'=>$property->adresse_complete,'mode'=>$property->is_allocation ? 'location' : 'vente','price'=>(float)($door?->tarifActif?->mt_loyer ?? $door?->mt_loyer ?? 0),'surface'=>$door?->superficie_m2,'image'=>null]; })->all(); }
+    private function listProperties(int $limit): array
+    {
+        return Propriete::query()
+            ->where('is_actif', true)
+            ->with(['typePropriete', 'batiments.portes.tarifActif'])
+            ->latest()
+            ->limit($limit)
+            ->get()
+            ->map(fn (Propriete $property) => $this->mapProperty($property))
+            ->all();
+    }
+
+    private function mapProperty(Propriete $property, bool $withDetails = false): array
+    {
+        $doors = $property->batiments->flatMap->portes;
+        $availableDoors = $doors->where('is_actif', true)->where('is_occupe', false);
+        $referenceDoor = $availableDoors->first() ?? $doors->first();
+
+        $payload = [
+            'id' => $property->propriete_id,
+            'reference' => $property->reference,
+            'title' => $property->typePropriete?->name ?? 'Propriété',
+            'description' => $property->description,
+            'address' => $property->adresse_complete,
+            'mode' => $property->is_allocation ? 'location' : 'vente',
+            'price' => (float) ($referenceDoor?->tarifActif?->mt_loyer ?? $referenceDoor?->mt_loyer ?? 0),
+            'surface' => $referenceDoor?->superficie_m2,
+            'image' => null,
+            'buildings_count' => $property->batiments->count(),
+            'units_count' => $doors->count(),
+            'available_units_count' => $availableDoors->count(),
+        ];
+
+        if (! $withDetails) {
+            return $payload;
+        }
+
+        return array_merge($payload, [
+            'agency' => [
+                'name' => $property->agence?->name,
+                'phone' => $property->agence?->tel1,
+                'email' => $property->agence?->email1,
+                'address' => $property->agence?->adresse,
+            ],
+            'buildings' => $property->batiments->map(fn ($building) => [
+                'id' => $building->batiment_id,
+                'name' => $building->name ?: 'Bâtiment',
+                'description' => $building->description,
+                'floors' => $building->nbre_etages,
+                'units' => $building->portes->where('is_actif', true)->map(fn ($door) => [
+                    'id' => $door->porte_id,
+                    'number' => $door->numero_porte,
+                    'type' => $door->typePorte?->libelle ?? 'Lot',
+                    'description' => $door->description,
+                    'surface' => $door->superficie_m2,
+                    'floor' => $door->etage,
+                    'available' => ! $door->is_occupe,
+                    'price' => (float) ($door->tarifActif?->mt_loyer ?? $door->mt_loyer ?? 0),
+                    'deposit' => (float) ($door->caution ?? 0),
+                    'advance' => (float) ($door->avance ?? 0),
+                ])->values()->all(),
+            ])->values()->all(),
+            'nearby' => $property->proprieteProximites->map(fn ($item) => [
+                'name' => $item->proximite?->libelle ?? $item->proximite?->name,
+                'distance' => $item->distance,
+                'unit' => $item->unite,
+            ])->filter(fn ($item) => filled($item['name']))->values()->all(),
+            'videos' => collect($property->videos_url)->filter()->values()->all(),
+        ]);
+    }
 }
