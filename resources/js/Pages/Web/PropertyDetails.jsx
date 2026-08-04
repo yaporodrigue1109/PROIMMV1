@@ -34,7 +34,7 @@ export default function PropertyDetails({ property }) {
                     <div className="space-y-8">
                         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                             <Stat icon={Building2} value={property.buildings_count} label="Bâtiment(s)" />
-                            <Stat icon={DoorOpen} value={property.units_count} label="Lot(s)" />
+                                    <Stat icon={DoorOpen} value={property.available_units_count} label="Lot(s) libre(s)" />
                             <Stat icon={CheckCircle2} value={property.available_units_count} label="Disponible(s)" />
                             <Stat icon={Maximize2} value={property.surface ? `${property.surface} m²` : '—'} label="Superficie" />
                         </div>

@@ -192,14 +192,17 @@ class WebController extends Controller
                 'name' => $building->name ?: 'Bâtiment',
                 'description' => $building->description,
                 'floors' => $building->nbre_etages,
-                'units' => $building->portes->where('is_actif', true)->map(fn ($door) => [
+                'units' => $building->portes
+                    ->where('is_actif', true)
+                    ->where('is_occupe', false)
+                    ->map(fn ($door) => [
                     'id' => $door->porte_id,
                     'number' => $door->numero_porte,
                     'type' => $door->typePorte?->libelle ?? 'Lot',
                     'description' => $door->description,
                     'surface' => $door->superficie_m2,
                     'floor' => $door->etage,
-                    'available' => ! $door->is_occupe,
+                    'available' => true,
                     'price' => (float) ($door->tarifActif?->mt_loyer ?? $door->mt_loyer ?? 0),
                     'deposit' => (float) ($door->caution ?? 0),
                     'advance' => (float) ($door->avance ?? 0),
