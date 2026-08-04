@@ -151,7 +151,7 @@ export default function Loyer({ modePaiement = [] }) {
             try {
                 const response = await fetch(`/agence/caisse/loyer/search?q=${encodeURIComponent(trimmed)}`, {
                     signal: controller.signal,
-                    headers: { Accept: 'application/json' },
+                    headers: { Accept: 'application/json' }, 
                 });
 
                 const payload = await response.json();

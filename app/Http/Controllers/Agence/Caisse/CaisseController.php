@@ -5,18 +5,29 @@ namespace App\Http\Controllers\Agence\Caisse;
 use App\Http\Controllers\Controller;
 use App\Models\ModePaiement;
 use App\Repositories\Agence\Interfaces\TransactionAgenceRepositoryInterface;
+use App\Repositories\Agence\Interfaces\MaintenanceRepositoryInterface;
 use Carbon\Carbon;
+use App\Models\ProprietaireAgence;
+use App\Models\ProprietaireLot;
+use App\Models\TypeMaintenance;
+use App\Models\Maintenance;
+use App\Models\Maintenancier;
+use App\Models\Batiment;
+use App\Models\Porte;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
 
 class CaisseController extends Controller
 {
     protected $transactionRepository;
+    protected $maintenanceRepository;
 
-    public function __construct(TransactionAgenceRepositoryInterface $transactionRepository)
+    public function __construct(TransactionAgenceRepositoryInterface $transactionRepository,MaintenanceRepositoryInterface $maintenanceRepository)
     {
         $this->transactionRepository = $transactionRepository;
+        $this->maintenanceRepository = $maintenanceRepository;
     }
 
     public function index()
@@ -193,29 +204,188 @@ class CaisseController extends Controller
         ]);
     }
 
-    public function maintenance()
-    {
-        $agenceId = $this->agenceId();
+   
+  
+public function maintenance(Request $request)
+{
+    $agenceId = $this->agenceId();
 
-        // Récupérer les maintenances depuis la table maintenance
-        $maintenancesData = $this->safeMaintenanceRows($agenceId);
-        
-        // Récupérer les transactions de maintenance pour les stats
-        $transactions = $this->transactionRepository->getByAgence($agenceId);
-        $totalMaintenance = $transactions->where('type_transaction', 'maintenance')->sum('montant_global_verser');
+    // Récupérer les paramètres de filtre
+    $proprietaireFilter = $request->input('proprietaire_id');
+    $lotFilter = $request->input('lot_id');
+    $searchTerm = $request->input('search');
 
-        return Inertia::render('Agence/Caisse/Maintenance', [
-            'caisseOuverte' => true,
-            'maintenances' => $maintenancesData,
-            'totalMaintenance' => (float) $totalMaintenance,
-            'proprietaires' => $this->safeTableRows('proprietaires', ['proprietaire_id', 'name']),
-            'lots' => $this->safeTableRows('propietaire_lots', ['propreietaire_lot_id', 'name', 'proprietaire_id']),
-            'batiments' => $this->safeTableRows('batiment', ['batiment_id', 'name', 'propriete_id']),
-            'portes' => $this->safeTableRows('porte', ['porte_id', 'numero_porte', 'batiment_id']),
-            'typesIntervention' => $this->safeTableRows('type_maintenances', ['type_maintenance_id', 'name', 'description']),
-            'maintenanciers' => $this->safeTableRows('maintenanciers', ['maintenancier_id', 'name', 'fonction_maintenance_id']),
-        ]);
+    // Récupérer les maintenances depuis la table maintenance avec filtres
+    $maintenancesQuery = $this->maintenanceRepository->getByAgence($agenceId);
+
+    // Filtre par propriétaire
+    if ($proprietaireFilter) {
+        $maintenancesQuery->where('proprietaire_id', $proprietaireFilter);
     }
+
+    // Filtre par lot
+    if ($lotFilter) {
+        $maintenancesQuery->where('lot_id', $lotFilter);
+    }
+
+    // Recherche globale
+    if ($searchTerm) {
+        $maintenancesQuery->where(function ($query) use ($searchTerm) {
+            $query->where('titre', 'LIKE', "%{$searchTerm}%")
+                ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+                ->orWhereHas('proprietaire', function ($q) use ($searchTerm) {
+                    $q->where('name', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('tel1', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('tel2', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('email', 'LIKE', "%{$searchTerm}%")
+                        ->orWhere('numpiece', 'LIKE', "%{$searchTerm}%");
+                })
+                ->orWhereHas('lot', function ($q) use ($searchTerm) {
+                    $q->where('name', 'LIKE', "%{$searchTerm}%");
+                });
+        });
+    }
+
+    // Récupérer les maintenances avec les relations
+    $maintenances = $maintenancesQuery;
+
+    // Formater les données pour la vue
+    $maintenancesData = $maintenances->map(function ($maintenance) {
+        return [
+            'maintenance_id' => (string) $maintenance->maintenance_id,
+            'titre' => $maintenance->titre,
+            'description' => $maintenance->description_generale,
+            'proprietaire_id' => $maintenance->proprietaire_id ? (string) $maintenance->proprietaire_id : '',
+            'lot_id' => $maintenance->lot_id ? (string) $maintenance->lot_id : '',
+            'propriete_id' => $maintenance->propriete_id ? (string) $maintenance->propriete_id : '',
+            'batiment_id' => $maintenance->batiment_id ? (string) $maintenance->batiment_id : '',
+            'porte_id' => $maintenance->porte_id ? (string) $maintenance->porte_id : '',
+            'prise_en_charge_par' => $maintenance->prise_en_charge_par ?? 'proprietaire',
+            'statut' => $maintenance->statut ?? 'en_cours',
+            'montant_global' => (float) ($maintenance->montant_global ?? 0),
+            'created_at' => $maintenance->created_at?->toISOString(),
+            'details' => $maintenance->details->map(function ($detail) {
+                return [
+                    'maintenance_detail_id' => (string) $detail->maintenance_detail_id,
+                    'maintenancier_id' => $detail->maintenancier_id ? (string) $detail->maintenancier_id : '',
+                    'type_intervention_id' => $detail->type_intervention_id ? (string) $detail->type_intervention_id : '',
+                    'montant' => (float) ($detail->montant ?? 0),
+                    'date_debut' => $detail->date_debut?->toISOString(),
+                    'date_fin' => $detail->date_fin?->toISOString(),
+                    'priorite' => $detail->priorite ?? 'normale',
+                    'description' => $detail->description ?? '',
+                    'note' => $detail->note ?? '',
+                    'statut' => $detail->statut ?? 'en_cours',
+                ];
+            })->toArray(),
+        ];
+    })->toArray();
+
+    // Récupérer les transactions de maintenance pour les stats
+    $transactions = $this->transactionRepository->getByAgence($agenceId)->where('type_transaction', 'maintenance');
+    $totalMaintenance = $transactions->sum('montant_global_verser');
+
+    // ✅ Récupérer UNIQUEMENT les propriétaires qui ont des maintenances
+    $proprietairesIdsAvecMaintenances = Maintenance::where('agence_id', $agenceId)
+        ->whereNotNull('proprietaire_id')
+        ->distinct()
+        ->pluck('proprietaire_id')
+        ->toArray();
+
+    $proprietaires = ProprietaireAgence::whereHas('proprietaire', function ($q) use ($agenceId, $proprietairesIdsAvecMaintenances) {
+        $q->where('agence_id', $agenceId)
+            ->where('is_active', 1)
+            ->whereIn('proprietaire_id', $proprietairesIdsAvecMaintenances); // ✅ Filtrer par propriétaires avec maintenances
+    })
+    ->with(['proprietaire'])
+    ->get()
+    ->map(function ($item) {
+        return [
+            'proprietaire_id' => (string) $item->proprietaire_id,
+            'name' => $item->proprietaire?->name ?? 'Propriétaire sans nom',
+        ];
+    })
+    ->unique('proprietaire_id')
+    ->values()
+    ->toArray();
+
+    // ✅ Récupérer UNIQUEMENT les lots qui ont des maintenances
+    $lotsIdsAvecMaintenances = Maintenance::where('agence_id', $agenceId)
+        ->whereNotNull('lot_id')
+        ->distinct()
+        ->pluck('lot_id')
+        ->toArray();
+
+    $lots = ProprietaireLot::where('agence_id', $agenceId)
+        ->whereHas('baux', function ($q) {
+            $q->where('is_active', 1);
+        })
+        ->whereIn('propreietaire_lot_id', $lotsIdsAvecMaintenances) // ✅ Filtrer par lots avec maintenances
+        ->select('propreietaire_lot_id', 'name', 'proprietaire_id')
+        ->get()
+        ->map(fn($item) => [
+            'propreietaire_lot_id' => (string) $item->propreietaire_lot_id,
+            'name' => $item->name,
+            'proprietaire_id' => (string) $item->proprietaire_id,
+        ])
+        ->toArray();
+
+    // Bâtiments
+    $batiments = Batiment::where('agence_id', $agenceId)
+        ->select('batiment_id', 'name', 'propriete_id')
+        ->get()
+        ->map(fn($item) => [
+            'batiment_id' => (string) $item->batiment_id,
+            'name' => $item->name,
+            'propriete_id' => (string) $item->propriete_id,
+        ])
+        ->toArray();
+
+    // Portes
+    $portes = Porte::where('agence_id', $agenceId)
+        ->select('porte_id', 'numero_porte', 'batiment_id')
+        ->get()
+        ->map(fn($item) => [
+            'porte_id' => (string) $item->porte_id,
+            'numero_porte' => $item->numero_porte,
+            'batiment_id' => (string) $item->batiment_id,
+        ])
+        ->toArray();
+
+    // Types d'intervention
+    $typesIntervention = TypeMaintenance::select('type_maintenance_id', 'name', 'description')
+        ->get()
+        ->map(fn($item) => [
+            'type_maintenance_id' => (string) $item->type_maintenance_id,
+            'name' => $item->name,
+            'description' => $item->description,
+        ])
+        ->toArray();
+
+    // Maintenanciers
+    $maintenanciers = Maintenancier::where('agence_id', $agenceId)
+        ->select('maintenancier_id', 'name', 'fonction_maintenance_id')
+        ->get()
+        ->map(fn($item) => [
+            'maintenancier_id' => (string) $item->maintenancier_id,
+            'name' => $item->name,
+            'fonction_maintenance_id' => (string) $item->fonction_maintenance_id,
+        ])
+        ->toArray();
+
+    return Inertia::render('Agence/Caisse/Maintenance', [
+        'caisseOuverte' => true,
+        'maintenances' => $maintenancesData,
+        'totalMaintenance' => (float) $totalMaintenance,
+        'proprietaires' => $proprietaires,
+        'lots' => $lots,
+        'batiments' => $batiments,
+        'portes' => $portes,
+        'typesIntervention' => $typesIntervention,
+        'maintenanciers' => $maintenanciers,
+    ]);
+}
+
 
     public function loyer()
     {

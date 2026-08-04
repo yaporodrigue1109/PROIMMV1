@@ -106,4 +106,17 @@ class Porte extends Model
         return $query->where('is_actif', true);
     }
    
+         public static function withDefaultRelations(): \Illuminate\Database\Eloquent\Builder
+    {
+        return static::with([
+            'batiment',
+            'typePorte', 
+            'tarifs',
+            'loyers',
+            'locatairesAgence',
+            'tarifActif',
+            'batiment.propriete',
+              
+        ]);
+    }
 }

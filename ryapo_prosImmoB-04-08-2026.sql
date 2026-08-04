@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Jul 22, 2026 at 01:16 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.0.30
+-- Hôte : localhost
+-- Généré le : mar. 04 août 2026 à 10:04
+-- Version du serveur : 10.4.28-MariaDB
+-- Version de PHP : 8.2.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,18 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `ryapo_prosimmob`
+-- Base de données : `ryapo_prosImmoB`
 --
 
 -- --------------------------------------------------------
 
-<<<<<<< HEAD:ryapo_prosimmob 21-07-2026.sql
 --
--- Table structure for table `abonnements`
-=======
--- 
 -- Structure de la table `abonnements`
->>>>>>> f9d8372 (Initial commit: Projet de gestion immobilière):ryapo_prosimmob17-07-2026.sql
 --
 
 CREATE TABLE `abonnements` (
@@ -66,30 +61,23 @@ CREATE TABLE `abonnements` (
   `updated_by` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `deleted_at` timestamp NULL DEFAULT NULL,
-   -- Clé primaire
-  PRIMARY KEY (`abonnement_id`),
-  KEY `idx_agence_id` (`agence_id`),
-  KEY `idx_ancien_abonnement` (`ancien_abonnement_id`),
-  KEY `idx_nouvel_abonnement` (`nouvel_abonnement_id`),
-  KEY `idx_code_abonnement` (`code_abonnement`),
-  KEY `idx_statut` (`statut`)
+  `deleted_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `abonnements`
+-- Déchargement des données de la table `abonnements`
 --
 
 INSERT INTO `abonnements` (`abonnement_id`, `type`, `agence_id`, `ancien_abonnement_id`, `nouvel_abonnement_id`, `ancienne_date_debut`, `ancienne_date_fin`, `nouvelle_date_debut`, `nouvelle_date_fin`, `duree_mois`, `montant_ht`, `action`, `action_par`, `notes`, `code_abonnement`, `name`, `description`, `prix_mensuel_ht`, `prix_annuel_ht`, `nb_proprietes_max`, `nb_locataires_max`, `nb_utilisateurs_max`, `module_comptabilite`, `module_reporting`, `module_api`, `statut`, `is_default`, `ordre`, `features`, `created_by`, `updated_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
 (1, 'subscription', '4c61c27c-e380-45f1-9847-79c070bb3a86', NULL, NULL, NULL, NULL, '2026-07-17', '2026-08-17', 1, 79000.00, 'creation', '11111111-1111-1111-1111-111111111111', NULL, 'SUB-AG-2026-0003', 'Centrale', NULL, 0.00, NULL, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, NULL, NULL, NULL, '2026-07-17 22:45:17', '2026-07-17 22:45:17', NULL),
 (2, 'subscription', 'c3ee22ef-5fb2-4a43-8af8-50128f324e9e', NULL, NULL, NULL, NULL, '2026-07-17', '2027-01-17', 6, 462000.00, 'creation', '11111111-1111-1111-1111-111111111111', NULL, 'SUB-AG-2026-0004', 'Tuba', NULL, 0.00, NULL, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, NULL, NULL, NULL, '2026-07-17 23:07:53', '2026-07-17 23:07:53', NULL),
 (3, 'subscription', '9959861e-03c6-45c4-a3ba-fc9edd90e88a', NULL, NULL, NULL, NULL, '2026-07-17', '2026-10-17', 3, 165000.00, 'creation', '11111111-1111-1111-1111-111111111111', NULL, 'SUB-AG-2026-0005', 'Abonnement de base', 'Notre plan de base offre accès complet à la plateforme avec support standard.', 50000.00, 600000.00, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, '[{\"id\":1,\"label\":\"SMS (Illimit\\u00e9)\",\"prix_mensuel\":25000,\"actif\":true},{\"id\":2,\"label\":\"WhatsApp Business\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":3,\"label\":\"Portail web\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":4,\"label\":\"Statistiques avanc\\u00e9es\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":5,\"label\":\"Portail propri\\u00e9taire\",\"prix_mensuel\":1000,\"actif\":true},{\"id\":6,\"label\":\"Portail locataire\",\"prix_mensuel\":1000,\"actif\":true}]', '11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', '2026-07-17 23:30:39', '2026-07-17 23:30:39', NULL),
-(4, 'subscription', 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 4, 4, '2026-07-21', '2026-08-21', '2026-07-21', '2026-08-21', 1, 79000.00, 'creation', '8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Validation test depuis le portail agence', 'SUB-AG-2026-0003', 'Abonnement de base', 'Notre plan de base offre accès complet à la plateforme avec support standard.', 50000.00, 600000.00, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, '[{\"id\":1,\"label\":\"SMS (Illimit\\u00e9)\",\"prix_mensuel\":25000,\"actif\":true},{\"id\":2,\"label\":\"WhatsApp Business\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":3,\"label\":\"Portail web\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":4,\"label\":\"Statistiques avanc\\u00e9es\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":5,\"label\":\"Portail propri\\u00e9taire\",\"prix_mensuel\":1000,\"actif\":true},{\"id\":6,\"label\":\"Portail locataire\",\"prix_mensuel\":1000,\"actif\":true}]', '8b1fc91c-966b-4bba-acba-46f4de717c6e', '8b1fc91c-966b-4bba-acba-46f4de717c6e', '2026-07-21 22:55:16', '2026-07-21 23:00:29', NULL);
+(4, 'subscription', '2df2a9f8-5d56-4842-a683-8676eb1d017f', NULL, NULL, NULL, NULL, '2026-07-22', '2026-08-22', 1, 83000.00, 'creation', '4fb6adb2-c847-44ac-83e7-4c64c033caef', 'Validation test depuis le portail agence', 'SUB-AG-2026-\n0001', 'Abonnement de base', 'Notre plan de base offre accès complet à la plateforme avec support standard.', 50000.00, 600000.00, NULL, NULL, NULL, 0, 0, 0, 'actif', 0, 0, '[{\"id\":1,\"label\":\"SMS (Illimit\\u00e9)\",\"prix_mensuel\":25000,\"actif\":true},{\"id\":2,\"label\":\"WhatsApp Business\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":3,\"label\":\"Portail web\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":4,\"label\":\"Statistiques avanc\\u00e9es\",\"prix_mensuel\":2000,\"actif\":true},{\"id\":5,\"label\":\"Portail propri\\u00e9taire\",\"prix_mensuel\":1000,\"actif\":true},{\"id\":6,\"label\":\"Portail locataire\",\"prix_mensuel\":1000,\"actif\":true}]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-22 12:20:08', '2026-07-22 12:20:08', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `abonnement_historiques`
+-- Structure de la table `abonnement_historiques`
 --
 
 CREATE TABLE `abonnement_historiques` (
@@ -111,18 +99,17 @@ CREATE TABLE `abonnement_historiques` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `abonnement_historiques`
+-- Déchargement des données de la table `abonnement_historiques`
 --
 
 INSERT INTO `abonnement_historiques` (`id`, `agence_id`, `ancien_abonnement_id`, `nouvel_abonnement_id`, `ancienne_date_debut`, `ancienne_date_fin`, `nouvelle_date_debut`, `nouvelle_date_fin`, `duree_mois`, `montant_ht`, `action`, `action_par`, `notes`, `created_at`, `updated_at`) VALUES
 (6, 'a299981a-d1c1-4690-8e96-d6ddb5df0874', NULL, NULL, NULL, NULL, '2026-05-11', '2027-05-11', 12, 1440000.00, 'creation', 'ADM-001', NULL, '2026-05-11 16:49:43', '2026-05-11 16:49:43'),
-(7, 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', NULL, 4, NULL, NULL, '2026-07-21', '2026-08-21', 1, 79000.00, 'creation', '8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Validation test depuis le portail agence', '2026-07-21 22:55:16', '2026-07-21 22:55:16'),
-(8, 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 4, 4, '2026-07-21', '2026-08-21', '2026-07-21', '2026-08-21', 1, 79000.00, 'creation', '8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Validation test depuis le portail agence', '2026-07-21 23:00:29', '2026-07-21 23:00:29');
+(7, '2df2a9f8-5d56-4842-a683-8676eb1d017f', NULL, 4, NULL, NULL, '2026-07-22', '2026-08-22', 1, 83000.00, 'creation', '4fb6adb2-c847-44ac-83e7-4c64c033caef', 'Validation test depuis le portail agence', '2026-07-22 12:20:08', '2026-07-22 12:20:08');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `acheteurs`
+-- Structure de la table `acheteurs`
 --
 
 CREATE TABLE `acheteurs` (
@@ -144,7 +131,7 @@ CREATE TABLE `acheteurs` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `admins`
+-- Structure de la table `admins`
 --
 
 CREATE TABLE `admins` (
@@ -164,7 +151,7 @@ CREATE TABLE `admins` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `admins`
+-- Déchargement des données de la table `admins`
 --
 
 INSERT INTO `admins` (`id_admin`, `name`, `phone`, `email`, `statut`, `password`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`, `remember_token`) VALUES
@@ -174,7 +161,7 @@ INSERT INTO `admins` (`id_admin`, `name`, `phone`, `email`, `statut`, `password`
 -- --------------------------------------------------------
 
 --
--- Table structure for table `agences`
+-- Structure de la table `agences`
 --
 
 CREATE TABLE `agences` (
@@ -214,18 +201,17 @@ CREATE TABLE `agences` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `agences`
+-- Déchargement des données de la table `agences`
 --
 
 INSERT INTO `agences` (`agence_id`, `name`, `code_agence`, `adresse`, `tel1`, `tel2`, `email1`, `email2`, `region_id`, `ville_id`, `statut`, `is_principale`, `parent_id`, `responsable_id`, `abonnement_id`, `abonnement_start`, `abonnement_end`, `duree_mois`, `rib`, `agence_bancaire`, `banque`, `site_web`, `bp`, `regime_fiscal`, `num_contribuable`, `rccm`, `sigle`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
 ('22222222-2222-2222-2222-222222222222', 'Agence Demo', 'AG-DEMO-001', 'Abidjan', '0102030405', NULL, 'agence.demo@pros-immobilier.test', NULL, NULL, NULL, 'active', 1, NULL, '33333333-3333-3333-3333-333333333333', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', NULL, '2026-07-09 11:41:01', '2026-07-09 11:41:01', NULL),
-('2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Agence de bingerville', 'AG-2026-\n0001', 'Bingerville', '0707902963', NULL, 'agence@bingerville.ci', NULL, 1, 1, 'active', 1, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'BP 123 Abidjan 01', 'SARL', NULL, NULL, NULL, NULL, 'ADM-001', NULL, '2026-04-27 00:01:07', '2026-06-09 08:47:56', NULL),
-('bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 'FROTA', 'AG-2026-0003', 'Cocody', '+2250788965877', '+2250533655878', 'frota@gmail.com', 'frota2@gmail.com', 1, 13, 'en_demo', 1, NULL, '8b1fc91c-966b-4bba-acba-46f4de717c6e', '4', '2026-07-21 00:00:00', '2026-08-21 00:00:00', 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', NULL, '2026-07-21 22:05:16', '2026-07-21 22:55:16', NULL);
+('2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Agence de bingerville', 'AG-2026-\n0001', 'Bingerville', '+2250707902963', NULL, 'agence@bingerville.ci', 'rodrigue.yapo@soumafe.ci', 1, 1, 'active', 1, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4', '2026-07-22 00:00:00', '2026-08-22 00:00:00', 1, NULL, NULL, NULL, NULL, 'BP 123 Abidjan 01', 'SARL', NULL, NULL, NULL, NULL, '', NULL, '2026-04-27 00:01:07', '2026-08-04 02:46:02', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `batiment`
+-- Structure de la table `batiment`
 --
 
 CREATE TABLE `batiment` (
@@ -242,11 +228,12 @@ CREATE TABLE `batiment` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `batiment`
+-- Déchargement des données de la table `batiment`
 --
 
 INSERT INTO `batiment` (`batiment_id`, `propriete_id`, `agence_id`, `name`, `description`, `nbre_etages`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
 ('42ddb365-a8c2-4551-b1f4-9819322c35ef', '3c4ab403-e08f-4193-a0f1-0341f02a3ebd', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'FRR', NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-07 13:19:20', '2026-07-07 13:19:20'),
+('4468c97b-42d4-4a32-bb08-9416f7536f1c', '82024ea3-67b6-42d8-bdad-d98e126eba35', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Batiment B', NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
 ('66898dee-57dd-48c4-9358-97770602368a', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Bâtiment 2', NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-05-26 14:06:33', '2026-05-26 14:06:33'),
 ('79a83de8-04bb-4a25-a83e-48014879b541', '1a85c585-565f-4946-aecb-8a95677ec9d0', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'FRRSSS', NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-07 14:04:11', '2026-07-07 14:04:11'),
 ('7d5ffc45-c4e9-47a6-930b-3a48a8918778', '7eb908bc-f886-498a-a6a5-5875baf25e32', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'ABATTA', NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-07 10:37:09', '2026-07-07 10:37:09'),
@@ -254,12 +241,14 @@ INSERT INTO `batiment` (`batiment_id`, `propriete_id`, `agence_id`, `name`, `des
 ('8ae0d4b2-84e8-4d02-8097-359bf6b0648c', '535e3431-6166-4f51-aa37-36931cc03d3d', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Espoir', NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-09 17:52:43', '2026-07-09 17:52:43'),
 ('8e489f28-784f-46d8-bb57-da2fc1b466a5', '52d5341f-031c-47e3-95b4-1ebb00560bf7', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A', NULL, 1, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-07 08:35:02', '2026-07-07 08:35:02'),
 ('915eb859-b82f-48b9-aca8-efb7cabfc411', 'b8b380ae-b180-49b5-88da-032e73828401', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'ATEOP', 'RAS', 2, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-07 10:16:50', '2026-07-07 10:16:50'),
-('dd839ae3-4ffa-4863-a20d-bf0147125f39', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Bâtiment 1', 'test', 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-05-22 20:24:53', '2026-05-22 20:24:53');
+('ca3307b6-c731-46ef-aeee-74fba27d43c5', '82024ea3-67b6-42d8-bdad-d98e126eba35', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Batiment A', NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
+('dd839ae3-4ffa-4863-a20d-bf0147125f39', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Bâtiment 1', 'test', 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-05-22 20:24:53', '2026-05-22 20:24:53'),
+('e9dbb0a5-4aac-4238-9238-bd00a92efc66', '82024ea3-67b6-42d8-bdad-d98e126eba35', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Batiment C', NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-21 23:32:00', '2026-07-21 23:32:00');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `cache`
+-- Structure de la table `cache`
 --
 
 CREATE TABLE `cache` (
@@ -271,7 +260,7 @@ CREATE TABLE `cache` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `caisses`
+-- Structure de la table `caisses`
 --
 
 CREATE TABLE `caisses` (
@@ -289,7 +278,7 @@ CREATE TABLE `caisses` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `configurations`
+-- Structure de la table `configurations`
 --
 
 CREATE TABLE `configurations` (
@@ -324,7 +313,7 @@ CREATE TABLE `configurations` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Dumping data for table `configurations`
+-- Déchargement des données de la table `configurations`
 --
 
 INSERT INTO `configurations` (`id`, `name`, `boite_postal`, `contact1`, `contact2`, `contact3`, `langue`, `adresse`, `raison_social`, `site_web`, `politique_confidentialite`, `condition_generale`, `cgu`, `email1`, `email2`, `logo`, `flavicon`, `num_rccm`, `capital`, `num_cnps`, `num_cc`, `facebook`, `instagram`, `linkedin`, `google`, `twitter`, `created_at`, `updated_at`) VALUES
@@ -333,7 +322,7 @@ INSERT INTO `configurations` (`id`, `name`, `boite_postal`, `contact1`, `contact
 -- --------------------------------------------------------
 
 --
--- Table structure for table `configuration_tarifs`
+-- Structure de la table `configuration_tarifs`
 --
 
 CREATE TABLE `configuration_tarifs` (
@@ -348,7 +337,7 @@ CREATE TABLE `configuration_tarifs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `configuration_tarifs`
+-- Déchargement des données de la table `configuration_tarifs`
 --
 
 INSERT INTO `configuration_tarifs` (`id`, `plan_nom`, `plan_prix_mensuel`, `delai_grace`, `cycle_facturation`, `plan_description`, `created_at`, `updated_at`) VALUES
@@ -357,7 +346,7 @@ INSERT INTO `configuration_tarifs` (`id`, `plan_nom`, `plan_prix_mensuel`, `dela
 -- --------------------------------------------------------
 
 --
--- Table structure for table `configuration_tarif_durees`
+-- Structure de la table `configuration_tarif_durees`
 --
 
 CREATE TABLE `configuration_tarif_durees` (
@@ -370,7 +359,7 @@ CREATE TABLE `configuration_tarif_durees` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `configuration_tarif_durees`
+-- Déchargement des données de la table `configuration_tarif_durees`
 --
 
 INSERT INTO `configuration_tarif_durees` (`id`, `tarif_id`, `nombre_mois`, `prix_reduit`, `created_at`, `updated_at`) VALUES
@@ -384,7 +373,7 @@ INSERT INTO `configuration_tarif_durees` (`id`, `tarif_id`, `nombre_mois`, `prix
 -- --------------------------------------------------------
 
 --
--- Table structure for table `configuration_tarif_modules`
+-- Structure de la table `configuration_tarif_modules`
 --
 
 CREATE TABLE `configuration_tarif_modules` (
@@ -399,7 +388,7 @@ CREATE TABLE `configuration_tarif_modules` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `configuration_tarif_modules`
+-- Déchargement des données de la table `configuration_tarif_modules`
 --
 
 INSERT INTO `configuration_tarif_modules` (`id`, `tarif_id`, `label`, `prix_mensuel`, `actif`, `ordre`, `created_at`, `updated_at`) VALUES
@@ -413,7 +402,7 @@ INSERT INTO `configuration_tarif_modules` (`id`, `tarif_id`, `label`, `prix_mens
 -- --------------------------------------------------------
 
 --
--- Table structure for table `equipement_proprietes`
+-- Structure de la table `equipement_proprietes`
 --
 
 CREATE TABLE `equipement_proprietes` (
@@ -426,7 +415,7 @@ CREATE TABLE `equipement_proprietes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Dumping data for table `equipement_proprietes`
+-- Déchargement des données de la table `equipement_proprietes`
 --
 
 INSERT INTO `equipement_proprietes` (`id`, `name`, `agence_id`, `description`, `created_at`, `updated_at`) VALUES
@@ -443,7 +432,7 @@ INSERT INTO `equipement_proprietes` (`id`, `name`, `agence_id`, `description`, `
 -- --------------------------------------------------------
 
 --
--- Table structure for table `fonction_maintenance`
+-- Structure de la table `fonction_maintenance`
 --
 
 CREATE TABLE `fonction_maintenance` (
@@ -458,7 +447,7 @@ CREATE TABLE `fonction_maintenance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `fonction_maintenance`
+-- Déchargement des données de la table `fonction_maintenance`
 --
 
 INSERT INTO `fonction_maintenance` (`fonction_maintenance_id`, `agence_id`, `name`, `description`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -469,7 +458,7 @@ INSERT INTO `fonction_maintenance` (`fonction_maintenance_id`, `agence_id`, `nam
 -- --------------------------------------------------------
 
 --
--- Table structure for table `genres`
+-- Structure de la table `genres`
 --
 
 CREATE TABLE `genres` (
@@ -481,7 +470,7 @@ CREATE TABLE `genres` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `genres`
+-- Déchargement des données de la table `genres`
 --
 
 INSERT INTO `genres` (`id`, `name`, `abreviation`, `created_at`, `updated_at`) VALUES
@@ -491,7 +480,7 @@ INSERT INTO `genres` (`id`, `name`, `abreviation`, `created_at`, `updated_at`) V
 -- --------------------------------------------------------
 
 --
--- Table structure for table `locataire`
+-- Structure de la table `locataire`
 --
 
 CREATE TABLE `locataire` (
@@ -520,16 +509,17 @@ CREATE TABLE `locataire` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `locataire`
+-- Déchargement des données de la table `locataire`
 --
 
 INSERT INTO `locataire` (`locataire_id`, `name`, `code`, `tel1`, `tel2`, `email`, `region_id`, `ville_id`, `adresse`, `nationalite`, `type_piece_id`, `num_piece`, `date_expiration_piece`, `date_naissance`, `lieu_naissance`, `genre_id`, `photo`, `image_pice`, `profession`, `password`, `created_at`, `updated_at`) VALUES
+('0ce87951-08f2-42ae-b31e-47d02ce97283', 'Koffi Koundjodji', 'TO-45710', '+2250707823478', '', 'koffikoundjodji@gmail.com', 1, 3, 'Abidjan', 'IVPOIRIENNE', 1, 'CI0009923484', '2026-08-09', '2026-07-01', 'Abidjan', 1, 'http://localhost:8000/admin/assets/images/locataires/photo/6a6082988c8436.05119646.png', 'http://localhost:8000/admin/assets/images/locataires/image_pice/6a6082988d24c6.78696972.png', 'Developpeur', '$2y$12$JsP3lVTGDv0dr3xQYnubwOSpxVmGhAEeL2oUyFt0rrerfUeucTWOm', '2026-07-22 08:43:04', '2026-07-22 08:43:04'),
 ('a60b1ee7-a122-4250-9ecc-f87602b8f581', 'Jean', 'VV-52287', '+225236583658', NULL, NULL, NULL, NULL, NULL, NULL, 2, 'CI9452', '2026-08-08', NULL, NULL, 1, NULL, NULL, NULL, '$2y$12$VRO4FTYHr5nCx.atO5mw7udM9RixDmUV8vSmrkYwIVge2g9u6Eiy6', '2026-07-09 17:37:02', '2026-07-09 17:37:02');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `locataire_agence`
+-- Structure de la table `locataire_agence`
 --
 
 CREATE TABLE `locataire_agence` (
@@ -550,6 +540,7 @@ CREATE TABLE `locataire_agence` (
   `porte_id` varchar(150) NOT NULL,
   `nbre_personne` int(11) NOT NULL DEFAULT 1,
   `date_debut_bail` timestamp NULL DEFAULT NULL,
+  `date_fin_bail` timestamp NULL DEFAULT NULL,
   `date_entree` date DEFAULT NULL,
   `is_active` tinyint(4) NOT NULL DEFAULT 1,
   `is_new` tinyint(4) NOT NULL DEFAULT 1 COMMENT 'Ancien locataire=0 nouveau locataire =1',
@@ -571,16 +562,17 @@ CREATE TABLE `locataire_agence` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `locataire_agence`
+-- Déchargement des données de la table `locataire_agence`
 --
 
-INSERT INTO `locataire_agence` (`locataire_agence_id`, `agence_id`, `locataire_id`, `proprietaire_id`, `loyer_net`, `caution`, `avance`, `agence`, `caution_cie`, `caution_sodeci`, `frais_annexe`, `propriete_id`, `batiment_id`, `lot_id`, `porte_id`, `nbre_personne`, `date_debut_bail`, `date_entree`, `is_active`, `is_new`, `civilite_representant_id`, `name_representant`, `adresse_representant`, `contant_representant`, `nbre_enfant`, `created_by`, `updated_by`, `created_at`, `updated_at`, `pas_de_porte`, `montant_global_garantie`, `date_signature_bail`, `versements_depot_garantie`, `periodicite_paiement_id`, `mode_paiement_id`) VALUES
-('56abbdd5-f3c7-4cb3-bea1-66abee92a543', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', 100000.00, 2.00, 2.00, 1.00, 30000.00, 30000.00, 0.00, '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 1, '2026-07-09 00:00:00', '2026-07-09', 1, 1, NULL, NULL, NULL, NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-09 17:37:02', '2026-07-09 17:37:02', 0.00, 560000.00, '2026-07-09', '[{\"montant\":\"400000\",\"date_versement\":\"2026-07-09\",\"mode_paiement_id\":\"1\"}]', 3, NULL);
+INSERT INTO `locataire_agence` (`locataire_agence_id`, `agence_id`, `locataire_id`, `proprietaire_id`, `loyer_net`, `caution`, `avance`, `agence`, `caution_cie`, `caution_sodeci`, `frais_annexe`, `propriete_id`, `batiment_id`, `lot_id`, `porte_id`, `nbre_personne`, `date_debut_bail`, `date_fin_bail`, `date_entree`, `is_active`, `is_new`, `civilite_representant_id`, `name_representant`, `adresse_representant`, `contant_representant`, `nbre_enfant`, `created_by`, `updated_by`, `created_at`, `updated_at`, `pas_de_porte`, `montant_global_garantie`, `date_signature_bail`, `versements_depot_garantie`, `periodicite_paiement_id`, `mode_paiement_id`) VALUES
+('50e0e24d-6577-491c-961e-2f7d27900aea', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0ce87951-08f2-42ae-b31e-47d02ce97283', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', 40000.00, 2.00, 2.00, 1.00, 0.00, 30000.00, 0.00, '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 1, '2026-07-22 00:00:00', NULL, '2026-07-22', 1, 1, NULL, '', NULL, NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-22 08:43:04', '2026-07-22 08:43:04', 0.00, 230000.00, '2026-07-22', '[{\"montant\":\"230000\",\"date_versement\":\"2026-07-22\",\"mode_paiement_id\":\"1\"}]', 3, NULL),
+('56abbdd5-f3c7-4cb3-bea1-66abee92a543', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', 100000.00, 2.00, 2.00, 1.00, 30000.00, 30000.00, 0.00, '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 1, '2026-07-09 00:00:00', NULL, '2026-07-09', 1, 1, NULL, NULL, NULL, NULL, 0, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-09 17:37:02', '2026-07-09 17:37:02', 0.00, 560000.00, '2026-07-09', '[{\"montant\":\"400000\",\"date_versement\":\"2026-07-09\",\"mode_paiement_id\":\"1\"}]', 3, NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `loyer`
+-- Structure de la table `loyer`
 --
 
 CREATE TABLE `loyer` (
@@ -616,23 +608,29 @@ CREATE TABLE `loyer` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `loyer`
+-- Déchargement des données de la table `loyer`
 --
 
 INSERT INTO `loyer` (`loyer_id`, `locataire_id`, `proprietaire_id`, `lot_id`, `agence_id`, `propriete_id`, `batiment_id`, `porte_id`, `statut`, `montant_a_payer`, `montant_payer`, `montant_restant`, `montant_proprio`, `montant_agence`, `montant_global_proprio`, `montant_global_agence`, `arriere_precedent`, `montant_penalite`, `is_first`, `mode_paiement_id`, `date_paiement`, `mois_paiement`, `annee_paiement`, `date_limit_paiement`, `commentaire`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
 ('0099ed29-1b20-47a9-82f4-8c8c00836498', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 'Paiement total', 100000, 100000, 0, 90000, 10000, 360000, 40000, 0, 0, 0, 1, '2026-07-14 00:00:00', 11, 2026, '2026-11-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:18:06', '2026-07-14 15:18:06'),
+('281f243f-730e-42e4-9bed-02422b6eafb0', '0ce87951-08f2-42ae-b31e-47d02ce97283', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 'Paiement total', 40000, 40000, 0, 36000, 4000, 108000, 12000, 0, 0, 0, 4, '2026-07-22 00:00:00', 10, 2026, '2026-10-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-22 13:14:56', '2026-07-22 13:14:56'),
 ('2971b114-c488-4ffa-ad91-742329f56456', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 'Paiement total', 100000, 100000, 0, 90000, 10000, 90000, 10000, 0, 0, 0, NULL, '2026-07-09 17:37:02', 8, 2026, '2026-08-10 23:59:59', NULL, 'system', NULL, '2026-07-09 17:37:02', '2026-07-09 17:37:02'),
 ('2f2bec40-f03a-4e92-9d01-a5ed48e93205', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 'Paiement total', 100000, 100000, 0, 90000, 10000, 540000, 60000, 0, 0, 0, 1, '2026-07-14 00:00:00', 1, 2027, '2027-01-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:24:05', '2026-07-14 15:24:05'),
 ('6879a615-39ec-4277-900a-42749497f007', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 'Paiement total', 100000, 100000, 0, 0, 0, 0, 0, 0, 0, 0, 4, '2026-07-14 00:00:00', 7, 2026, '2026-07-10 23:59:59', 'test', 'system', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-14 01:59:11', '2026-07-14 15:09:35'),
+('7bbb4a3a-c5a9-4554-9eb9-09ce46b5df3f', '0ce87951-08f2-42ae-b31e-47d02ce97283', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 'Paiement total', 40000, 40000, 0, 36000, 4000, 36000, 4000, 0, 0, 1, NULL, '2026-07-22 08:43:04', 7, 2026, '2026-07-10 23:59:59', NULL, 'system', NULL, '2026-07-22 08:43:04', '2026-07-22 08:43:04'),
 ('90001112-d760-46c1-ba76-6ce91a62b492', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 'Paiement total', 100000, 100000, 0, 90000, 10000, 450000, 50000, 0, 0, 0, 1, '2026-07-14 00:00:00', 12, 2026, '2026-12-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:24:05', '2026-07-14 15:24:05'),
 ('a0d85ad9-f9a7-43f4-bcd5-2859c04c77b5', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 'Paiement total', 100000, 100000, 0, 90000, 10000, 270000, 30000, 0, 0, 0, 1, '2026-07-14 00:00:00', 10, 2026, '2026-10-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:18:06', '2026-07-14 15:18:06'),
 ('b3ea86e2-6d80-4a73-af89-f5ae342053d0', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 'Paiement total', 100000, 100000, 0, 90000, 10000, 90000, 10000, 0, 0, 1, NULL, '2026-07-09 17:37:02', 6, 2026, '2026-07-10 23:59:59', NULL, 'system', NULL, '2026-07-09 17:37:02', '2026-07-14 01:48:28'),
-('dea63ce9-3c82-48a8-a42f-6523fd662858', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 'Paiement total', 100000, 100000, 0, 90000, 10000, 180000, 20000, 0, 0, 0, 4, '2026-07-14 00:00:00', 9, 2026, '2026-09-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:10:51', '2026-07-14 15:10:51');
+('b5fac5cd-e9c3-4b13-ba1b-541371e7ce96', '0ce87951-08f2-42ae-b31e-47d02ce97283', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 'Paiement total', 40000, 40000, 0, 36000, 4000, 72000, 8000, 0, 0, 0, 4, '2026-07-22 00:00:00', 9, 2026, '2026-09-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-22 12:26:01', '2026-07-22 12:26:01'),
+('d5a22bf3-c4bb-4fe8-835c-85f4db9dac33', '0ce87951-08f2-42ae-b31e-47d02ce97283', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 'Paiement total', 40000, 40000, 0, 36000, 4000, 144000, 16000, 0, 0, 0, 4, '2026-07-22 00:00:00', 11, 2026, '2026-11-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-22 13:17:19', '2026-07-22 13:17:19'),
+('dea63ce9-3c82-48a8-a42f-6523fd662858', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '0143080c-1088-45b2-a292-edf809feb8e3', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 'Paiement total', 100000, 100000, 0, 90000, 10000, 180000, 20000, 0, 0, 0, 4, '2026-07-14 00:00:00', 9, 2026, '2026-09-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:10:51', '2026-07-14 15:10:51'),
+('e56a50ee-c712-4d56-96ee-de6035484b34', '0ce87951-08f2-42ae-b31e-47d02ce97283', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 'Paiement total', 40000, 40000, 0, 36000, 4000, 180000, 20000, 0, 0, 0, 1, '2026-07-27 00:00:00', 12, 2026, '2026-12-10 23:59:59', 'test', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-27 10:21:59', '2026-07-27 10:21:59'),
+('f801b164-1b38-4ec6-b2af-231cbcb0237f', '0ce87951-08f2-42ae-b31e-47d02ce97283', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 'Paiement total', 40000, 40000, 0, 36000, 4000, 36000, 4000, 0, 0, 0, NULL, '2026-07-22 08:43:04', 8, 2026, '2026-08-10 23:59:59', NULL, 'system', NULL, '2026-07-22 08:43:04', '2026-07-22 08:43:04');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `maintenance`
+-- Structure de la table `maintenance`
 --
 
 CREATE TABLE `maintenance` (
@@ -657,7 +655,7 @@ CREATE TABLE `maintenance` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `maintenance`
+-- Déchargement des données de la table `maintenance`
 --
 
 INSERT INTO `maintenance` (`maintenance_id`, `agence_id`, `proprietaire_id`, `lot_id`, `propriete_id`, `batiment_id`, `porte_id`, `titre`, `description`, `statut`, `montant_global`, `prise_en_charge_par`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -666,7 +664,7 @@ INSERT INTO `maintenance` (`maintenance_id`, `agence_id`, `proprietaire_id`, `lo
 -- --------------------------------------------------------
 
 --
--- Table structure for table `maintenance_categories`
+-- Structure de la table `maintenance_categories`
 --
 
 CREATE TABLE `maintenance_categories` (
@@ -680,7 +678,7 @@ CREATE TABLE `maintenance_categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `maintenance_categories`
+-- Déchargement des données de la table `maintenance_categories`
 --
 
 INSERT INTO `maintenance_categories` (`maintenance_category_id`, `name`, `slug`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
@@ -694,7 +692,7 @@ INSERT INTO `maintenance_categories` (`maintenance_category_id`, `name`, `slug`,
 -- --------------------------------------------------------
 
 --
--- Table structure for table `maintenance_detail`
+-- Structure de la table `maintenance_detail`
 --
 
 CREATE TABLE `maintenance_detail` (
@@ -717,7 +715,7 @@ CREATE TABLE `maintenance_detail` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `maintenance_detail`
+-- Déchargement des données de la table `maintenance_detail`
 --
 
 INSERT INTO `maintenance_detail` (`maintenance_detail_id`, `maintenance_id`, `maintenancier_id`, `type_intervention_id`, `date_debut`, `date_fin`, `priorite`, `montant`, `note`, `statut`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -727,7 +725,7 @@ INSERT INTO `maintenance_detail` (`maintenance_detail_id`, `maintenance_id`, `ma
 -- --------------------------------------------------------
 
 --
--- Table structure for table `maintenanciers`
+-- Structure de la table `maintenanciers`
 --
 
 CREATE TABLE `maintenanciers` (
@@ -751,7 +749,7 @@ CREATE TABLE `maintenanciers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `maintenanciers`
+-- Déchargement des données de la table `maintenanciers`
 --
 
 INSERT INTO `maintenanciers` (`maintenancier_id`, `fonction_maintenance_id`, `agence_id`, `name`, `tel1`, `tel2`, `email`, `statut`, `adresse`, `entreprise`, `type_piece_id`, `numero_piece`, `date_validite_piece`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -761,7 +759,7 @@ INSERT INTO `maintenanciers` (`maintenancier_id`, `fonction_maintenance_id`, `ag
 -- --------------------------------------------------------
 
 --
--- Table structure for table `migrations`
+-- Structure de la table `migrations`
 --
 
 CREATE TABLE `migrations` (
@@ -771,7 +769,7 @@ CREATE TABLE `migrations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `migrations`
+-- Déchargement des données de la table `migrations`
 --
 
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
@@ -789,14 +787,12 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (12, '2026_07_09_000003_add_loyer_net_to_locataire_agence_table', 11),
 (13, '2026_07_09_000004_add_contract_amount_fields_to_locataire_agence_table', 12),
 (14, '2026_07_09_000005_add_mode_paiement_id_to_locataire_agence_table', 13),
-(15, '2026_07_16_000001_create_maintenance_categories_table', 14),
-(16, '2026_07_16_000002_add_duree_estimee_to_type_maintenances_table', 14),
-(17, '2026_07_21_000001_align_maintenance_module_tables', 15);
+(15, '2026_08_04_000001_create_support_tables', 14);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `mode_paiements`
+-- Structure de la table `mode_paiements`
 --
 
 CREATE TABLE `mode_paiements` (
@@ -807,7 +803,7 @@ CREATE TABLE `mode_paiements` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Dumping data for table `mode_paiements`
+-- Déchargement des données de la table `mode_paiements`
 --
 
 INSERT INTO `mode_paiements` (`id`, `name`, `created_at`, `updated_at`) VALUES
@@ -821,7 +817,7 @@ INSERT INTO `mode_paiements` (`id`, `name`, `created_at`, `updated_at`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `mouvements_caisse`
+-- Structure de la table `mouvements_caisse`
 --
 
 CREATE TABLE `mouvements_caisse` (
@@ -846,7 +842,7 @@ CREATE TABLE `mouvements_caisse` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `parametrages_agence`
+-- Structure de la table `parametrages_agence`
 --
 
 CREATE TABLE `parametrages_agence` (
@@ -906,17 +902,16 @@ CREATE TABLE `parametrages_agence` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `parametrages_agence`
+-- Déchargement des données de la table `parametrages_agence`
 --
 
 INSERT INTO `parametrages_agence` (`parametrages_agence_id`, `agence_id`, `devise`, `langue`, `format_date`, `timezone`, `sauvegarde_auto`, `double_validation`, `journal_activites`, `multi_session`, `periode_facturation`, `jour_emission`, `delai_paiement`, `penalite_retard`, `prefixe_facture`, `sequence_facture`, `commission`, `base_commission`, `tva`, `aib`, `ras`, `acompte_min`, `mode_reglement_id`, `logo`, `logo_largeur`, `logo_position`, `logo_tutelle`, `logo_partenaire`, `cachet`, `signature_dg`, `dg_nom`, `dg_titre`, `signature_sg`, `sg_nom`, `sg_titre`, `signature_cpt`, `cpt_nom`, `cpt_titre`, `sig_dg_facture`, `sig_double`, `cachet_auto`, `notif_rappel`, `notif_retard`, `notif_recu`, `email_compta`, `email_dg`, `delai_rappel`, `seuil_dg`, `created_by`, `updated_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
-('64d53a99-2b0d-45c6-bc43-2f48d32f9473', 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 'XOF', 'fr', 'd/m/Y', 'Africa/Abidjan', 1, 1, 1, 0, 'mensuelle', '1', 30, 1.50, 'FAC-', 1, 15.00, 'ht', 18.00, 5.00, 2.00, 30.00, 1, NULL, 200, 'gauche', NULL, NULL, NULL, NULL, NULL, 'Directeur Général', NULL, NULL, 'Secrétaire Général(e)', NULL, NULL, 'Responsable Comptable', 1, 1, 0, 1, 1, 0, NULL, NULL, 7, 1000000, '8b1fc91c-966b-4bba-acba-46f4de717c6e', NULL, '2026-07-21 22:48:04', '2026-07-21 22:48:04', NULL),
 ('93577165-0a54-483a-acf8-7d838da4f883', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'XOF', 'fr', 'd/m/Y', 'Africa/Abidjan', 0, 0, 0, 0, 'mensuelle', '1', 10, 1.60, 'FAC-', 1, 10.00, 'ht', 0.00, 0.00, 0.00, 30.00, 1, NULL, 200, 'gauche', NULL, NULL, NULL, NULL, NULL, 'Directeur Général', NULL, NULL, 'Secrétaire Général(e)', NULL, NULL, 'Responsable Comptable', 1, 1, 0, 1, 1, 0, NULL, NULL, 7, 1000000, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-06-01 01:50:59', '2026-06-09 12:57:31', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `periodicite_paiements`
+-- Structure de la table `periodicite_paiements`
 --
 
 CREATE TABLE `periodicite_paiements` (
@@ -929,7 +924,7 @@ CREATE TABLE `periodicite_paiements` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `periodicite_paiements`
+-- Déchargement des données de la table `periodicite_paiements`
 --
 
 INSERT INTO `periodicite_paiements` (`id`, `name`, `description`, `is_actif`, `created_at`, `updated_at`) VALUES
@@ -943,7 +938,7 @@ INSERT INTO `periodicite_paiements` (`id`, `name`, `description`, `is_actif`, `c
 -- --------------------------------------------------------
 
 --
--- Table structure for table `porte`
+-- Structure de la table `porte`
 --
 
 CREATE TABLE `porte` (
@@ -973,12 +968,14 @@ CREATE TABLE `porte` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `porte`
+-- Déchargement des données de la table `porte`
 --
 
 INSERT INTO `porte` (`porte_id`, `batiment_id`, `type_porte_id`, `agence_id`, `numero_porte`, `superficie_m2`, `etage`, `is_allocation`, `description`, `is_occupe`, `is_actif`, `caution`, `avance`, `agence`, `mt_caution_cie`, `mt_caution_sodeci`, `mt_autre_frais`, `mt_loyer`, `equipements`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+('1863b38b-ee46-4091-bc03-cc7499c6eee2', 'e9dbb0a5-4aac-4238-9238-bd00a92efc66', 5, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'C-2', NULL, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 30000, 0, 100000, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
 ('201fafef-f4ad-4449-9acb-f7a96cffd591', '79a83de8-04bb-4a25-a83e-48014879b541', 6, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'AAA', 250.00, 0, 0, NULL, 0, 1, 2, 2, 1, 0, 0, 0, 0, '[\"8\",\"6\",\"3\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-07 14:04:11', '2026-07-07 14:04:11'),
 ('20a42d39-bad9-4cc9-9076-12fb85e64a98', '8e489f28-784f-46d8-bb57-da2fc1b466a5', 5, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A-1', 30.00, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 0, 0, 0, '[\"6\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-07 08:35:02', '2026-07-09 17:50:22'),
+('39ee8bda-6614-4d4c-9f1d-e16f47b7940e', 'e9dbb0a5-4aac-4238-9238-bd00a92efc66', 5, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'C-1', NULL, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 30000, 0, 100000, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
 ('42d35228-6d56-4915-8aba-0db4563194ce', '7d5ffc45-c4e9-47a6-930b-3a48a8918778', 2, '2df2a9f8-5d56-4842-a683-8676eb1d017f', '78', NULL, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 0, 0, 0, '[\"7\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-07 10:44:57', '2026-07-07 10:44:57'),
 ('6400a16c-8da4-4b05-b0cb-198856d2a39e', '7e0d3674-2d1c-4c17-9011-d358d41b8978', 5, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'CEMA', 200.00, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 0, 0, 0, '[\"6\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-07 10:16:51', '2026-07-07 10:16:51'),
 ('6a976b1f-853a-4c55-908c-4679107f73a7', '7d5ffc45-c4e9-47a6-930b-3a48a8918778', 2, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'AR1', 20.00, 0, 0, NULL, 0, 1, 2, 2, 1, 0, 0, 0, 0, '[\"1\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-07 10:37:09', '2026-07-07 10:37:09'),
@@ -986,15 +983,21 @@ INSERT INTO `porte` (`porte_id`, `batiment_id`, `type_porte_id`, `agence_id`, `n
 ('7316f432-c33c-45e3-9a53-f9f509f89f6c', '42ddb365-a8c2-4551-b1f4-9819322c35ef', 4, '2df2a9f8-5d56-4842-a683-8676eb1d017f', '7aa', 20.00, 0, 0, 'RAS', 0, 1, 2, 2, 1, 0, 0, 0, 0, '[\"6\",\"8\",\"2\",\"5\",\"4\",\"1\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-07 13:19:20', '2026-07-07 13:39:42'),
 ('7a27644f-5d1e-41d1-b5bc-4a0285d81b7c', '915eb859-b82f-48b9-aca8-efb7cabfc411', 2, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'B', 50.00, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 0, 0, 0, '[\"8\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-07 10:16:50', '2026-07-07 10:16:50'),
 ('8f6d2b4d-597d-46aa-96e2-bccd82a59fe7', '915eb859-b82f-48b9-aca8-efb7cabfc411', 1, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A', 80.00, 1, 1, 'RASS', 0, 1, 2, 2, 1, 0, 0, 0, 0, '[\"6\",\"2\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-07 10:16:50', '2026-07-07 10:16:50'),
+('96d66556-54ff-4fc7-84f9-3d5b59707e72', '4468c97b-42d4-4a32-bb08-9416f7536f1c', 4, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'B-3', NULL, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 30000, 0, 50000, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
+('98606d51-abb8-4f05-b320-2c4abcef987d', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 2, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A-3', NULL, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 30000, 0, 4000, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
+('a04e112a-d576-408f-833e-adb74c5a0354', '4468c97b-42d4-4a32-bb08-9416f7536f1c', 4, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'B-1', NULL, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 30000, 0, 50000, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
 ('adf56a6b-c6ab-4e25-abc4-1cdd508dea6c', 'dd839ae3-4ffa-4863-a20d-bf0147125f39', 2, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A-1', 60.00, 0, 1, NULL, 1, 1, 2, 2, 1, 4000, 0, 0, 50000, '[\"1\",\"2\",\"9\",\"3\",\"4\",\"5\",\"7\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-05-22 20:24:53', '2026-07-08 17:13:22'),
 ('bd407e98-3d95-4d76-a5de-286d1f7bceff', 'dd839ae3-4ffa-4863-a20d-bf0147125f39', 2, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A-2', 60.00, 0, 1, NULL, 1, 1, 2, 2, 1, 4000, 0, 0, 50000, '[\"1\",\"9\",\"3\",\"4\",\"5\",\"7\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-05-23 16:57:08', '2026-05-31 17:07:59'),
 ('c04ec857-ad77-4a2b-a34b-2a860495a7a9', '8ae0d4b2-84e8-4d02-8097-359bf6b0648c', 4, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A-89', NULL, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 0, 0, 0, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-09 17:52:43', '2026-07-09 17:52:43'),
-('c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', '66898dee-57dd-48c4-9358-97770602368a', 5, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A-3', NULL, 0, 1, NULL, 1, 1, 2, 2, 1, 30000, 30000, 0, 100000, '[\"1\",\"9\",\"4\",\"8\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-05-26 14:06:33', '2026-07-09 17:37:02');
+('c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', '66898dee-57dd-48c4-9358-97770602368a', 5, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A-3', NULL, 0, 1, NULL, 1, 1, 2, 2, 1, 30000, 30000, 0, 100000, '[\"1\",\"9\",\"4\",\"8\"]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-05-26 14:06:33', '2026-07-09 17:37:02'),
+('c5e92cf6-ced2-4693-ad58-a8005c0ab63c', '4468c97b-42d4-4a32-bb08-9416f7536f1c', 4, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'B-2', NULL, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 30000, 0, 50000, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
+('cd4d5470-b2a3-4fed-8e55-7b482b128021', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 2, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A-1', NULL, 0, 1, NULL, 1, 1, 2, 2, 1, 0, 30000, 0, 40000, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-21 23:32:00', '2026-07-22 08:43:04'),
+('f1f9a841-b6f7-4503-9a9a-4648282a8c6b', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 1, '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'A-2', NULL, 0, 1, NULL, 0, 1, 2, 2, 1, 0, 30000, 0, 40000, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-21 23:32:00', '2026-07-21 23:32:00');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `propietaire_lots`
+-- Structure de la table `propietaire_lots`
 --
 
 CREATE TABLE `propietaire_lots` (
@@ -1017,7 +1020,7 @@ CREATE TABLE `propietaire_lots` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Dumping data for table `propietaire_lots`
+-- Déchargement des données de la table `propietaire_lots`
 --
 
 INSERT INTO `propietaire_lots` (`propreietaire_lot_id`, `name`, `superficie`, `region_id`, `ville_id`, `adresse`, `num_lot`, `num_ilot`, `proprietaire_id`, `agence_id`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -1025,12 +1028,13 @@ INSERT INTO `propietaire_lots` (`propreietaire_lot_id`, `name`, `superficie`, `r
 ('39b36a6d-af4a-4b83-8a03-6a0be94840d8', 'Lot 1', 700, 1, 4, 'Cocody Rivera 4', '180', '34', '0143080c-1088-45b2-a292-edf809feb8e3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-05-18 15:12:11', '2026-05-18 15:19:09', NULL),
 ('96c871a7-b88a-4c43-90b2-90647b8381ee', 'Adeba', 400, 1, 4, 'Cocody', '2', 'A785', '0143080c-1088-45b2-a292-edf809feb8e3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-06 13:46:23', '2026-07-06 13:46:23', NULL),
 ('aff40968-9f34-4139-a4d5-4d9afb71ae88', 'hhh', NULL, NULL, NULL, NULL, NULL, NULL, '0143080c-1088-45b2-a292-edf809feb8e3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-07 11:29:24', '2026-07-07 11:29:24', NULL),
+('b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', 'lot 1', 600, 1, 9, 'Bingerville', '721', '1298', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-21 23:07:57', '2026-07-21 23:07:57', NULL),
 ('ebd3f311-03c3-428d-bc39-275719bf786c', 'aa', 400, 12, 48, 'aaa', '1', 'a2', '0143080c-1088-45b2-a292-edf809feb8e3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-06 13:52:22', '2026-07-06 13:52:22', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `proprietaires`
+-- Structure de la table `proprietaires`
 --
 
 CREATE TABLE `proprietaires` (
@@ -1059,20 +1063,21 @@ CREATE TABLE `proprietaires` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `proprietaires`
+-- Déchargement des données de la table `proprietaires`
 --
 
 INSERT INTO `proprietaires` (`proprietaire_id`, `code`, `genre_id`, `name`, `tel1`, `tel2`, `type_pieces_id`, `type_proprietaire`, `numpiece`, `date_expiration_piece`, `email`, `profession`, `nationalite`, `date_naiss`, `lieu_naiss`, `region_id`, `ville_id`, `adresse`, `photo`, `created_at`, `updated_at`, `password`) VALUES
 ('0143080c-1088-45b2-a292-edf809feb8e3', 'JH-09486', 1, 'John Doe', '0707902960', '0142259037', 1, 'particulier', 'ci0987652332345', '2026-06-07', 'john.doe@pro.com', 'tailleur', 'IVOIRIENNE', '2026-05-01', 'Abidjan', 1, 1, 'abidjan adjame', NULL, '2026-05-17 00:55:28', '2026-05-17 02:31:32', NULL),
 ('0577b283-a5ed-488d-a0a9-24aa7c64edb1', 'KH-06717', 1, 'jjjj', '+2250747033011', NULL, 1, 'particulier', '00777', '2043-07-07', 'ooo@hhh.com', 'jnuhbhn', 'fgvhb', '1976-07-07', 'rtfbgy', 4, 22, 'ytuhn', 'https://dev.rodrigue-yapo.com/admin/assets/images/proprietaire/6a4d57adf03935.30309817.png', '2026-07-07 19:46:54', '2026-07-07 19:46:54', '$2y$12$Wl9Q3ikY80WkiAizBvNlC.IyhpxlQG24hWIhCJrlNl3HC/GY8qchi'),
 ('5bae10a1-390b-4912-b3ee-3ed03d047e45', 'VO-62185', 1, 'fdvdvdvd', '+2257896585698', NULL, 2, 'particulier', '841adad82', '2026-07-17', NULL, NULL, 'IVOIRIENNE', NULL, NULL, NULL, NULL, NULL, 'http://localhost:8000/admin/assets/images/proprietaire/6a4e2ce6ce88b7.18041252.png', '2026-07-08 10:56:39', '2026-07-08 10:56:39', '$2y$12$otbcrcAulMuxy7SwK503.uPmRZGoUreGAfyHwktUvytBI8n4IgsyK'),
+('958eadb7-20c7-4a9c-85bc-e323dccd6b16', 'PC-24324', 1, 'Yapo Rodrigue', '+2250707902962', '+2250142259037', 1, 'particulier', 'ci123456789', '2026-08-08', 'yaporodrigue1109@gmail.com', 'Informatique', 'Ivoirienne', '2026-07-07', 'Treichville', 4, 22, 'Treichville', 'http://localhost:8000/admin/assets/images/proprietaire/6a5ff7af3ce7b4.35448704.png', '2026-07-21 22:50:23', '2026-07-21 22:50:23', '$2y$12$Q7oHydro1MB68HaAhfZkQ.7RwO/LUMVinH6rlX9l0auCWZKzsWEiK'),
 ('a73b8ad2-e4c6-4c9e-82e9-d3e823c2682f', 'DC-66164', 1, 'afada', '+2257242465247', NULL, 1, 'particulier', 'adad4adad5a5da5', '2026-07-31', NULL, NULL, 'IVOIRIENNE', NULL, NULL, NULL, NULL, NULL, 'http://localhost:8000/admin/assets/images/proprietaire/6a4e5f07741432.84542582.png', '2026-07-08 13:58:39', '2026-07-08 14:30:31', '$2y$12$qO3LDf84gClI9/JTRjBEveBQ2AR.IrjjqO1CoY6875JfWEJUnh5LO'),
 ('b87c3c28-6686-4458-9c12-c9a50c473387', 'IU-88671', 1, 'ggdfvdvdf', '+2257896527896', NULL, 1, 'particulier', '74egrege', '2026-07-31', NULL, NULL, 'IVOIRIENNE', NULL, NULL, 2, 17, NULL, 'https://dev.rodrigue-yapo.com/admin/assets/images/proprietaire/6a4e2b128b8a21.53742631.png', '2026-07-08 10:48:51', '2026-07-08 10:48:51', '$2y$12$gqdsXXLvGsQ/OZipWivJ/uZPvr8IV7cepelMCodtf1LwihhnmDFOG');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `proprietaire_agences`
+-- Structure de la table `proprietaire_agences`
 --
 
 CREATE TABLE `proprietaire_agences` (
@@ -1102,11 +1107,12 @@ CREATE TABLE `proprietaire_agences` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `proprietaire_agences`
+-- Déchargement des données de la table `proprietaire_agences`
 --
 
 INSERT INTO `proprietaire_agences` (`proprietaire_agence_id`, `proprietaire_id`, `agence_id`, `is_active`, `date_activation`, `date_desactivation`, `agent_activation_id`, `agent_desactivation_id`, `name_representant`, `genre_representant_id`, `adresse_representant`, `tel1_representant`, `tel2_representant`, `email_representant`, `type_pieces_representant_id`, `numpiece_representant`, `photo_representant`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
 ('0c75c23c-cc96-4679-b289-1a13dfe5de15', '5bae10a1-390b-4912-b3ee-3ed03d047e45', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 0, '2026-07-08 10:56:39', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-08 10:56:39', '2026-07-08 13:54:33', '2026-07-08 13:54:33'),
+('56c30542-c551-425f-9e5d-247b5bd23391', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 1, '2026-07-21 22:50:23', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-21 22:50:23', '2026-07-21 22:50:23', NULL),
 ('902f26a3-c9c2-4227-a932-0d177263293c', 'b87c3c28-6686-4458-9c12-c9a50c473387', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 1, '2026-07-08 10:48:51', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-08 10:48:51', '2026-07-08 10:48:51', NULL),
 ('b1b5da9c-1829-4abc-b7ef-cfebe5fd9b6d', '0143080c-1088-45b2-a292-edf809feb8e3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 1, '2026-05-17 02:00:01', NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', 'koffi kouadio jean', NULL, 'abobo', '0100987658', NULL, 'representant.koffi@gmail.com', NULL, NULL, NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-05-17 00:55:28', '2026-05-17 02:00:01', NULL),
 ('dba28c8d-c365-407e-b373-05d7dbcde368', 'a73b8ad2-e4c6-4c9e-82e9-d3e823c2682f', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 1, '2026-07-08 15:34:47', NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', 'AEEE', 1, NULL, '+2254565458525', NULL, NULL, 1, 'CF7522929', 'http://localhost:8000/admin/assets/images/representant/6a4e58c4b8a764.99382751.jpg', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-08 13:58:39', '2026-07-08 15:34:47', NULL),
@@ -1115,7 +1121,7 @@ INSERT INTO `proprietaire_agences` (`proprietaire_agence_id`, `proprietaire_id`,
 -- --------------------------------------------------------
 
 --
--- Table structure for table `propriete`
+-- Structure de la table `propriete`
 --
 
 CREATE TABLE `propriete` (
@@ -1140,7 +1146,7 @@ CREATE TABLE `propriete` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `propriete`
+-- Déchargement des données de la table `propriete`
 --
 
 INSERT INTO `propriete` (`propriete_id`, `proprietaire_id`, `agence_id`, `lot_id`, `type_propriete_id`, `reference`, `description`, `adresse_complete`, `videos_url`, `is_allocation`, `is_actif`, `prossimites`, `created_by`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -1150,12 +1156,13 @@ INSERT INTO `propriete` (`propriete_id`, `proprietaire_id`, `agence_id`, `lot_id
 ('52d5341f-031c-47e3-95b4-1ebb00560bf7', '0143080c-1088-45b2-a292-edf809feb8e3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '96c871a7-b88a-4c43-90b2-90647b8381ee', 3, 'PROP-2026-0002', NULL, 'Cocody', NULL, 1, 1, '[6]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-07 08:35:02', '2026-07-09 17:50:22', NULL),
 ('535e3431-6166-4f51-aa37-36931cc03d3d', 'a73b8ad2-e4c6-4c9e-82e9-d3e823c2682f', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '18c965f2-6c95-4b4d-85f6-5a0563952498', NULL, 'PROP-2026-0007', NULL, NULL, NULL, 1, 1, '[6]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-09 17:52:43', '2026-07-09 17:52:43', NULL),
 ('7eb908bc-f886-498a-a6a5-5875baf25e32', '0143080c-1088-45b2-a292-edf809feb8e3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '96c871a7-b88a-4c43-90b2-90647b8381ee', NULL, 'PROP-2026-0004', 'Test', 'Cocody', NULL, 1, 1, '[6]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-07 10:37:09', '2026-07-07 12:50:29', NULL),
+('82024ea3-67b6-42d8-bdad-d98e126eba35', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', NULL, 'PROP-2026-0008', NULL, 'Bingerville', NULL, 1, 1, '[6,3,2]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-21 23:32:00', '2026-07-21 23:32:00', NULL),
 ('b8b380ae-b180-49b5-88da-032e73828401', '0143080c-1088-45b2-a292-edf809feb8e3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '39b36a6d-af4a-4b83-8a03-6a0be94840d8', NULL, 'PROP-2026-0003', NULL, 'Cocody Rivera 4', NULL, 0, 1, '[]', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, '2026-07-07 10:16:50', '2026-07-07 10:16:50', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `propriete_proximites`
+-- Structure de la table `propriete_proximites`
 --
 
 CREATE TABLE `propriete_proximites` (
@@ -1173,21 +1180,24 @@ CREATE TABLE `propriete_proximites` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `propriete_proximites`
+-- Déchargement des données de la table `propriete_proximites`
 --
 
 INSERT INTO `propriete_proximites` (`propriete_proximite_id`, `propriete_id`, `proximite_id`, `distance`, `unite`, `created_by`, `updated_by`, `deleted_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
 ('11be0e4b-0c59-4e30-8a35-70bd31c2d2c7', '52d5341f-031c-47e3-95b4-1ebb00560bf7', 6, 20.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-09 17:50:22', '2026-07-09 17:50:22'),
 ('257666f9-3303-453c-99de-0fb8d998e380', '3c4ab403-e08f-4193-a0f1-0341f02a3ebd', 6, 10.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-07 14:01:52', '2026-07-07 14:01:52'),
+('4fb41036-9fed-458e-9efb-57b04dfd1ab7', '82024ea3-67b6-42d8-bdad-d98e126eba35', 3, 300.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
 ('6b062e6b-3410-4f9c-aab2-3670a9b3d061', '7eb908bc-f886-498a-a6a5-5875baf25e32', 6, 200.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-07 12:50:29', '2026-07-07 12:50:29'),
+('6bab3d54-907f-4f1f-a9b5-665343e2d816', '82024ea3-67b6-42d8-bdad-d98e126eba35', 2, 300.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-21 23:32:00', '2026-07-21 23:32:00'),
 ('6e29e176-2476-4875-9df7-b743288c06cf', '535e3431-6166-4f51-aa37-36931cc03d3d', 6, 20.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-09 17:52:43', '2026-07-09 17:52:43'),
 ('9d95ff03-cfb4-43e4-abb6-410a6590e6fa', '1a85c585-565f-4946-aecb-8a95677ec9d0', 6, 10.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-07 14:07:35', '2026-07-07 14:07:35'),
-('acc42bdb-0516-4ec2-9800-f29712aa74c2', '3c4ab403-e08f-4193-a0f1-0341f02a3ebd', 5, 15.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-07 14:01:52', '2026-07-07 14:01:52');
+('acc42bdb-0516-4ec2-9800-f29712aa74c2', '3c4ab403-e08f-4193-a0f1-0341f02a3ebd', 5, 15.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-07 14:01:52', '2026-07-07 14:01:52'),
+('dcb0f07a-5e7e-41d2-9d87-d0583f72b5f3', '82024ea3-67b6-42d8-bdad-d98e126eba35', 6, 100.00, 'm', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-07-21 23:32:00', '2026-07-21 23:32:00');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `prossimite_proprietes`
+-- Structure de la table `prossimite_proprietes`
 --
 
 CREATE TABLE `prossimite_proprietes` (
@@ -1200,7 +1210,7 @@ CREATE TABLE `prossimite_proprietes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Dumping data for table `prossimite_proprietes`
+-- Déchargement des données de la table `prossimite_proprietes`
 --
 
 INSERT INTO `prossimite_proprietes` (`id`, `name`, `agence_id`, `description`, `created_at`, `updated_at`) VALUES
@@ -1216,7 +1226,7 @@ INSERT INTO `prossimite_proprietes` (`id`, `name`, `agence_id`, `description`, `
 -- --------------------------------------------------------
 
 --
--- Table structure for table `regions`
+-- Structure de la table `regions`
 --
 
 CREATE TABLE `regions` (
@@ -1227,7 +1237,7 @@ CREATE TABLE `regions` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Dumping data for table `regions`
+-- Déchargement des données de la table `regions`
 --
 
 INSERT INTO `regions` (`id`, `name`, `created_at`, `updated_at`) VALUES
@@ -1268,7 +1278,97 @@ INSERT INTO `regions` (`id`, `name`, `created_at`, `updated_at`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `roles`
+-- Structure de la table `reversements`
+--
+
+CREATE TABLE `reversements` (
+  `id_reversement` varchar(150) NOT NULL,
+  `lot_id` varchar(150) NOT NULL,
+  `proprietaire_id` varchar(150) NOT NULL,
+  `agence_id` varchar(150) NOT NULL,
+  `periode_debut` date NOT NULL,
+  `periode_fin` date NOT NULL,
+  `total_attendu` int(11) NOT NULL DEFAULT 0,
+  `total_encaisse` int(11) NOT NULL DEFAULT 0,
+  `total_restant` int(11) NOT NULL DEFAULT 0,
+  `total_loyer_paye` int(11) NOT NULL DEFAULT 0,
+  `total_arriere_paye` int(11) NOT NULL DEFAULT 0,
+  `taux_commission` decimal(5,2) NOT NULL DEFAULT 10.00,
+  `montant_commission` int(11) NOT NULL DEFAULT 0,
+  `montant_apres_commission` int(11) NOT NULL DEFAULT 0,
+  `nouvelle_caution` int(11) NOT NULL DEFAULT 0,
+  `depenses_effectuees` int(11) NOT NULL DEFAULT 0,
+  `net_a_reverser` int(11) NOT NULL DEFAULT 0,
+  `statut` varchar(20) NOT NULL DEFAULT 'en_attente' CHECK (`statut` in ('en_attente','reverse','annule')),
+  `date_reversement` date DEFAULT NULL,
+  `mode_paiement` varchar(50) DEFAULT NULL,
+  `reference_paiement` varchar(100) DEFAULT NULL,
+  `numero_cheque` varchar(50) DEFAULT NULL,
+  `observation` text DEFAULT NULL,
+  `signe_par` varchar(100) DEFAULT NULL,
+  `date_signature` timestamp NOT NULL DEFAULT current_timestamp(),
+  `created_by` varchar(150) DEFAULT NULL,
+  `updated_by` varchar(150) DEFAULT NULL,
+  `deleted_by` varchar(150) DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `reversements`
+--
+
+INSERT INTO `reversements` (`id_reversement`, `lot_id`, `proprietaire_id`, `agence_id`, `periode_debut`, `periode_fin`, `total_attendu`, `total_encaisse`, `total_restant`, `total_loyer_paye`, `total_arriere_paye`, `taux_commission`, `montant_commission`, `montant_apres_commission`, `nouvelle_caution`, `depenses_effectuees`, `net_a_reverser`, `statut`, `date_reversement`, `mode_paiement`, `reference_paiement`, `numero_cheque`, `observation`, `signe_par`, `date_signature`, `created_by`, `updated_by`, `deleted_by`, `deleted_at`, `created_at`, `updated_at`) VALUES
+('2f26d812-1268-49f5-abaa-7ebaa1e0e874', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '2026-07-01', '2026-07-31', 40000, 280000, 0, 0, 0, 0.10, 28000, 252000, 80000, 0, 362000, 'reverse', '2026-08-03', NULL, NULL, NULL, NULL, NULL, '2026-08-03 11:26:09', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, NULL, NULL, '2026-08-03 11:26:09', '2026-08-03 11:26:09');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `reversement_details`
+--
+
+CREATE TABLE `reversement_details` (
+  `id_reversement_detail` varchar(255) NOT NULL,
+  `reversement_id` varchar(255) NOT NULL,
+  `locataire_id` varchar(150) NOT NULL,
+  `porte_id` varchar(150) NOT NULL,
+  `agence_id` varchar(150) NOT NULL,
+  `proprietaire_id` varchar(150) NOT NULL,
+  `lot_id` varchar(150) NOT NULL,
+  `propriete_id` varchar(150) NOT NULL,
+  `batiment_id` varchar(150) NOT NULL,
+  `montant_loyer` int(11) NOT NULL,
+  `arrieres_init` int(11) NOT NULL DEFAULT 0,
+  `montant_attendu` int(11) NOT NULL,
+  `loyer_paye` int(11) NOT NULL DEFAULT 0,
+  `arriere_paye` int(11) NOT NULL DEFAULT 0,
+  `total_paye` int(11) NOT NULL DEFAULT 0,
+  `impayes` int(11) NOT NULL DEFAULT 0,
+  `date_paiement` date DEFAULT NULL,
+  `caution_payee` int(11) DEFAULT 0,
+  `mois_payer` text DEFAULT NULL,
+  `caution_sodeci` int(11) DEFAULT 0,
+  `date_entree` date DEFAULT NULL,
+  `nouvelle_caution` int(11) DEFAULT 0,
+  `montant_paye` int(11) DEFAULT 0,
+  `created_by` varchar(150) DEFAULT NULL,
+  `updated_by` varchar(150) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `reversement_details`
+--
+
+INSERT INTO `reversement_details` (`id_reversement_detail`, `reversement_id`, `locataire_id`, `porte_id`, `agence_id`, `proprietaire_id`, `lot_id`, `propriete_id`, `batiment_id`, `montant_loyer`, `arrieres_init`, `montant_attendu`, `loyer_paye`, `arriere_paye`, `total_paye`, `impayes`, `date_paiement`, `caution_payee`, `mois_payer`, `caution_sodeci`, `date_entree`, `nouvelle_caution`, `montant_paye`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+('e9028fc3-e5d1-4c41-99ae-53360fcf14b3', '2f26d812-1268-49f5-abaa-7ebaa1e0e874', '0ce87951-08f2-42ae-b31e-47d02ce97283', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', 'b6806ece-1e3d-48f2-a6e8-c7e0076fc90a', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 40000, 0, 40000, 40000, 0, 390000, 0, '2026-07-22', 80000, '[\"Juillet-2026\",\"Ao\\u00fbt-2026\",\"Octobre-2026\",\"Septembre-2026\",\"D\\u00e9cembre-2026\",\"Novembre-2026\"]', 30000, '2026-07-22', 80000, 240000, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-08-03 11:26:09', '2026-08-03 11:26:09');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `roles`
 --
 
 CREATE TABLE `roles` (
@@ -1283,7 +1383,7 @@ CREATE TABLE `roles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `roles`
+-- Déchargement des données de la table `roles`
 --
 
 INSERT INTO `roles` (`role_id`, `name`, `description`, `agence_id`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
@@ -1292,7 +1392,7 @@ INSERT INTO `roles` (`role_id`, `name`, `description`, `agence_id`, `created_by`
 -- --------------------------------------------------------
 
 --
--- Table structure for table `sessions`
+-- Structure de la table `sessions`
 --
 
 CREATE TABLE `sessions` (
@@ -1305,16 +1405,89 @@ CREATE TABLE `sessions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `sessions`
+-- Déchargement des données de la table `sessions`
 --
 
 INSERT INTO `sessions` (`id`, `user_id`, `ip_address`, `user_agent`, `payload`, `last_activity`) VALUES
-('e2ntDtEacJqva3LoNiKSAj9NI6IMGE0gkngvJrgZ', NULL, '127.0.0.1', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiJsZkJ3WFdQcmNMWUF1ZzZ6UU9BcEFxU3dCRGY5WWFJcTBiZnFrMHJZIiwiX3ByZXZpb3VzIjp7InVybCI6Imh0dHA6XC9cL2xvY2FsaG9zdDo4MDAwXC9hZG1pblwvYWJvbm5lbWVudHMiLCJyb3V0ZSI6ImFkbWluLmFib25uZW1lbnRzLmluZGV4In0sIl9mbGFzaCI6eyJvbGQiOltdLCJuZXciOltdfSwibG9naW5fdXNlcl81OWJhMzZhZGRjMmIyZjk0MDE1ODBmMDE0YzdmNThlYTRlMzA5ODlkIjoiNGZiNmFkYjItYzg0Ny00NGFjLTgzZTctNGM2NGMwMzNjYWVmIiwibG9naW5fYWRtaW5fNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI6IkFETS0wMDEifQ==', 1784541092);
+('CxlnvxnG247YhjGj9bFDijd1D2EgRvI8hZhxxsZU', NULL, '127.0.0.1', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36', 'eyJfdG9rZW4iOiIxMjAyVDFHOERYWjB4MmlRT0FtOFRJRTNmQXRZTzNOUU10Wk5KcVVIIiwiX2ZsYXNoIjp7Im5ldyI6W10sIm9sZCI6W119LCJfcHJldmlvdXMiOnsidXJsIjoiaHR0cDpcL1wvMTI3LjAuMC4xOjgwMDAiLCJyb3V0ZSI6IndlYi5ob21lIn0sImxvZ2luX3VzZXJfNTliYTM2YWRkYzJiMmY5NDAxNTgwZjAxNGM3ZjU4ZWE0ZTMwOTg5ZCI6IjRmYjZhZGIyLWM4NDctNDRhYy04M2U3LTRjNjRjMDMzY2FlZiIsImxvZ2luX2FkbWluXzU5YmEzNmFkZGMyYjJmOTQwMTU4MGYwMTRjN2Y1OGVhNGUzMDk4OWQiOiJBRE0tMDAxIn0=', 1785825957);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `tarif_porte`
+-- Structure de la table `support_attachments`
+--
+
+CREATE TABLE `support_attachments` (
+  `support_attachment_id` char(36) NOT NULL,
+  `support_ticket_id` char(36) NOT NULL,
+  `support_message_id` char(36) DEFAULT NULL,
+  `nom_original` varchar(255) NOT NULL,
+  `chemin` varchar(255) NOT NULL,
+  `mime_type` varchar(120) NOT NULL,
+  `taille` bigint(20) UNSIGNED NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `support_messages`
+--
+
+CREATE TABLE `support_messages` (
+  `support_message_id` char(36) NOT NULL,
+  `support_ticket_id` char(36) NOT NULL,
+  `auteur_id` varchar(150) DEFAULT NULL,
+  `auteur_type` enum('agence','support') NOT NULL DEFAULT 'agence',
+  `contenu` text NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `support_messages`
+--
+
+INSERT INTO `support_messages` (`support_message_id`, `support_ticket_id`, `auteur_id`, `auteur_type`, `contenu`, `created_at`, `updated_at`) VALUES
+('0e70efbd-e041-4fdd-a2c4-063fc7049274', 'f08e31ba-d357-42f2-b12d-0440b062ef86', 'ADM-001', 'support', 'ok pas de soucis, je regarde et je vous faire un retour', '2026-08-04 04:33:24', '2026-08-04 04:33:24'),
+('5c65b462-7312-4284-8b83-63f7e6061b78', 'f08e31ba-d357-42f2-b12d-0440b062ef86', '4fb6adb2-c847-44ac-83e7-4c64c033caef', 'agence', 'et le probleme persiste', '2026-08-04 04:26:01', '2026-08-04 04:26:01'),
+('926bbe69-674c-4aaf-bdb9-3876d4edbfec', 'f08e31ba-d357-42f2-b12d-0440b062ef86', '4fb6adb2-c847-44ac-83e7-4c64c033caef', 'agence', 'tableau de bord', '2026-08-04 04:32:43', '2026-08-04 04:32:43'),
+('adb0ea9b-59cb-43e3-8ee9-5c6c72e4e32c', 'f08e31ba-d357-42f2-b12d-0440b062ef86', '4fb6adb2-c847-44ac-83e7-4c64c033caef', 'agence', 'encore', '2026-08-04 04:26:18', '2026-08-04 04:26:18'),
+('d340e91c-b5ef-43a7-91fe-c9d9b889941e', 'f08e31ba-d357-42f2-b12d-0440b062ef86', 'ADM-001', 'support', 'salut c\'est quel page precisement', '2026-08-04 04:31:58', '2026-08-04 04:31:58');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `support_tickets`
+--
+
+CREATE TABLE `support_tickets` (
+  `support_ticket_id` char(36) NOT NULL,
+  `reference` varchar(30) NOT NULL,
+  `agence_id` varchar(150) NOT NULL,
+  `demandeur_id` varchar(150) DEFAULT NULL,
+  `categorie` varchar(40) NOT NULL,
+  `sujet` varchar(160) NOT NULL,
+  `description` text NOT NULL,
+  `statut` enum('open','pending','resolved','closed') NOT NULL DEFAULT 'open',
+  `priorite` enum('low','medium','high') NOT NULL DEFAULT 'medium',
+  `resolved_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `support_tickets`
+--
+
+INSERT INTO `support_tickets` (`support_ticket_id`, `reference`, `agence_id`, `demandeur_id`, `categorie`, `sujet`, `description`, `statut`, `priorite`, `resolved_at`, `created_at`, `updated_at`) VALUES
+('f08e31ba-d357-42f2-b12d-0440b062ef86', 'SUP-260804-LXYYA', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '4fb6adb2-c847-44ac-83e7-4c64c033caef', 'technique', 'probleme d\'affiche', 'mes page ne passe pas', 'resolved', 'medium', '2026-08-04 04:37:00', '2026-08-04 04:25:37', '2026-08-04 04:37:00');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `tarif_porte`
 --
 
 CREATE TABLE `tarif_porte` (
@@ -1334,10 +1507,12 @@ CREATE TABLE `tarif_porte` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `tarif_porte`
+-- Déchargement des données de la table `tarif_porte`
 --
 
 INSERT INTO `tarif_porte` (`tarif_id`, `porte_id`, `mt_loyer`, `mt_vente`, `mt_caution`, `mt_avance`, `mt_frais_agence`, `mt_caution_cie`, `mt_caution_sodeci`, `date_effet`, `is_actif`, `created_at`, `mt_frais_dossier`) VALUES
+('002cccd7-5eab-4024-9886-46fa54e40ed8', 'a04e112a-d576-408f-833e-adb74c5a0354', 50000.00, NULL, 2.00, 2.00, 1.00, 0.00, 30000.00, '2026-07-21', 1, '2026-07-21 23:32:00', 10000.00),
+('0605e44a-8e2f-4c74-9c66-bfdd4385aaba', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 40000.00, NULL, 2.00, 2.00, 1.00, 0.00, 30000.00, '2026-07-21', 1, '2026-07-21 23:32:00', 10000.00),
 ('1de4df37-a3a3-4015-95e8-2efa426069ec', '20a42d39-bad9-4cc9-9076-12fb85e64a98', 75000.00, NULL, 2.00, 2.00, 1.00, 0.00, 0.00, '2026-07-07', 0, '2026-07-07 08:35:02', 0.00),
 ('295f3137-4479-47f9-b526-194dec9fd0f0', '7316f432-c33c-45e3-9a53-f9f509f89f6c', 0.00, 36000000.00, 0.00, 0.00, 0.00, 0.00, 0.00, '2026-07-07', 0, '2026-07-07 13:21:17', 0.00),
 ('2b535303-85f0-452d-9d38-aca29edc4d87', '7a27644f-5d1e-41d1-b5bc-4a0285d81b7c', 80000.00, NULL, 2.00, 2.00, 1.00, 0.00, 0.00, '2026-07-07', 1, '2026-07-07 10:16:50', 0.00),
@@ -1346,13 +1521,19 @@ INSERT INTO `tarif_porte` (`tarif_id`, `porte_id`, `mt_loyer`, `mt_vente`, `mt_c
 ('57e0edeb-50ff-4979-9e9e-a8f680441d4e', '7316f432-c33c-45e3-9a53-f9f509f89f6c', 0.00, 36000000.00, 0.00, 0.00, 0.00, 0.00, 0.00, '2026-07-07', 0, '2026-07-07 13:39:42', 0.00),
 ('583442d1-2256-4379-b493-b07f71a6af03', '7316f432-c33c-45e3-9a53-f9f509f89f6c', 0.00, 36000000.00, 0.00, 0.00, 0.00, 0.00, 0.00, '2026-07-07', 0, '2026-07-07 13:19:55', 0.00),
 ('65b01728-ade0-4681-af50-340bd5c6031c', '8f6d2b4d-597d-46aa-96e2-bccd82a59fe7', 50000.00, NULL, 2.00, 2.00, 1.00, 25000.00, 0.00, '2026-07-07', 1, '2026-07-07 10:16:50', 0.00),
+('65be7a32-873d-4fc7-be4b-ba414603ab4f', 'c5e92cf6-ced2-4693-ad58-a8005c0ab63c', 50000.00, NULL, 2.00, 2.00, 1.00, 0.00, 30000.00, '2026-07-21', 1, '2026-07-21 23:32:00', 10000.00),
 ('6f38ee39-112f-4058-9b9b-21febd535663', '6a976b1f-853a-4c55-908c-4679107f73a7', 25000.00, NULL, 2.00, 2.00, 1.00, 0.00, 0.00, '2026-07-07', 1, '2026-07-07 12:50:29', 0.00),
+('7f228937-af99-4b26-8b29-ab7d86a7b928', '1863b38b-ee46-4091-bc03-cc7499c6eee2', 100000.00, NULL, 2.00, 2.00, 1.00, 0.00, 30000.00, '2026-07-21', 1, '2026-07-21 23:32:00', 10000.00),
 ('82b801ca-ab0f-4738-8f63-de8ef893606a', '42d35228-6d56-4915-8aba-0db4563194ce', 25000.00, NULL, 2.00, 2.00, 1.00, 0.00, 0.00, '2026-07-07', 1, '2026-07-07 12:50:29', 0.00),
 ('8a30ed2b-b9fa-4337-acb4-cab1f9c48d55', '6a976b1f-853a-4c55-908c-4679107f73a7', 25000.00, NULL, 2.00, 2.00, 1.00, 0.00, 0.00, '2026-07-07', 0, '2026-07-07 10:44:57', 0.00),
+('95f8254d-afb1-4503-be70-c0df64b95772', 'f1f9a841-b6f7-4503-9a9a-4648282a8c6b', 40000.00, NULL, 2.00, 2.00, 1.00, 0.00, 30000.00, '2026-07-21', 1, '2026-07-21 23:32:00', 0.00),
+('99af343a-9adb-4113-b582-5ab9a2533177', '96d66556-54ff-4fc7-84f9-3d5b59707e72', 50000.00, NULL, 2.00, 2.00, 1.00, 0.00, 30000.00, '2026-07-21', 1, '2026-07-21 23:32:00', 10000.00),
 ('a10aeb3f-04da-4e58-ab51-e17d0cc49a7a', '7316f432-c33c-45e3-9a53-f9f509f89f6c', 0.00, 36000000.00, 0.00, 0.00, 0.00, 0.00, 0.00, '2026-07-07', 1, '2026-07-07 14:01:52', 0.00),
 ('bd63ed34-5868-4d1a-a221-ef229352e696', '42d35228-6d56-4915-8aba-0db4563194ce', 25000.00, NULL, 2.00, 2.00, 1.00, 0.00, 0.00, '2026-07-07', 0, '2026-07-07 10:44:57', 0.00),
 ('bf04138d-8dca-4cdd-83f4-cbb195268270', '7316f432-c33c-45e3-9a53-f9f509f89f6c', 0.00, 36000000.00, 0.00, 0.00, 0.00, 0.00, 0.00, '2026-07-07', 0, '2026-07-07 13:19:20', 0.00),
 ('c290d0ec-b5aa-4aeb-8ecb-bd528277311c', '201fafef-f4ad-4449-9acb-f7a96cffd591', 0.00, 36900000.00, 0.00, 0.00, 0.00, 0.00, 0.00, '2026-07-07', 0, '2026-07-07 14:04:11', 5000.00),
+('cf282269-5f34-4be2-a952-73b656df1572', '98606d51-abb8-4f05-b320-2c4abcef987d', 4000.00, NULL, 2.00, 2.00, 1.00, 0.00, 30000.00, '2026-07-21', 1, '2026-07-21 23:32:00', 10000.00),
+('deb259d9-70bc-4f4f-bd06-e12aee383464', '39ee8bda-6614-4d4c-9f1d-e16f47b7940e', 100000.00, NULL, 2.00, 2.00, 1.00, 0.00, 30000.00, '2026-07-21', 1, '2026-07-21 23:32:00', 10000.00),
 ('df10b9f8-8f36-4fa1-b9a0-4cff7007c091', '6400a16c-8da4-4b05-b0cb-198856d2a39e', 120000.00, NULL, 2.00, 2.00, 1.00, 0.00, 0.00, '2026-07-07', 1, '2026-07-07 10:16:51', 0.00),
 ('df887030-e333-4d2e-87d0-b0f25acddb5b', '7316f432-c33c-45e3-9a53-f9f509f89f6c', 0.00, 36000000.00, 0.00, 0.00, 0.00, 0.00, 0.00, '2026-07-07', 0, '2026-07-07 13:32:41', 0.00),
 ('e5400a92-bba4-4ea6-a351-a1da1029b5ec', '201fafef-f4ad-4449-9acb-f7a96cffd591', 0.00, 36900000.00, 0.00, 0.00, 0.00, 0.00, 0.00, '2026-07-07', 1, '2026-07-07 14:07:35', 5000.00),
@@ -1362,7 +1543,7 @@ INSERT INTO `tarif_porte` (`tarif_id`, `porte_id`, `mt_loyer`, `mt_vente`, `mt_c
 -- --------------------------------------------------------
 
 --
--- Table structure for table `test`
+-- Structure de la table `test`
 --
 
 CREATE TABLE `test` (
@@ -1372,7 +1553,7 @@ CREATE TABLE `test` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `transactions`
+-- Structure de la table `transactions`
 --
 
 CREATE TABLE `transactions` (
@@ -1406,17 +1587,17 @@ CREATE TABLE `transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `transactions`
+-- Déchargement des données de la table `transactions`
 --
 
 INSERT INTO `transactions` (`transaction_id`, `reference`, `agence_id`, `abonnement_id`, `abonnement_historique_id`, `montant_base_ht`, `montant_options_ht`, `montant_total_ht`, `taux_tva`, `montant_tva`, `montant_ttc`, `duree_mois`, `periode_debut`, `periode_fin`, `options_souscrites`, `mode_paiement`, `statut`, `reference_paiement`, `date_paiement`, `date_validation`, `type_operation`, `created_by`, `updated_by`, `notes`, `created_at`, `updated_at`, `deleted_at`) VALUES
 (6, 'TXN-2026-7858D8', 'a299981a-d1c1-4690-8e96-d6ddb5df0874', NULL, 6, 600000.00, 840000.00, 1440000.00, 0.00, 0.00, 1440000.00, 12, '2026-05-11', '2027-05-11', '[\"1\", \"2\", \"3\", \"4\", \"5\", \"6\"]', NULL, 'en_attente', NULL, NULL, NULL, 'souscription', 'ADM-001', NULL, NULL, '2026-05-11 16:49:43', '2026-05-11 16:49:43', NULL),
-(7, 'TXN-2026-D3A717', 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 4, 8, 0.00, 29000.00, 79000.00, 0.00, 0.00, 79000.00, 1, '2026-07-21', '2026-08-21', '[1,2,3]', 'mobile_money', 'validee', NULL, '2026-07-21 23:00:29', '2026-07-21 23:00:29', 'souscription', '8b1fc91c-966b-4bba-acba-46f4de717c6e', '8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Validation test depuis le portail agence', '2026-07-21 23:00:29', '2026-07-21 23:00:29', NULL);
+(7, 'TXN-2026-8DEB0D', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 4, 7, 0.00, 33000.00, 83000.00, 0.00, 0.00, 83000.00, 1, '2026-07-22', '2026-08-22', '[1,3,5,6,4,2]', 'mobile_money', 'validee', NULL, '2026-07-22 12:20:08', '2026-07-22 12:20:08', 'souscription', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '4fb6adb2-c847-44ac-83e7-4c64c033caef', 'Validation test depuis le portail agence', '2026-07-22 12:20:08', '2026-07-22 12:20:08', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `transaction_agences`
+-- Structure de la table `transaction_agences`
 --
 
 CREATE TABLE `transaction_agences` (
@@ -1434,10 +1615,13 @@ CREATE TABLE `transaction_agences` (
   `montant_arriere_actuel` int(11) NOT NULL DEFAULT 0,
   `montant_loyer_payer` int(11) NOT NULL DEFAULT 0,
   `montant_avance_payer` int(11) NOT NULL DEFAULT 0,
+  `reference` varchar(150) DEFAULT NULL,
   `is_first` tinyint(4) NOT NULL DEFAULT 0,
   `type_transaction` enum('loyer','maintenance','depense','vente') NOT NULL DEFAULT 'loyer',
   `mode_paiement_id` int(11) DEFAULT NULL,
   `is_reversement` tinyint(4) NOT NULL DEFAULT 0,
+  `date_reversement` timestamp NULL DEFAULT NULL,
+  `reversement_by` varchar(150) DEFAULT NULL,
   `date_transaction` datetime NOT NULL,
   `created_by` varchar(150) DEFAULT NULL,
   `updated_by` varchar(150) DEFAULT NULL,
@@ -1446,20 +1630,25 @@ CREATE TABLE `transaction_agences` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `transaction_agences`
+-- Déchargement des données de la table `transaction_agences`
 --
 
-INSERT INTO `transaction_agences` (`transaction_agence_id`, `locataire_id`, `agence_id`, `proprietaire_id`, `propriete_id`, `batiment_id`, `porte_id`, `montant_global_verser`, `mois_payer`, `arriere_actuel`, `montant_arriere_payer`, `montant_arriere_actuel`, `montant_loyer_payer`, `montant_avance_payer`, `is_first`, `type_transaction`, `mode_paiement_id`, `is_reversement`, `date_transaction`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
-('06d71cb4-df6f-4683-b222-2f3939a4fa6d', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 560000, '[\"Juillet-2026\",\"Ao\\u00fbt-2026\"]', 0, 0, 0, 100000, 200000, 1, 'loyer', NULL, 0, '2026-07-09 17:37:02', 'system', NULL, '2026-07-09 17:37:02', '2026-07-09 17:37:02'),
-('149c817f-8f74-4d04-9f69-088a09f391fd', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 100000, NULL, 0, 0, 0, 0, 100000, 1, 'loyer', 4, 0, '2026-07-14 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:10:51', '2026-07-14 15:10:51'),
-('a3cd11f7-2712-4bf0-af43-d39fc92b4452', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 200000, '[\"Octobre-2026\",\"Novembre-2026\"]', 0, 0, 0, 0, 200000, 1, 'loyer', 1, 0, '2026-07-14 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:18:06', '2026-07-14 15:18:06'),
-('a863b06d-c720-4bae-a783-137cf6b89578', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 200000, '[\"Décembre-2026\",\"Janvier-2027\"]', 0, 0, 0, 0, 200000, 0, 'loyer', 1, 0, '2026-07-14 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:24:05', '2026-07-14 15:24:05'),
-('efb79e91-cfef-4910-8518-df45c464fbae', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 100000, NULL, 0, 0, 0, 100000, 0, 1, 'loyer', 4, 0, '2026-07-14 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:09:35', '2026-07-14 15:09:35');
+INSERT INTO `transaction_agences` (`transaction_agence_id`, `locataire_id`, `agence_id`, `proprietaire_id`, `propriete_id`, `batiment_id`, `porte_id`, `montant_global_verser`, `mois_payer`, `arriere_actuel`, `montant_arriere_payer`, `montant_arriere_actuel`, `montant_loyer_payer`, `montant_avance_payer`, `reference`, `is_first`, `type_transaction`, `mode_paiement_id`, `is_reversement`, `date_reversement`, `reversement_by`, `date_transaction`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+('06d71cb4-df6f-4683-b222-2f3939a4fa6d', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 560000, '[\"Juillet-2026\",\"Ao\\u00fbt-2026\"]', 0, 0, 0, 100000, 200000, NULL, 1, 'loyer', NULL, 0, NULL, NULL, '2026-07-09 17:37:02', 'system', NULL, '2026-07-09 17:37:02', '2026-07-09 17:37:02'),
+('149c817f-8f74-4d04-9f69-088a09f391fd', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 100000, NULL, 0, 0, 0, 0, 100000, NULL, 1, 'loyer', 4, 0, NULL, NULL, '2026-07-14 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:10:51', '2026-07-14 15:10:51'),
+('253fd665-0b63-4bc5-8057-c4059ca5f68a', '0ce87951-08f2-42ae-b31e-47d02ce97283', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 230000, '[\"Juillet-2026\",\"Ao\\u00fbt-2026\"]', 0, 0, 0, 40000, 80000, NULL, 1, 'loyer', NULL, 1, '2026-08-03 11:26:09', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-22 08:43:04', 'system', NULL, '2026-07-22 08:43:04', '2026-08-03 11:26:09'),
+('4739342f-f32c-4ab2-b3bb-35d167c68440', '0ce87951-08f2-42ae-b31e-47d02ce97283', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 40000, '[\"Octobre-2026\"]', 0, 0, 0, 0, 40000, NULL, 0, 'loyer', 4, 1, '2026-08-03 11:26:09', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-22 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-22 13:14:56', '2026-08-03 11:26:09'),
+('4901774e-0f38-4e4f-bd4f-6852948f2d3d', '0ce87951-08f2-42ae-b31e-47d02ce97283', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 40000, '[\"Septembre-2026\"]', 0, 0, 0, 0, 40000, NULL, 0, 'loyer', 4, 1, '2026-08-03 11:26:09', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-22 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-22 12:26:00', '2026-08-03 11:26:09'),
+('a3cd11f7-2712-4bf0-af43-d39fc92b4452', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 200000, '[\"Octobre-2026\",\"Novembre-2026\"]', 0, 0, 0, 0, 200000, NULL, 1, 'loyer', 1, 0, NULL, NULL, '2026-07-14 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:18:06', '2026-07-14 15:18:06'),
+('a863b06d-c720-4bae-a783-137cf6b89578', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 200000, '[\"Décembre-2026\",\"Janvier-2027\"]', 0, 0, 0, 0, 200000, NULL, 0, 'loyer', 1, 0, NULL, NULL, '2026-07-14 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:24:05', '2026-07-14 15:24:05'),
+('de41eaa6-01e7-4c5b-a27c-973ee00166a2', '0ce87951-08f2-42ae-b31e-47d02ce97283', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 40000, '[\"Décembre-2026\"]', 0, 0, 0, 0, 40000, NULL, 0, 'loyer', 1, 1, '2026-08-03 11:26:09', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-27 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-27 10:21:59', '2026-08-03 11:26:09'),
+('ef8e4240-d8f5-457e-ab06-6c83e0c84def', '0ce87951-08f2-42ae-b31e-47d02ce97283', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '958eadb7-20c7-4a9c-85bc-e323dccd6b16', '82024ea3-67b6-42d8-bdad-d98e126eba35', 'ca3307b6-c731-46ef-aeee-74fba27d43c5', 'cd4d5470-b2a3-4fed-8e55-7b482b128021', 40000, '[\"Novembre-2026\"]', 0, 0, 0, 0, 40000, NULL, 0, 'loyer', 4, 1, '2026-08-03 11:26:09', '4fb6adb2-c847-44ac-83e7-4c64c033caef', '2026-07-22 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-22 13:17:19', '2026-08-03 11:26:09'),
+('efb79e91-cfef-4910-8518-df45c464fbae', 'a60b1ee7-a122-4250-9ecc-f87602b8f581', '2df2a9f8-5d56-4842-a683-8676eb1d017f', '0143080c-1088-45b2-a292-edf809feb8e3', '2254a569-9bee-45dd-bfec-4d0d3212fa5b', '66898dee-57dd-48c4-9358-97770602368a', 'c2a89ff2-c3cb-4069-b0d4-b3c406282d5d', 100000, NULL, 0, 0, 0, 100000, 0, NULL, 1, 'loyer', 4, 0, NULL, NULL, '2026-07-14 00:00:00', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-07-14 15:09:35', '2026-07-14 15:09:35');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `type_maintenances`
+-- Structure de la table `type_maintenances`
 --
 
 CREATE TABLE `type_maintenances` (
@@ -1467,8 +1656,6 @@ CREATE TABLE `type_maintenances` (
   `agence_id` varchar(150) NOT NULL,
   `name` varchar(150) NOT NULL,
   `categorie` varchar(150) DEFAULT NULL,
-  `maintenance_category_id` char(36) DEFAULT NULL,
-  `duree_estimee` decimal(8,2) DEFAULT NULL,
   `description` varchar(250) DEFAULT NULL,
   `created_by` varchar(150) DEFAULT NULL,
   `updated_by` varchar(150) DEFAULT NULL,
@@ -1477,17 +1664,16 @@ CREATE TABLE `type_maintenances` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `type_maintenances`
+-- Déchargement des données de la table `type_maintenances`
 --
 
-INSERT INTO `type_maintenances` (`type_maintenance_id`, `agence_id`, `name`, `categorie`, `maintenance_category_id`, `duree_estimee`, `description`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
-('1fbac4bc-b728-40dd-966a-c1e264af53b1', 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 'DDD', 'Équipements', 'f33c0383-bf35-4225-9d54-3d2b1318f759', 3.00, 'aa', '8b1fc91c-966b-4bba-acba-46f4de717c6e', NULL, '2026-07-21 23:10:27', '2026-07-21 23:10:27'),
-('54a4124d-4bdb-4dd7-931f-851279eecea3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Réparation 🧑‍🔧', NULL, NULL, NULL, 'Réparation Electricite🧑‍🔧', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-06-02 21:21:45', '2026-06-02 21:21:45');
+INSERT INTO `type_maintenances` (`type_maintenance_id`, `agence_id`, `name`, `categorie`, `description`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+('54a4124d-4bdb-4dd7-931f-851279eecea3', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 'Réparation 🧑‍🔧', NULL, 'Réparation Electricite🧑‍🔧', '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-06-02 21:21:45', '2026-06-02 21:21:45');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `type_pieces`
+-- Structure de la table `type_pieces`
 --
 
 CREATE TABLE `type_pieces` (
@@ -1498,7 +1684,7 @@ CREATE TABLE `type_pieces` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `type_pieces`
+-- Déchargement des données de la table `type_pieces`
 --
 
 INSERT INTO `type_pieces` (`type_pieces_id`, `name`, `created_at`, `deleted_at`) VALUES
@@ -1510,7 +1696,7 @@ INSERT INTO `type_pieces` (`type_pieces_id`, `name`, `created_at`, `deleted_at`)
 -- --------------------------------------------------------
 
 --
--- Table structure for table `type_porte`
+-- Structure de la table `type_porte`
 --
 
 CREATE TABLE `type_porte` (
@@ -1521,7 +1707,7 @@ CREATE TABLE `type_porte` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `type_porte`
+-- Déchargement des données de la table `type_porte`
 --
 
 INSERT INTO `type_porte` (`type_porte_id`, `libelle`, `description`, `created_at`) VALUES
@@ -1537,7 +1723,7 @@ INSERT INTO `type_porte` (`type_porte_id`, `libelle`, `description`, `created_at
 -- --------------------------------------------------------
 
 --
--- Table structure for table `type_proprietes`
+-- Structure de la table `type_proprietes`
 --
 
 CREATE TABLE `type_proprietes` (
@@ -1550,7 +1736,7 @@ CREATE TABLE `type_proprietes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Dumping data for table `type_proprietes`
+-- Déchargement des données de la table `type_proprietes`
 --
 
 INSERT INTO `type_proprietes` (`id`, `agence_id`, `name`, `description`, `created_at`, `updated_at`) VALUES
@@ -1564,7 +1750,7 @@ INSERT INTO `type_proprietes` (`id`, `agence_id`, `name`, `description`, `create
 -- --------------------------------------------------------
 
 --
--- Table structure for table `users`
+-- Structure de la table `users`
 --
 
 CREATE TABLE `users` (
@@ -1591,7 +1777,7 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
--- Dumping data for table `users`
+-- Déchargement des données de la table `users`
 --
 
 INSERT INTO `users` (`id_users`, `name`, `email`, `adresse`, `agence_id`, `is_responsable`, `role_id`, `tel1`, `tel2`, `statut`, `email_verified_at`, `password`, `remember_token`, `created_by`, `photo`, `updated_by`, `deleted_by`, `created_at`, `updated_at`, `deleted_at`) VALUES
@@ -1599,13 +1785,12 @@ INSERT INTO `users` (`id_users`, `name`, `email`, `adresse`, `agence_id`, `is_re
 ('4fb6adb2-c847-44ac-83e7-4c64c033caed', 'Mon Agence', 'agence@test.com', NULL, '', 0, '', '', NULL, 'actif', NULL, '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', NULL, NULL, NULL, NULL, NULL, '2026-05-02 12:25:29', '2026-05-02 12:26:29', NULL),
 ('4fb6adb2-c847-44ac-83e7-4c64c033caef', 'Rodrigue', 'rodrigue.yapo@soumafe.ci', 'Abidjan', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 1, '1', '0707902962', NULL, 'actif', NULL, '$2y$12$AVLFXIQ7HXGshGXhPBpl2.nPQVq34bq.Tg1ciFz4cRST01H.kuSk2', NULL, NULL, NULL, NULL, NULL, '2026-04-26 23:59:04', '2026-05-11 15:01:19', NULL),
 ('6b97e65c-42eb-4695-a85d-0a2b1302d73e', 'Ouattara Junior', 'junior.ouattara@prosimmobilier.ci', 'Cocody angre', '2df2a9f8-5d56-4842-a683-8676eb1d017f', 0, '1', '0707902909', NULL, 'actif', NULL, '$2y$12$kAyHVpvE1Dx2bMdU.259.ewPp9q2Pd04kW0aM9KyFusApfRC3WQum', NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '4fb6adb2-c847-44ac-83e7-4c64c033caef', NULL, '2026-05-16 22:35:08', '2026-05-16 23:00:07', NULL),
-('8b1fc91c-966b-4bba-acba-46f4de717c6e', 'Ouattara Junior', 'junior@gmail.com', NULL, 'bdbeffd8-6f4e-4ac6-b1e5-264674289eed', 1, '1', '+2250788963300', '+2256689365577', 'actif', NULL, '$2y$12$yJpddBHUARxmfErHe0xvAuK8qmQ83CzYCY0TS8ILfERYxz.iEKBri', NULL, '', NULL, '', NULL, '2026-07-21 22:05:16', '2026-07-21 22:05:16', NULL),
 ('ac9b87f2-33a8-4df2-a96e-575edff2b9c4', 'Jonas Kouadio', 'jonask@gmail.com', 'Abobo', 'f2b4c17f-1d74-47fc-975b-49f62e64f9b4', 1, '1', '0707902492', '0709902904', 'actif', NULL, '$2y$12$ILFtC5P8hKfdZEpZKENmWekdnoHsSE4iVIQ3yKZWfRxor8NJrDPAW', NULL, 'ADM-001', '/admin/assets/images/users_photo/6a0248c9ba42c4.27078193.png', NULL, NULL, '2026-05-11 21:23:21', '2026-05-11 21:48:20', NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `ventes_biens`
+-- Structure de la table `ventes_biens`
 --
 
 CREATE TABLE `ventes_biens` (
@@ -1636,7 +1821,7 @@ CREATE TABLE `ventes_biens` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `villes`
+-- Structure de la table `villes`
 --
 
 CREATE TABLE `villes` (
@@ -1648,7 +1833,7 @@ CREATE TABLE `villes` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Dumping data for table `villes`
+-- Déchargement des données de la table `villes`
 --
 
 INSERT INTO `villes` (`id`, `name`, `region_id`, `created_at`, `updated_at`) VALUES
@@ -1778,11 +1963,11 @@ INSERT INTO `villes` (`id`, `name`, `region_id`, `created_at`, `updated_at`) VAL
 (124, 'Yamoussoukro', 33, '2024-12-24 07:05:30', '2024-12-24 07:05:30');
 
 --
--- Indexes for dumped tables
+-- Index pour les tables déchargées
 --
 
 --
--- Indexes for table `abonnements`
+-- Index pour la table `abonnements`
 --
 ALTER TABLE `abonnements`
   ADD PRIMARY KEY (`abonnement_id`),
@@ -1793,7 +1978,7 @@ ALTER TABLE `abonnements`
   ADD KEY `idx_statut` (`statut`);
 
 --
--- Indexes for table `abonnement_historiques`
+-- Index pour la table `abonnement_historiques`
 --
 ALTER TABLE `abonnement_historiques`
   ADD PRIMARY KEY (`id`),
@@ -1802,155 +1987,155 @@ ALTER TABLE `abonnement_historiques`
   ADD KEY `abonnement_historiques_nouvel_abonnement_id_foreign` (`nouvel_abonnement_id`);
 
 --
--- Indexes for table `acheteurs`
+-- Index pour la table `acheteurs`
 --
 ALTER TABLE `acheteurs`
   ADD PRIMARY KEY (`id_acheteur`);
 
 --
--- Indexes for table `admins`
+-- Index pour la table `admins`
 --
 ALTER TABLE `admins`
   ADD PRIMARY KEY (`id_admin`),
   ADD KEY `email` (`email`);
 
 --
--- Indexes for table `agences`
+-- Index pour la table `agences`
 --
 ALTER TABLE `agences`
   ADD PRIMARY KEY (`agence_id`);
 
 --
--- Indexes for table `batiment`
+-- Index pour la table `batiment`
 --
 ALTER TABLE `batiment`
   ADD PRIMARY KEY (`batiment_id`);
 
 --
--- Indexes for table `cache`
+-- Index pour la table `cache`
 --
 ALTER TABLE `cache`
   ADD PRIMARY KEY (`key`);
 
 --
--- Indexes for table `caisses`
+-- Index pour la table `caisses`
 --
 ALTER TABLE `caisses`
   ADD PRIMARY KEY (`caisse_id`);
 
 --
--- Indexes for table `configurations`
+-- Index pour la table `configurations`
 --
 ALTER TABLE `configurations`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `configuration_tarifs`
+-- Index pour la table `configuration_tarifs`
 --
 ALTER TABLE `configuration_tarifs`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `configuration_tarif_durees`
+-- Index pour la table `configuration_tarif_durees`
 --
 ALTER TABLE `configuration_tarif_durees`
   ADD PRIMARY KEY (`id`),
   ADD KEY `tarif_durees_tarif_id_foreign` (`tarif_id`);
 
 --
--- Indexes for table `configuration_tarif_modules`
+-- Index pour la table `configuration_tarif_modules`
 --
 ALTER TABLE `configuration_tarif_modules`
   ADD PRIMARY KEY (`id`),
   ADD KEY `tarif_modules_tarif_id_foreign` (`tarif_id`);
 
 --
--- Indexes for table `equipement_proprietes`
+-- Index pour la table `equipement_proprietes`
 --
 ALTER TABLE `equipement_proprietes`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `fonction_maintenance`
+-- Index pour la table `fonction_maintenance`
 --
 ALTER TABLE `fonction_maintenance`
   ADD PRIMARY KEY (`fonction_maintenance_id`);
 
 --
--- Indexes for table `genres`
+-- Index pour la table `genres`
 --
 ALTER TABLE `genres`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `locataire`
+-- Index pour la table `locataire`
 --
 ALTER TABLE `locataire`
   ADD PRIMARY KEY (`locataire_id`);
 
 --
--- Indexes for table `locataire_agence`
+-- Index pour la table `locataire_agence`
 --
 ALTER TABLE `locataire_agence`
   ADD PRIMARY KEY (`locataire_agence_id`);
 
 --
--- Indexes for table `loyer`
+-- Index pour la table `loyer`
 --
 ALTER TABLE `loyer`
   ADD PRIMARY KEY (`loyer_id`);
 
 --
--- Indexes for table `maintenance`
+-- Index pour la table `maintenance`
 --
 ALTER TABLE `maintenance`
   ADD PRIMARY KEY (`maintenance_id`);
 
 --
--- Indexes for table `maintenance_detail`
+-- Index pour la table `maintenance_detail`
 --
 ALTER TABLE `maintenance_detail`
   ADD PRIMARY KEY (`maintenance_detail_id`);
 
 --
--- Indexes for table `maintenanciers`
+-- Index pour la table `maintenanciers`
 --
 ALTER TABLE `maintenanciers`
   ADD PRIMARY KEY (`maintenancier_id`);
 
 --
--- Indexes for table `migrations`
+-- Index pour la table `migrations`
 --
 ALTER TABLE `migrations`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `mode_paiements`
+-- Index pour la table `mode_paiements`
 --
 ALTER TABLE `mode_paiements`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `mouvements_caisse`
+-- Index pour la table `mouvements_caisse`
 --
 ALTER TABLE `mouvements_caisse`
   ADD PRIMARY KEY (`mouvement_id`);
 
 --
--- Indexes for table `parametrages_agence`
+-- Index pour la table `parametrages_agence`
 --
 ALTER TABLE `parametrages_agence`
   ADD PRIMARY KEY (`parametrages_agence_id`);
 
 --
--- Indexes for table `periodicite_paiements`
+-- Index pour la table `periodicite_paiements`
 --
 ALTER TABLE `periodicite_paiements`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `periodicite_paiements_name_unique` (`name`);
 
 --
--- Indexes for table `porte`
+-- Index pour la table `porte`
 --
 ALTER TABLE `porte`
   ADD PRIMARY KEY (`porte_id`),
@@ -1958,13 +2143,13 @@ ALTER TABLE `porte`
   ADD UNIQUE KEY `batiment_id` (`batiment_id`,`numero_porte`);
 
 --
--- Indexes for table `propietaire_lots`
+-- Index pour la table `propietaire_lots`
 --
 ALTER TABLE `propietaire_lots`
   ADD PRIMARY KEY (`propreietaire_lot_id`);
 
 --
--- Indexes for table `proprietaires`
+-- Index pour la table `proprietaires`
 --
 ALTER TABLE `proprietaires`
   ADD PRIMARY KEY (`proprietaire_id`),
@@ -1973,20 +2158,20 @@ ALTER TABLE `proprietaires`
   ADD UNIQUE KEY `code` (`code`);
 
 --
--- Indexes for table `proprietaire_agences`
+-- Index pour la table `proprietaire_agences`
 --
 ALTER TABLE `proprietaire_agences`
   ADD PRIMARY KEY (`proprietaire_agence_id`);
 
 --
--- Indexes for table `propriete`
+-- Index pour la table `propriete`
 --
 ALTER TABLE `propriete`
   ADD PRIMARY KEY (`propriete_id`),
   ADD UNIQUE KEY `reference` (`reference`);
 
 --
--- Indexes for table `propriete_proximites`
+-- Index pour la table `propriete_proximites`
 --
 ALTER TABLE `propriete_proximites`
   ADD PRIMARY KEY (`propriete_proximite_id`),
@@ -1994,37 +2179,88 @@ ALTER TABLE `propriete_proximites`
   ADD KEY `propriete_proximites_proximite_id_index` (`proximite_id`);
 
 --
--- Indexes for table `prossimite_proprietes`
+-- Index pour la table `prossimite_proprietes`
 --
 ALTER TABLE `prossimite_proprietes`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `regions`
+-- Index pour la table `regions`
 --
 ALTER TABLE `regions`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `roles`
+-- Index pour la table `reversements`
+--
+ALTER TABLE `reversements`
+  ADD PRIMARY KEY (`id_reversement`),
+  ADD KEY `idx_reversements_cour` (`lot_id`),
+  ADD KEY `idx_reversements_proprietaire` (`proprietaire_id`),
+  ADD KEY `idx_reversements_agence` (`agence_id`),
+  ADD KEY `idx_reversements_periode` (`periode_debut`,`periode_fin`),
+  ADD KEY `idx_reversements_statut` (`statut`),
+  ADD KEY `idx_reversements_date_reversement` (`date_reversement`);
+
+--
+-- Index pour la table `reversement_details`
+--
+ALTER TABLE `reversement_details`
+  ADD PRIMARY KEY (`id_reversement_detail`),
+  ADD KEY `idx_reversement_details_reversement` (`reversement_id`),
+  ADD KEY `idx_reversement_details_locataire` (`locataire_id`),
+  ADD KEY `idx_reversement_details_porte` (`porte_id`),
+  ADD KEY `idx_reversement_details_propriete` (`propriete_id`),
+  ADD KEY `idx_reversement_details_proprietaire` (`proprietaire_id`),
+  ADD KEY `idx_reversement_details_agence` (`agence_id`),
+  ADD KEY `idx_reversement_details_proprietaire_lot` (`lot_id`),
+  ADD KEY `idx_reversement_details_batiment` (`batiment_id`);
+
+--
+-- Index pour la table `roles`
 --
 ALTER TABLE `roles`
   ADD PRIMARY KEY (`role_id`);
 
 --
--- Indexes for table `sessions`
+-- Index pour la table `sessions`
 --
 ALTER TABLE `sessions`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `tarif_porte`
+-- Index pour la table `support_attachments`
+--
+ALTER TABLE `support_attachments`
+  ADD PRIMARY KEY (`support_attachment_id`),
+  ADD KEY `support_attachments_support_ticket_id_index` (`support_ticket_id`),
+  ADD KEY `support_attachments_support_message_id_index` (`support_message_id`);
+
+--
+-- Index pour la table `support_messages`
+--
+ALTER TABLE `support_messages`
+  ADD PRIMARY KEY (`support_message_id`),
+  ADD KEY `support_messages_support_ticket_id_index` (`support_ticket_id`);
+
+--
+-- Index pour la table `support_tickets`
+--
+ALTER TABLE `support_tickets`
+  ADD PRIMARY KEY (`support_ticket_id`),
+  ADD UNIQUE KEY `support_tickets_reference_unique` (`reference`),
+  ADD KEY `support_tickets_agence_id_index` (`agence_id`),
+  ADD KEY `support_tickets_demandeur_id_index` (`demandeur_id`),
+  ADD KEY `support_tickets_statut_index` (`statut`);
+
+--
+-- Index pour la table `tarif_porte`
 --
 ALTER TABLE `tarif_porte`
   ADD UNIQUE KEY `tarif_id` (`tarif_id`);
 
 --
--- Indexes for table `transactions`
+-- Index pour la table `transactions`
 --
 ALTER TABLE `transactions`
   ADD PRIMARY KEY (`transaction_id`),
@@ -2037,199 +2273,212 @@ ALTER TABLE `transactions`
   ADD KEY `transactions_reference_index` (`reference`);
 
 --
--- Indexes for table `transaction_agences`
+-- Index pour la table `transaction_agences`
 --
 ALTER TABLE `transaction_agences`
   ADD PRIMARY KEY (`transaction_agence_id`);
 
 --
--- Indexes for table `type_maintenances`
+-- Index pour la table `type_maintenances`
 --
 ALTER TABLE `type_maintenances`
   ADD PRIMARY KEY (`type_maintenance_id`);
 
 --
--- Indexes for table `type_pieces`
+-- Index pour la table `type_pieces`
 --
 ALTER TABLE `type_pieces`
   ADD PRIMARY KEY (`type_pieces_id`);
 
 --
--- Indexes for table `type_porte`
+-- Index pour la table `type_porte`
 --
 ALTER TABLE `type_porte`
   ADD PRIMARY KEY (`type_porte_id`),
   ADD UNIQUE KEY `type_porte_id` (`type_porte_id`);
 
 --
--- Indexes for table `type_proprietes`
+-- Index pour la table `type_proprietes`
 --
 ALTER TABLE `type_proprietes`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `users`
+-- Index pour la table `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id_users`),
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- Indexes for table `ventes_biens`
+-- Index pour la table `ventes_biens`
 --
 ALTER TABLE `ventes_biens`
   ADD PRIMARY KEY (`id_vente`),
   ADD UNIQUE KEY `reference` (`reference`);
 
 --
--- Indexes for table `villes`
+-- Index pour la table `villes`
 --
 ALTER TABLE `villes`
   ADD PRIMARY KEY (`id`);
 
 --
--- AUTO_INCREMENT for dumped tables
+-- AUTO_INCREMENT pour les tables déchargées
 --
 
 --
--- AUTO_INCREMENT for table `abonnement_historiques`
+-- AUTO_INCREMENT pour la table `abonnement_historiques`
 --
 ALTER TABLE `abonnement_historiques`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT for table `caisses`
+-- AUTO_INCREMENT pour la table `caisses`
 --
 ALTER TABLE `caisses`
   MODIFY `caisse_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `configurations`
+-- AUTO_INCREMENT pour la table `configurations`
 --
 ALTER TABLE `configurations`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `configuration_tarifs`
+-- AUTO_INCREMENT pour la table `configuration_tarifs`
 --
 ALTER TABLE `configuration_tarifs`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
--- AUTO_INCREMENT for table `configuration_tarif_durees`
+-- AUTO_INCREMENT pour la table `configuration_tarif_durees`
 --
 ALTER TABLE `configuration_tarif_durees`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
--- AUTO_INCREMENT for table `configuration_tarif_modules`
+-- AUTO_INCREMENT pour la table `configuration_tarif_modules`
 --
 ALTER TABLE `configuration_tarif_modules`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT for table `equipement_proprietes`
+-- AUTO_INCREMENT pour la table `equipement_proprietes`
 --
 ALTER TABLE `equipement_proprietes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
--- AUTO_INCREMENT for table `genres`
+-- AUTO_INCREMENT pour la table `genres`
 --
 ALTER TABLE `genres`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT for table `migrations`
+-- AUTO_INCREMENT pour la table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
--- AUTO_INCREMENT for table `mode_paiements`
+-- AUTO_INCREMENT pour la table `mode_paiements`
 --
 ALTER TABLE `mode_paiements`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT for table `mouvements_caisse`
+-- AUTO_INCREMENT pour la table `mouvements_caisse`
 --
 ALTER TABLE `mouvements_caisse`
   MODIFY `mouvement_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `periodicite_paiements`
+-- AUTO_INCREMENT pour la table `periodicite_paiements`
 --
 ALTER TABLE `periodicite_paiements`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
--- AUTO_INCREMENT for table `prossimite_proprietes`
+-- AUTO_INCREMENT pour la table `prossimite_proprietes`
 --
 ALTER TABLE `prossimite_proprietes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT for table `regions`
+-- AUTO_INCREMENT pour la table `regions`
 --
 ALTER TABLE `regions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
--- AUTO_INCREMENT for table `transactions`
+-- AUTO_INCREMENT pour la table `transactions`
 --
 ALTER TABLE `transactions`
   MODIFY `transaction_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
--- AUTO_INCREMENT for table `type_pieces`
+-- AUTO_INCREMENT pour la table `type_pieces`
 --
 ALTER TABLE `type_pieces`
   MODIFY `type_pieces_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT for table `type_porte`
+-- AUTO_INCREMENT pour la table `type_porte`
 --
 ALTER TABLE `type_porte`
   MODIFY `type_porte_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT for table `type_proprietes`
+-- AUTO_INCREMENT pour la table `type_proprietes`
 --
 ALTER TABLE `type_proprietes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
--- AUTO_INCREMENT for table `villes`
+-- AUTO_INCREMENT pour la table `villes`
 --
 ALTER TABLE `villes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=126;
 
 --
--- Constraints for dumped tables
+-- Contraintes pour les tables déchargées
 --
 
 --
--- Constraints for table `abonnement_historiques`
+-- Contraintes pour la table `abonnement_historiques`
 --
 ALTER TABLE `abonnement_historiques`
   ADD CONSTRAINT `abonnement_historiques_ancien_abonnement_id_foreign` FOREIGN KEY (`ancien_abonnement_id`) REFERENCES `abonnements` (`abonnement_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `abonnement_historiques_nouvel_abonnement_id_foreign` FOREIGN KEY (`nouvel_abonnement_id`) REFERENCES `abonnements` (`abonnement_id`) ON DELETE SET NULL;
 
 --
--- Constraints for table `configuration_tarif_durees`
+-- Contraintes pour la table `configuration_tarif_durees`
 --
 ALTER TABLE `configuration_tarif_durees`
   ADD CONSTRAINT `tarif_durees_tarif_id_foreign` FOREIGN KEY (`tarif_id`) REFERENCES `configuration_tarifs` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `configuration_tarif_modules`
+-- Contraintes pour la table `configuration_tarif_modules`
 --
 ALTER TABLE `configuration_tarif_modules`
   ADD CONSTRAINT `tarif_modules_tarif_id_foreign` FOREIGN KEY (`tarif_id`) REFERENCES `configuration_tarifs` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `transactions`
+-- Contraintes pour la table `support_attachments`
+--
+ALTER TABLE `support_attachments`
+  ADD CONSTRAINT `support_attachments_support_message_id_foreign` FOREIGN KEY (`support_message_id`) REFERENCES `support_messages` (`support_message_id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `support_attachments_support_ticket_id_foreign` FOREIGN KEY (`support_ticket_id`) REFERENCES `support_tickets` (`support_ticket_id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `support_messages`
+--
+ALTER TABLE `support_messages`
+  ADD CONSTRAINT `support_messages_support_ticket_id_foreign` FOREIGN KEY (`support_ticket_id`) REFERENCES `support_tickets` (`support_ticket_id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `transactions`
 --
 ALTER TABLE `transactions`
   ADD CONSTRAINT `transactions_abonnement_historique_id_foreign` FOREIGN KEY (`abonnement_historique_id`) REFERENCES `abonnement_historiques` (`id`) ON DELETE SET NULL,

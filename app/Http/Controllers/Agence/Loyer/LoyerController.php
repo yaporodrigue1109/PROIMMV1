@@ -42,15 +42,16 @@ protected  $paiementLoyerService;
         if (strlen($query) < 2) {
             return response()->json(['data' => null]);
         }
-
+//dd( $hasLoyerTable,$query);
       $locataire = Locataire::whereHas('contrats', function ($q) use ($agenceId) {
-        $q->where('agence_id', $agenceId)
+        $q->where('agence_id', $agenceId) 
           ->where('is_active', 1); // uniquement les baux actifs de cette agence
     })
             ->where(function ($q) use ($query) {
                 $q->where('name', 'LIKE', "%{$query}%")
                     ->orWhere('tel1', 'LIKE', "%{$query}%")
-                    ->orWhere('tel2', 'LIKE', "%{$query}%");
+                    ->orWhere('tel2', 'LIKE', "%{$query}%")
+                    ->orWhere('email', 'LIKE', "%{$query}%");
             })
             ->first();
 
@@ -60,6 +61,7 @@ protected  $paiementLoyerService;
 
         $bauxActifs = $locataire->bauxActifs($agenceId)
             ->where('agence_id', $agenceId)
+            ->where('locataire_id', $locataire->locataire_id)
             ->withDefaultRelations()
             ->get();
 
@@ -68,8 +70,8 @@ protected  $paiementLoyerService;
         }
 
         $rentals = [];
-
-        foreach ($bauxActifs as $bail) {
+//dd($bauxActifs->where('locataire_id', $locataire->locataire_id),$locataire->locataire_id);
+        foreach ($bauxActifs->where('locataire_id', $locataire->locataire_id)  as $bail) {
             $dernierPaiement = null;
             $montantDu = 0;
             $nbMoisRetard = 0;
@@ -83,6 +85,8 @@ protected  $paiementLoyerService;
                 $dernierPaiement = Loyer::where('locataire_id', $locataire->locataire_id)
                     ->where('agence_id', $agenceId)
                     ->where('proprietaire_id', $bail->proprietaire_id)
+                    ->where('batiment_id', $bail->batiment_id)
+                    ->where('lot_id', $bail->lot_id)
                     ->where('porte_id', $bail->porte_id)
                     ->whereNotNull('date_paiement')
                     ->latest('date_paiement')
@@ -159,7 +163,7 @@ protected  $paiementLoyerService;
                 'history' => $history,
             ];
         }
-
+//dd($rentals);
         return response()->json([
             'data' => [
                 'locataire_id' => $locataire->locataire_id,

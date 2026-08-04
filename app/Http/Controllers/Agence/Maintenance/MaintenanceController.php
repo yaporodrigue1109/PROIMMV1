@@ -50,6 +50,7 @@ class MaintenanceController extends Controller
 
     public function index(Request $request)
     {
+        //dd('dsjhksml,./');
         $filters = $request->only([
             'statut', 'maintenancier_id', 'agence_id',
             'date_debut', 'date_fin', 'per_page',

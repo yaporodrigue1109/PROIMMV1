@@ -429,7 +429,7 @@ export default function Maintenance({
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
             const response = await fetch('/agence/maintenance', {
-                method: 'POST',
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
@@ -644,7 +644,7 @@ export default function Maintenance({
                                                     <span className="block text-xs uppercase tracking-wide text-[#94a3b8]">Créée le</span>
                                                     <strong className="text-[#0f172a]">{formatDateFr(item.created_at)}</strong>
                                                 </div>
-                                            </div>
+                                            </div> 
 
                                             {item.description ? (
                                                 <div className="mt-4 rounded-2xl border border-[#e2e8f0] bg-[#fbfdff] p-4">

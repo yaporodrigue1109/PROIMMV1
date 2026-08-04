@@ -1,0 +1,14 @@
+<?php
+namespace App\Repositories\Agence\Repository;
+use App\Models\SupportTicket; use App\Repositories\Agence\Interfaces\SupportTicketRepositoryInterface; use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+class SupportTicketRepository implements SupportTicketRepositoryInterface {
+ public function paginate(string $agenceId,array $filters=[]): LengthAwarePaginator { $q=SupportTicket::query()->where('agence_id',$agenceId)->withCount('messages')->latest(); if(!empty($filters['status'])) $q->where('statut',$filters['status']); if(!empty($filters['search'])) $q->where(fn($x)=>$x->where('sujet','like','%'.$filters['search'].'%')->orWhere('reference','like','%'.$filters['search'].'%')->orWhere('categorie','like','%'.$filters['search'].'%')); return $q->paginate($filters['per_page']??20)->withQueryString(); }
+ public function paginateForAdmin(array $filters=[]): LengthAwarePaginator { $q=SupportTicket::query()->with(['demandeur','agence','messages'])->latest(); if(!empty($filters['status'])) $q->where('statut',$filters['status']); return $q->paginate($filters['per_page']??50); }
+ public function findForAgence(string $id,string $agenceId): ?SupportTicket { return SupportTicket::where('agence_id',$agenceId)->where(fn($q)=>$q->where('support_ticket_id',$id)->orWhere('reference',$id))->with('messages')->first(); }
+ public function find(string $id): ?SupportTicket { return SupportTicket::where(fn($q)=>$q->where('support_ticket_id',$id)->orWhere('reference',$id))->with(['messages','demandeur','agence'])->first(); }
+ public function create(array $data): SupportTicket { return SupportTicket::create($data); }
+ public function addMessage(SupportTicket $ticket,array $data): SupportTicket { $ticket->messages()->create($data); $ticket->update(['statut'=>'pending']); return $ticket->fresh('messages'); }
+ public function updateStatus(SupportTicket $ticket,string $status): SupportTicket { $ticket->update(['statut'=>$status,'resolved_at'=>in_array($status,['resolved','closed'])?now():null]); return $ticket->fresh(); }
+ public function statistics(string $agenceId): array { $q=SupportTicket::where('agence_id',$agenceId); return ['all'=>(clone $q)->count(),'open'=>(clone $q)->where('statut','open')->count(),'pending'=>(clone $q)->where('statut','pending')->count(),'resolved'=>(clone $q)->where('statut','resolved')->count(),'closed'=>(clone $q)->where('statut','closed')->count()]; }
+ public function globalStatistics(): array { return $this->statisticsFor(SupportTicket::query()); } private function statisticsFor($q): array { return ['all'=>(clone $q)->count(),'open'=>(clone $q)->where('statut','open')->count(),'pending'=>(clone $q)->where('statut','pending')->count(),'resolved'=>(clone $q)->where('statut','resolved')->count(),'closed'=>(clone $q)->where('statut','closed')->count()]; }
+}

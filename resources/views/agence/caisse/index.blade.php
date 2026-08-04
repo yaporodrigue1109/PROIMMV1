@@ -89,7 +89,7 @@
 
                     <button type="button"
                             class="btn btn-primary"
-                            data-open-modal="mouvementModal">
+                            data-open-modal="mouvementModal"> 
                         + Nouveau mouvement
                     </button>
 
@@ -804,7 +804,7 @@
                         </a>
 
                         <!-- Vente de biens -->
-                        <a href="{{ route('agence.caisse.loyer') }}"
+                        <a href="{{ route('agence.caisse.vente.bien') }}"
                            class="mouvement-option">
                             <div class="mouvement-option-icon success">
                                 <svg xmlns="http://www.w3.org/2000/svg"
