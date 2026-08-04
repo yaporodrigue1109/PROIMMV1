@@ -5,6 +5,8 @@ import {
     CalendarDays,
     CheckCircle2,
     CircleDollarSign,
+    Download,
+    ExternalLink,
     FileText,
     Home,
     MapPin,
@@ -38,6 +40,29 @@ const asArray = (value) => (Array.isArray(value) ? value : []);
 const number = (value) => new Intl.NumberFormat('fr-FR').format(Number(value ?? 0));
 
 const money = (value) => `${number(value)} FCFA`;
+
+const fileUrl = (value) => {
+    if (!value) return '';
+
+    const path = String(value).trim();
+
+    if (/^https?:\/\//i.test(path)) {
+        try {
+            const url = new URL(path);
+            return ['localhost', '127.0.0.1'].includes(url.hostname)
+                ? `${url.pathname}${url.search}`
+                : path;
+        } catch {
+            return path;
+        }
+    }
+
+    if (path.startsWith('/')) return path;
+    if (path.startsWith('storage/')) return `/${path}`;
+    if (path.startsWith('admin/') || path.startsWith('assets/')) return `/${path}`;
+
+    return `/storage/${path.replace(/^public\//, '')}`;
+};
 
 const months = (value) => {
     const numeric = Number(value ?? 0);
@@ -385,6 +410,12 @@ export default function Show({ locataire = null }) {
     const totalTransactions = tenant.transactions.reduce((acc, transaction) => acc + transaction.montant_total_verse, 0);
     const totalLoyers = tenant.loyers.reduce((acc, loyer) => acc + loyer.montant_a_payer, 0);
     const totalRestant = tenant.loyers.reduce((acc, loyer) => acc + loyer.montant_restant, 0);
+    const documents = [
+        { key: 'identity', label: "Pièce d'identité", path: tenant.image_pice },
+        { key: 'photo', label: 'Photo du locataire', path: tenant.photo },
+    ]
+        .filter((document) => document.path)
+        .map((document) => ({ ...document, url: fileUrl(document.path) }));
 
     const handleResilier = () => {
         if (!tenant.id) return;
@@ -524,6 +555,9 @@ export default function Show({ locataire = null }) {
                                 <TabsTrigger value="transactions" className="data-[state=active]:bg-white data-[state=active]:text-[#00559b]">
                                     Transactions
                                 </TabsTrigger>
+                                    <TabsTrigger value="documents" className="data-[state=active]:bg-white data-[state=active]:text-[#00559b]">
+                                    Documents Relatifs
+                                </TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="overview" className="mt-0 space-y-4">
@@ -631,6 +665,69 @@ export default function Show({ locataire = null }) {
                                                 <p className="text-sm font-semibold text-[#0f172a]">Aucune transaction</p>
                                                 <p className="text-sm text-[#5f7182]">
                                                     Aucune transaction n’a encore été enregistrée pour ce locataire.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="documents" className="mt-0 space-y-4">
+                                <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
+                                    <CardHeader className="border-b border-[#e2e8f0] py-4">
+                                        <CardTitle className="text-sm text-[#0f172a]">Documents Relatifs</CardTitle>
+                                        <CardDescription className="text-xs text-[#5f7182]">
+                                            Liste des documents relatifs au locataire.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="mt-4 space-y-4 p-5">
+                                        {documents.length ? (
+                                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                {documents.map((document) => (
+                                                    <div
+                                                        key={document.key}
+                                                        className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-[#f8fafc]"
+                                                    >
+                                                        <a
+                                                            href={document.url}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="flex h-52 items-center justify-center bg-white p-3"
+                                                        >
+                                                            <img
+                                                                src={document.url}
+                                                                alt={document.label}
+                                                                className="h-full w-full rounded-xl object-contain"
+                                                            />
+                                                        </a>
+                                                        <div className="flex items-center justify-between gap-3 border-t border-[#e2e8f0] p-4">
+                                                            <div className="min-w-0">
+                                                                <p className="truncate text-sm font-semibold text-[#0f172a]">
+                                                                    {document.label}
+                                                                </p>
+                                                                <p className="text-xs text-[#5f7182]">Document disponible</p>
+                                                            </div>
+                                                            <div className="flex shrink-0 gap-2">
+                                                                <Button asChild type="button" variant="outline" size="icon">
+                                                                    <a href={document.url} target="_blank" rel="noreferrer" title="Ouvrir">
+                                                                        <ExternalLink className="h-4 w-4" />
+                                                                    </a>
+                                                                </Button>
+                                                                <Button asChild type="button" variant="outline" size="icon">
+                                                                    <a href={document.url} download title="Télécharger">
+                                                                        <Download className="h-4 w-4" />
+                                                                    </a>
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="rounded-2xl border border-dashed border-[#c8d4de] bg-[#f8fafc] px-4 py-10 text-center">
+                                                <p className="text-sm font-semibold text-[#0f172a]">Aucun document</p>
+                                                <p className="text-sm text-[#5f7182]">
+                                                    Aucun document n’a encore été enregistré pour ce locataire.
                                                 </p>
                                             </div>
                                         )}
