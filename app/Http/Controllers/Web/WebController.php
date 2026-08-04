@@ -106,6 +106,26 @@ class WebController extends Controller
         }
     }
     public function contact(): Response { return Inertia::render('Web/Contact'); }
-    public function sendContact(Request $request) { $request->validate(['name'=>'required|string|max:100','email'=>'required|email','message'=>'required|string|max:2000']); return back()->with('success', 'Votre message a bien été envoyé. Notre équipe vous répondra rapidement.'); }
+    public function sendContact(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'request_type' => ['required', 'in:demo,inscription,support,partenariat,autre'],
+            'name' => ['required', 'string', 'max:100'],
+            'email' => ['required', 'email', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'subject' => ['required', 'string', 'max:150'],
+            'message' => ['required', 'string', 'min:10', 'max:2000'],
+        ], [
+            'request_type.required' => 'Sélectionnez le motif de votre demande.',
+            'name.required' => 'Votre nom est obligatoire.',
+            'email.required' => 'Votre adresse email est obligatoire.',
+            'email.email' => 'Saisissez une adresse email valide.',
+            'subject.required' => 'L’objet de votre demande est obligatoire.',
+            'message.required' => 'Votre message est obligatoire.',
+            'message.min' => 'Votre message doit contenir au moins 10 caractères.',
+        ]);
+
+        return back()->with('success', 'Votre message a bien été envoyé. Notre équipe vous répondra rapidement.');
+    }
     private function listProperties(int $limit): array { return Propriete::query()->where('is_actif', true)->with(['typePropriete','batiments.portes.tarifActif'])->latest()->limit($limit)->get()->map(function ($property) { $door=$property->batiments->flatMap->portes->firstWhere('is_occupe', false) ?? $property->batiments->flatMap->portes->first(); return ['id'=>$property->propriete_id,'reference'=>$property->reference,'title'=>$property->typePropriete?->name ?? 'Propriété','address'=>$property->adresse_complete,'mode'=>$property->is_allocation ? 'location' : 'vente','price'=>(float)($door?->tarifActif?->mt_loyer ?? $door?->mt_loyer ?? 0),'surface'=>$door?->superficie_m2,'image'=>null]; })->all(); }
 }
