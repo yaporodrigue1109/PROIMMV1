@@ -49,7 +49,11 @@ export default function Dashboard({
         occupiedUnits = 0,
         vacantUnits = 0,
         tenants = 0,
+        personnel = 0,
+        proprietaires = 0,
+        lots = 0,
         monthlyRevenue = 0,
+        expectedRevenue = 0,
         revenueTrend = 0,
         pendingPayments = 0,
         occupancyRate = 0,
@@ -64,6 +68,20 @@ export default function Dashboard({
             accent: 'bg-[#eef8df] text-[#4d8500]',
         },
         {
+            label: 'Personnel',
+            value: number(personnel),
+            hint: 'Membres de l’agence',
+            icon: UserRound,
+            accent: 'bg-[#eaf4fb] text-[#00559b]',
+        },
+        {
+            label: 'Propriétaires',
+            value: number(proprietaires),
+            hint: `${number(lots)} lots gérés`,
+            icon: UserRound,
+            accent: 'bg-[#eef8df] text-[#4d8500]',
+        },
+        {
             label: 'Locataires actifs',
             value: number(tenants),
             hint: 'Contrats en cours',
@@ -71,7 +89,21 @@ export default function Dashboard({
             accent: 'bg-[#eaf4fb] text-[#00559b]',
         },
         {
-            label: 'Revenus du mois',
+            label: 'Portes',
+            value: number(occupiedUnits + vacantUnits),
+            hint: `${number(occupiedUnits)} occupées · ${number(vacantUnits)} libres`,
+            icon: DoorOpen,
+            accent: 'bg-[#eef8df] text-[#4d8500]',
+        },
+        {
+            label: 'Montant attendu',
+            value: currency(expectedRevenue),
+            hint: `${currency(pendingPayments)} à recevoir`,
+            icon: Banknote,
+            accent: 'bg-[#eaf4fb] text-[#00559b]',
+        },
+        {
+            label: 'Montant versé',
             value: currency(monthlyRevenue),
             hint: `${revenueTrend >= 0 ? '+' : ''}${revenueTrend}% vs mois dernier`,
             icon: Banknote,
@@ -81,7 +113,7 @@ export default function Dashboard({
         {
             label: "Taux d'occupation",
             value: `${number(occupancyRate)}%`,
-            hint: `${number(pendingPayments)} paiements en attente`,
+            hint: `${number(vacantUnits)} porte(s) libre(s)`,
             icon: DoorOpen,
             accent: 'bg-[#eef8df] text-[#4d8500]',
         },
@@ -161,6 +193,50 @@ export default function Dashboard({
                         );
                     })}
                 </div>
+
+                <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
+                    <CardHeader>
+                        <div>
+                            <CardTitle className="text-base text-[#0f172a]">Résumé par module</CardTitle>
+                            <CardDescription className="text-[#5f7182]">
+                                Vue synthétique des activités de l’agence
+                            </CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+                        <div className="rounded-xl border border-[#eef3f7] bg-[#f7fbfe] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#5f7182]">Immobilier</p>
+                            <p className="mt-2 text-2xl font-semibold text-[#0f172a]">{number(properties)}</p>
+                            <p className="mt-1 text-sm text-[#5f7182]">
+                                {number(occupiedUnits)} occupées · {number(vacantUnits)} libres
+                            </p>
+                        </div>
+
+                        <div className="rounded-xl border border-[#eef3f7] bg-[#f7fbfe] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#5f7182]">Locataires</p>
+                            <p className="mt-2 text-2xl font-semibold text-[#0f172a]">{number(tenants)}</p>
+                            <p className="mt-1 text-sm text-[#5f7182]">Contrats actifs suivis</p>
+                        </div>
+
+                        <div className="rounded-xl border border-[#eef3f7] bg-[#f7fbfe] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#5f7182]">Propriétaires</p>
+                            <p className="mt-2 text-2xl font-semibold text-[#0f172a]">{number(proprietaires)}</p>
+                            <p className="mt-1 text-sm text-[#5f7182]">{number(lots)} lots gérés</p>
+                        </div>
+
+                        <div className="rounded-xl border border-[#eef3f7] bg-[#f7fbfe] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#5f7182]">Personnel</p>
+                            <p className="mt-2 text-2xl font-semibold text-[#0f172a]">{number(personnel)}</p>
+                            <p className="mt-1 text-sm text-[#5f7182]">Membres de l’agence</p>
+                        </div>
+
+                        <div className="rounded-xl border border-[#eef3f7] bg-[#f7fbfe] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#5f7182]">Finances</p>
+                            <p className="mt-2 text-lg font-semibold text-[#0f172a]">{currency(expectedRevenue)}</p>
+                            <p className="mt-1 text-sm text-[#5f7182]">Versé : {currency(monthlyRevenue)}</p>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Paiements récents */}
