@@ -76,6 +76,12 @@ const navigation = [
         activeMatch: '/agence/caisse',
     },
     {
+        label: 'Reversement',
+        href: '/agence/reversement',
+        icon: WalletCards,
+        activeMatch: '/agence/reversement',
+    },
+    {
         label: 'Statistiques',
         href: '/agence/statistiques',
         icon: BarChart3,

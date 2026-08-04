@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Agence\Reversement;
 
+use App\Http\Controllers\Controller;
 use App\Services\Agence\ReversementDetailService;
 use App\Http\Requests\Agence\Reversement\ReversementDetailRequest;
 use App\Http\Resources\ReversementDetailResource;

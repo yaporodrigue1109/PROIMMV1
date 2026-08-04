@@ -21,6 +21,8 @@ use App\Http\Controllers\Agence\Propriete\TypeProprieteController;
 use App\Http\Controllers\Agence\Propriete\EquipementProprieteController;
 use App\Http\Controllers\Agence\Propriete\ProssimiteProprieteController;
 use App\Http\Controllers\Agence\Parametrage\ParametrageController;
+use App\Http\Controllers\Agence\Reversement\ReversementDetailController;
+use App\Http\Controllers\Agence\Support\SupportController;
 use Inertia\Inertia;
 
 
@@ -53,7 +55,7 @@ Route::middleware(['user'])->group(function () {
         ]);
     })->name('profile');
 
-    Route::get('/support', function () {
+    /*Route::get('/support', function () {
         $phone = company_phone() ?: null;
         $email = company_email() ?: null;
 
@@ -234,7 +236,15 @@ Route::middleware(['user'])->group(function () {
             ],
             'ticket' => $tickets[$ticket],
         ]);
-    })->name('support.show');
+    })->name('support.show');*/
+
+    Route::controller(SupportController::class)->prefix('support')->name('support.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/nouveau', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{ticket}', 'show')->name('show');
+        Route::post('/{ticket}/reponses', 'reply')->name('reply');
+    });
 
     Route::prefix('dashboard')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -349,12 +359,37 @@ Route::middleware(['user'])->group(function () {
     });
 
 
+    Route::prefix('reversement')->name('reversements.')->group(function () {
+        Route::controller(ReversementController::class)->group(function () {
+            Route::get('/',  'index')->name('index');
+            Route::post('/store', 'store')->name('store');
+            Route::post('/with-details', 'storeWithDetails')->name('store_with_details');
+            Route::get('/statistics', 'statistics')->name('statistics');
+          //  Route::get('/{id}',  'show')->name('show');
+            Route::get('/{id}/summary', 'summary')->name('summary');
+            Route::put('/{id}', 'update')->name('update');
+            Route::put('/{id}/paiements', 'updatePaiements')->name('update_paiements');
+            Route::post('/{id}/valider','valider')->name('valider');
+            Route::post('/{id}/annuler','annuler')->name('annuler');
+            Route::delete('/{id}', 'destroy')->name('destroy');
+            Route::post('/{lotId}/marquer-reverse', 'marquerReverse')->name('marquer-reverse');
+            Route::get('/historique/{id}', 'historiqueDetail')->name('historique.detail');
+            Route::get('/pdf/{id}/{debut}/{fin}', 'PdfReversement')->name('historique.pdf');
+            Route::get('/historique', 'historique')->name('historique');
+        });
+         Route::controller(ReversementDetailController::class)->name('details.')->prefix('details')->group(function () {
+            // Routes pour les détails
+            Route::get('/{reversementId}','index')->name('index');
+            Route::get('/{reversementId}/summary', 'summary')->name('summary');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{id}', 'show')->name('show');
+            Route::put('/{id}','update')->name('update');
+            Route::delete('/{id}', 'destroy')->name('destroy');
+        });
+});
 
-    Route::prefix('reversement')->group(function () {
-        Route::get('/', [ReversementController::class, 'index'])->name('reversement.index');
 
 
-    });
 
     Route::controller(ProprietaireController::class)->prefix('proprietaire')->name('proprietaire.')->group(function () {
         Route::get('/','index')->name('index');

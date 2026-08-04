@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/react';
 import {
     Bar,
+    BarChart,
     CartesianGrid,
     Cell,
     ComposedChart,
@@ -16,6 +17,7 @@ import {
 import {
     AlertTriangle,
     Banknote,
+    BriefcaseBusiness,
     Building2,
     CalendarClock,
     ChevronRight,
@@ -23,6 +25,10 @@ import {
     FileText,
     PiggyBank,
     TrendingUp,
+    Users,
+    UserCheck,
+    UserMinus,
+    UserRound,
     Wallet,
     Wrench,
 } from 'lucide-react';
@@ -41,87 +47,15 @@ const PERIODS = [
 
 const TABS = [
     { key: 'overview', label: "Vue d'ensemble", icon: TrendingUp },
+    { key: 'proprietaires', label: 'Propriétaires', icon: UserRound },
+    { key: 'locataires', label: 'Locataires', icon: Users },
+    { key: 'personnel', label: 'Personnel', icon: BriefcaseBusiness },
     { key: 'finances', label: 'Finances & Recouvrement', icon: Banknote },
     { key: 'maintenance', label: 'Gestion & Maintenance', icon: Wrench },
 ];
 
 const PALETTE = [BRAND, '#22a6f2', '#5b6cff', '#94a3b8', '#f59e0b', '#ef4444'];
 
-const MOCK = {
-    patrimoine: {
-        proprietes: 128,
-        lots: 342,
-        occupes: 301,
-        libres: 41,
-    },
-    contrats: {
-        locatairesActifs: 297,
-        proprietaires: 96,
-        contratsEnCours: 301,
-        contratsExpirant: 14,
-        nouveauxContrats: 9,
-    },
-    finances: {
-        loyersAttendus: 48250000,
-        loyersEncaisses: 41180000,
-        impayes: 7070000,
-        locatairesRetard: 23,
-        arrieres: 12840000,
-    },
-    tresorerie: {
-        depensesAgence: 6320000,
-        soldeCaisse: 18450000,
-        depensesParCategorie: [
-            { label: 'Salaires', montant: 1980000 },
-            { label: 'Loyer bureau', montant: 1450000 },
-            { label: 'Autres', montant: 820000 },
-            { label: 'Comm. & pub', montant: 1220000 },
-            { label: 'Fournitures', montant: 870000 },
-            { label: 'Déplacements', montant: 460000 },
-        ],
-    },
-    maintenance: {
-        interventionsOuvertes: 8,
-        interventionsCloturees: 63,
-        interventionsParType: [
-            { label: 'Plomberie', valeur: 24 },
-            { label: 'Électricité', valeur: 18 },
-            { label: 'Serrurerie', valeur: 12 },
-            { label: 'Peinture', valeur: 9 },
-            { label: 'Autre', valeur: 8 },
-        ],
-    },
-    evolution: [
-        { mois: 'Juil', encaisse: 33, impaye: 4.2 },
-        { mois: 'Août', encaisse: 41, impaye: 5.2 },
-        { mois: 'Sep', encaisse: 38, impaye: 4.8 },
-        { mois: 'Oct', encaisse: 44, impaye: 5.8 },
-        { mois: 'Nov', encaisse: 42, impaye: 5.2 },
-        { mois: 'Déc', encaisse: 45, impaye: 6.0 },
-        { mois: 'Jan', encaisse: 48, impaye: 6.3 },
-        { mois: 'Fév', encaisse: 46, impaye: 5.7 },
-        { mois: 'Mar', encaisse: 49, impaye: 6.5 },
-        { mois: 'Avr', encaisse: 50, impaye: 6.9 },
-        { mois: 'Mai', encaisse: 48, impaye: 6.3 },
-        { mois: 'Juin', encaisse: 47, impaye: 6.1 },
-    ],
-    topRentables: [
-        { nom: 'Résidence Les Pins', valeur: 8450000 },
-        { nom: 'Immeuble Bellevue', valeur: 6750000 },
-        { nom: 'Villa Riviera 4', valeur: 6120000 },
-        { nom: 'Immeuble Cocody Center', valeur: 5400000 },
-    ],
-    alertes: [
-        { texte: '3 contrats expirent dans moins de 7 jours', niveau: 'warning' },
-        { texte: '23 locataires en retard de paiement', niveau: 'danger' },
-        { texte: '2 interventions maintenance en attente depuis 5 jours', niveau: 'warning' },
-    ],
-    activite: [
-        { agent: 'Marco L.', action: "a clôturé l'intervention #D82", temps: 'il y a 22 min' },
-        { agent: 'Fatou D.', action: 'a enregistré 3 paiements', temps: 'il y a 1 h' },
-        { agent: 'Karim B.', action: 'a créé le contrat #F-021', temps: 'il y a 3 h' },
-    ],
-};
 
 function fmtF(n) {
     return new Intl.NumberFormat('fr-FR').format(n) + ' F';
@@ -215,6 +149,22 @@ function ComboChart({ data }) {
                     <span className="h-2 w-4 rounded-full bg-[#ff5a6f]" /> Impayés
                 </span>
             </div>
+        </div>
+    );
+}
+
+function PeopleEvolutionChart({ data, label }) {
+    return (
+        <div className="h-64 w-full min-w-[420px]">
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                    <CartesianGrid stroke="#eef2f6" vertical={false} />
+                    <XAxis dataKey="mois" tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                    <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                    <Tooltip cursor={{ fill: 'rgba(0,85,155,0.04)' }} contentStyle={{ borderRadius: '12px', border: '1px solid #c8d4de' }} />
+                    <Bar dataKey="total" name={label} fill={BRAND} radius={[5, 5, 0, 0]} barSize={28} />
+                </BarChart>
+            </ResponsiveContainer>
         </div>
     );
 }
@@ -372,9 +322,34 @@ function AlertCard({ alertes }) {
     );
 }
 
-function OverviewTab({ d, tauxOccupation, metrics }) {
+function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, sortBy, setSortBy, filteredTopProperties }) {
     return (
         <div className="flex flex-col gap-6">
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-1 items-center gap-2 rounded-xl border border-[#dbe3ea] bg-white px-3 py-2 shadow-sm">
+                    <FileText className="h-4 w-4 text-slate-400" />
+                    <input
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder="Rechercher une propriété, un locataire ou une maintenance"
+                        className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                    />
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Trier</span>
+                    <select
+                        value={sortBy}
+                        onChange={(event) => setSortBy(event.target.value)}
+                        className="rounded-xl border border-[#dbe3ea] bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
+                    >
+                        <option value="recent">Plus récents</option>
+                        <option value="amount">Montant</option>
+                        <option value="name">Nom</option>
+                    </select>
+                </div>
+            </div>
+
             {/* Indicateurs principaux */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {metrics.map((item) => {
@@ -496,9 +471,9 @@ function OverviewTab({ d, tauxOccupation, metrics }) {
                             />
 
                             <RankedList
-                                items={d.topRentables.map((item) => ({
-                                    nom: item.nom,
-                                    valeur: item.valeur,
+                                items={filteredTopProperties.map((item) => ({
+                                    nom: item.propriete?.reference ?? `Propriété ${item.propriete_id ?? ''}`,
+                                    valeur: Number(item.montant_total ?? 0),
                                 }))}
                                 formatValue={(value) => `${fmtShort(value)} F`}
                             />
@@ -513,6 +488,44 @@ function OverviewTab({ d, tauxOccupation, metrics }) {
                     </Card>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function PeopleOverviewTab({ title, subtitle, icon, metrics, evolution, evolutionLabel, distribution, distributionTitle, distributionSubtitle, total, totalLabel, actionHref, actionLabel, children }) {
+    return (
+        <div className="flex flex-col gap-6">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {metrics.map((item) => (
+                    <StatCard key={item.label} {...item} />
+                ))}
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.9fr)]">
+                <Card className="min-w-0 rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
+                    <CardContent className="mt-4 p-5">
+                        <SectionTitle icon={icon} title={`Évolution des ${title.toLowerCase()}`} subtitle={`Nouvelles inscriptions par mois — ${subtitle}`} />
+                        <PeopleEvolutionChart data={evolution} label={evolutionLabel} />
+                    </CardContent>
+                </Card>
+
+                <DonutCard
+                    icon={icon}
+                    title={distributionTitle}
+                    subtitle={distributionSubtitle}
+                    segments={distribution}
+                    centerValue={String(total)}
+                    centerLabel={totalLabel}
+                />
+            </div>
+
+            {actionHref ? (
+                <Link href={actionHref} className="inline-flex w-fit items-center gap-1 text-sm font-medium text-[#00559b]">
+                    {actionLabel} <ChevronRight className="h-4 w-4" />
+                </Link>
+            ) : null}
+
+            {children}
         </div>
     );
 }
@@ -685,13 +698,159 @@ function MaintenanceTab({ d }) {
         </div>
     );
 }
-export default function Statistiques() {
+export default function Statistiques({
+    stats = {},
+    monthlyLabels = [],
+    revenueSeries = [],
+    maintenanceMonthSeries = [],
+    proprietairesMonthSeries = [],
+    locatairesMonthSeries = [],
+    personnelMonthSeries = [],
+    loyersMonthSeries = [],
+    personnelParRole = [],
+    maintenanceSeries = [],
+    topMaintenanceTypes = [],
+    topProperties = [],
+    recentTransactions = [],
+    recentMaintenances = [],
+    year = new Date().getFullYear(),
+}) {
     const [period, setPeriod] = useState('month');
     const [activeTab, setActiveTab] = useState('overview');
-    const d = MOCK;
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState('recent');
 
-    const tauxOccupation = useMemo(() => Math.round((d.patrimoine.occupes / d.patrimoine.lots) * 100), [d.patrimoine]);
-    const tauxRecouvrement = useMemo(() => Math.round((d.finances.loyersEncaisses / d.finances.loyersAttendus) * 100), [d.finances]);
+    const d = useMemo(() => ({
+        patrimoine: {
+            proprietes: Number(stats.proprietes_total ?? 0),
+            lots: Number(stats.lots_total ?? 0),
+            occupes: Number(stats.portes_occupees ?? 0),
+            libres: Number(stats.portes_libres ?? 0),
+        },
+        contrats: {
+            locatairesActifs: Number(stats.locataires_actifs ?? 0),
+            proprietaires: Number(stats.proprietaires_total ?? 0),
+            contratsEnCours: Number(stats.portes_occupees ?? 0),
+            contratsExpirant: 0,
+            nouveauxContrats: Number(stats.locataires_ce_mois ?? 0),
+        },
+        finances: {
+            loyersAttendus: Number(stats.reversements_attendu ?? stats.revenu_mois ?? 0),
+            loyersEncaisses: Number(stats.revenu_mois ?? 0),
+            impayes: Math.max(Number(stats.reversements_attendu ?? 0) - Number(stats.revenu_mois ?? 0), 0),
+            locatairesRetard: 0,
+            arrieres: Number(stats.reversements_attendu ?? 0),
+        },
+        tresorerie: {
+            depensesAgence: Number(stats.cout_maintenance_mois ?? 0),
+            soldeCaisse: Number(stats.total_encaisse ?? 0),
+            depensesParCategorie: [
+                { label: 'Ventes', montant: Number(stats.ventes_montant ?? 0) },
+                { label: 'Reversements', montant: Number(stats.reversements_net ?? 0) },
+                { label: 'Maintenance', montant: Number(stats.cout_maintenance_mois ?? 0) },
+                { label: 'Transactions', montant: Number(stats.total_encaisse ?? 0) },
+            ].filter((item) => item.montant > 0),
+        },
+        maintenance: {
+            interventionsOuvertes: Number(stats.maintenances_en_cours ?? 0),
+            interventionsCloturees: Number(stats.maintenances_terminees ?? 0),
+            interventionsParType: maintenanceSeries.map((segment) => ({
+                label: segment.label,
+                valeur: Number(segment.value ?? 0),
+            })),
+        },
+        evolution: monthlyLabels.map((label, index) => ({
+            mois: label,
+            encaisse: Number(revenueSeries[index] ?? 0),
+            impaye: Math.max(Number(revenueSeries[index] ?? 0) * 0.12, 0),
+        })),
+        topRentables: topProperties.map((item) => ({
+            nom: item.propriete?.reference ?? `Propriété ${item.propriete_id ?? ''}`,
+            valeur: Number(item.montant_total ?? 0),
+        })),
+        alertes: [
+            {
+                texte: `${stats.reversements_en_attente ?? 0} reversements en attente`,
+                niveau: 'warning',
+            },
+            {
+                texte: `${stats.transactions_en_attente ?? 0} transactions en attente`,
+                niveau: 'warning',
+            },
+            {
+                texte: `${stats.maintenances_en_cours ?? 0} maintenances en cours`,
+                niveau: 'warning',
+            },
+        ],
+        activite: recentTransactions.slice(0, 3).map((item, index) => ({
+            agent: item.tenant ?? `Paiement ${index + 1}`,
+            action: `a enregistré un paiement de ${fmtF(Number(item.amount ?? 0))}`,
+            temps: item.date ?? '—',
+        })),
+    }), [stats, monthlyLabels, revenueSeries, maintenanceSeries, topProperties, recentTransactions]);
+
+    const tauxOccupation = useMemo(() => {
+        const total = Number(d.patrimoine.lots || d.patrimoine.proprietes || 0);
+        const occupied = Number(d.patrimoine.occupes || 0);
+        return total > 0 ? Math.round((occupied / total) * 100) : 0;
+    }, [d.patrimoine]);
+
+    const tauxRecouvrement = useMemo(() => {
+        const attendu = Number(d.finances.loyersAttendus || 0);
+        const encaisse = Number(d.finances.loyersEncaisses || 0);
+        return attendu > 0 ? Math.round((encaisse / attendu) * 100) : 0;
+    }, [d.finances]);
+
+    const filteredTopProperties = useMemo(() => {
+        const term = searchTerm.toLowerCase();
+        const items = topProperties.filter((item) => {
+            const label = `${item.propriete?.reference ?? ''} ${item.propriete?.adresse_complete ?? ''}`.toLowerCase();
+            return !term || label.includes(term);
+        });
+
+        if (sortBy === 'amount') {
+            return [...items].sort((a, b) => Number(b.montant_total ?? 0) - Number(a.montant_total ?? 0));
+        }
+
+        if (sortBy === 'name') {
+            return [...items].sort((a, b) => (a.propriete?.reference ?? '').localeCompare(b.propriete?.reference ?? ''));
+        }
+
+        return items;
+    }, [searchTerm, sortBy, topProperties]);
+
+    const filteredRecentTransactions = useMemo(() => {
+        const term = searchTerm.toLowerCase();
+        const items = recentTransactions.filter((item) => {
+            const label = `${item.tenant ?? ''} ${item.property ?? ''}`.toLowerCase();
+            return !term || label.includes(term);
+        });
+
+        if (sortBy === 'amount') {
+            return [...items].sort((a, b) => Number(b.amount ?? 0) - Number(a.amount ?? 0));
+        }
+
+        if (sortBy === 'name') {
+            return [...items].sort((a, b) => (a.tenant ?? '').localeCompare(b.tenant ?? ''));
+        }
+
+        return items;
+    }, [searchTerm, sortBy, recentTransactions]);
+
+    const filteredTopMaintenanceTypes = useMemo(() => {
+        const term = searchTerm.toLowerCase();
+        const items = topMaintenanceTypes.filter((item) => !term || `${item.name ?? ''} ${item.categorie ?? ''}`.toLowerCase().includes(term));
+
+        if (sortBy === 'amount') {
+            return [...items].sort((a, b) => Number(b.montant_total ?? 0) - Number(a.montant_total ?? 0));
+        }
+
+        if (sortBy === 'name') {
+            return [...items].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+        }
+
+        return items;
+    }, [searchTerm, sortBy, topMaintenanceTypes]);
 
     const overviewMetrics = [
         {
@@ -702,10 +861,24 @@ export default function Statistiques() {
             tone: 'brand',
         },
         {
+            icon: Users,
+            label: 'Propriétaires',
+            value: `${stats.proprietaires_total ?? 0} propriétaires`,
+            sub: `${stats.proprietaires_actifs ?? 0} actifs`,
+            tone: 'violet',
+        },
+        {
+            icon: Users,
+            label: 'Locataires',
+            value: `${stats.locataires_total ?? 0} locataires`,
+            sub: `${stats.locataires_actifs ?? 0} actifs`,
+            tone: 'green',
+        },
+        {
             icon: PiggyBank,
-            label: 'Recouvrement Juin',
+            label: 'Recouvrement',
             value: `${tauxRecouvrement}%`,
-            sub: '↑ +1.2% vs Mai',
+            sub: `Encaissements du mois ${fmtF(d.finances.loyersEncaisses)}`,
             tone: 'green',
         },
         {
@@ -717,11 +890,39 @@ export default function Statistiques() {
         },
         {
             icon: CalendarClock,
-            label: 'Baux à renouveler',
-            value: `${d.contrats.contratsExpirant} Contrats`,
-            sub: 'Échéance < 60j',
+            label: 'Personnel',
+            value: `${stats.personnel_total ?? 0} agents`,
+            sub: `${stats.personnel_actifs ?? 0} actifs`,
             tone: 'violet',
         },
+    ];
+
+    const peopleEvolution = (series) => monthlyLabels.map((mois, index) => ({
+        mois,
+        total: Number(series[index] ?? 0),
+    }));
+
+    const proprietairesMetrics = [
+        { icon: UserRound, label: 'Propriétaires enregistrés', value: String(stats.proprietaires_total ?? 0), sub: 'Portefeuille de l’agence', tone: 'violet' },
+        { icon: UserCheck, label: 'Propriétaires actifs', value: String(stats.proprietaires_actifs ?? 0), sub: 'Liaisons actives', tone: 'green' },
+        { icon: UserMinus, label: 'Propriétaires inactifs', value: String(Math.max(Number(stats.proprietaires_total ?? 0) - Number(stats.proprietaires_actifs ?? 0), 0)), sub: 'À relancer ou réactiver', tone: 'amber' },
+        { icon: Building2, label: 'Lots propriétaires', value: String(stats.lots_total ?? 0), sub: 'Lots rattachés à l’agence', tone: 'brand' },
+    ];
+
+    const locatairesMetrics = [
+        { icon: Users, label: 'Locataires enregistrés', value: String(stats.locataires_total ?? 0), sub: 'Tous les contrats', tone: 'brand' },
+        { icon: UserCheck, label: 'Contrats actifs', value: String(stats.locataires_actifs ?? 0), sub: 'Baux en cours', tone: 'green' },
+        { icon: UserCheck, label: 'À jour de loyer', value: String(stats.locataires_a_jour ?? 0), sub: 'Aucune échéance arrivée à terme', tone: 'green' },
+        { icon: AlertTriangle, label: 'En retard de loyer', value: String(stats.locataires_en_retard ?? 0), sub: 'Au moins une échéance impayée', tone: 'red' },
+        { icon: UserMinus, label: 'Contrats résiliés', value: String(stats.locataires_resilies ?? 0), sub: 'Historique des contrats', tone: 'red' },
+        { icon: TrendingUp, label: 'Nouveaux ce mois', value: String(stats.locataires_ce_mois ?? 0), sub: 'Nouvelles entrées', tone: 'violet' },
+    ];
+
+    const personnelMetrics = [
+        { icon: BriefcaseBusiness, label: 'Membres du personnel', value: String(stats.personnel_total ?? 0), sub: 'Équipe de l’agence', tone: 'violet' },
+        { icon: UserCheck, label: 'Personnel actif', value: String(stats.personnel_actifs ?? 0), sub: 'Comptes opérationnels', tone: 'green' },
+        { icon: UserMinus, label: 'Personnel inactif', value: String(Math.max(Number(stats.personnel_total ?? 0) - Number(stats.personnel_actifs ?? 0), 0)), sub: 'Comptes désactivés', tone: 'amber' },
+        { icon: BriefcaseBusiness, label: 'Rôles attribués', value: String(personnelParRole.length), sub: 'Fonctions représentées', tone: 'brand' },
     ];
 
     const currentPeriod = PERIODS.find((item) => item.key === period) ?? PERIODS[0];
@@ -792,7 +993,96 @@ export default function Statistiques() {
                 </div>
 
                 {activeTab === 'overview' ? (
-                    <OverviewTab d={d} tauxOccupation={tauxOccupation} metrics={overviewMetrics} />
+                    <OverviewTab
+                        d={d}
+                        tauxOccupation={tauxOccupation}
+                        metrics={overviewMetrics}
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        sortBy={sortBy}
+                        setSortBy={setSortBy}
+                        filteredTopProperties={filteredTopProperties}
+                    />
+                ) : null}
+
+                {activeTab === 'proprietaires' ? (
+                    <PeopleOverviewTab
+                        title="Propriétaires"
+                        subtitle={String(year)}
+                        icon={UserRound}
+                        metrics={proprietairesMetrics}
+                        evolution={peopleEvolution(proprietairesMonthSeries)}
+                        evolutionLabel="Nouveaux propriétaires"
+                        distribution={[
+                            { label: 'Actifs', value: Number(stats.proprietaires_actifs ?? 0) },
+                            { label: 'Inactifs', value: Math.max(Number(stats.proprietaires_total ?? 0) - Number(stats.proprietaires_actifs ?? 0), 0) },
+                        ]}
+                        distributionTitle="Statut des propriétaires"
+                        distributionSubtitle="Répartition du portefeuille"
+                        total={stats.proprietaires_total ?? 0}
+                        totalLabel="propriétaires"
+                        actionHref="/agence/proprietaire"
+                        actionLabel="Voir la liste des propriétaires"
+                    />
+                ) : null}
+
+                {activeTab === 'locataires' ? (
+                    <PeopleOverviewTab
+                        title="Locataires"
+                        subtitle={String(year)}
+                        icon={Users}
+                        metrics={locatairesMetrics}
+                        evolution={peopleEvolution(locatairesMonthSeries)}
+                        evolutionLabel="Nouveaux locataires"
+                        distribution={[
+                            { label: 'À jour', value: Number(stats.locataires_a_jour ?? 0) },
+                            { label: 'En retard', value: Number(stats.locataires_en_retard ?? 0) },
+                            { label: 'Résiliés', value: Number(stats.locataires_resilies ?? 0) },
+                        ]}
+                        distributionTitle="Situation des loyers"
+                        distributionSubtitle="Suivi des échéances arrivées à terme"
+                        total={stats.locataires_total ?? 0}
+                        totalLabel="locataires"
+                        actionHref="/agence/locataires"
+                        actionLabel="Voir la liste des locataires"
+                    >
+                        <Card className="min-w-0 rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
+                            <CardContent className="mt-4 p-5">
+                                <SectionTitle
+                                    icon={Banknote}
+                                    title="Impayés mensuels"
+                                    subtitle={`Montants restant à régler par échéance — ${year}`}
+                                />
+                                <div className="overflow-x-auto">
+                                    <ComboChart
+                                        data={monthlyLabels.map((mois, index) => ({
+                                            mois,
+                                            encaisse: Number(loyersMonthSeries[index]?.encaisse ?? 0),
+                                            impaye: Number(loyersMonthSeries[index]?.impaye ?? 0),
+                                        }))}
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </PeopleOverviewTab>
+                ) : null}
+
+                {activeTab === 'personnel' ? (
+                    <PeopleOverviewTab
+                        title="Personnel"
+                        subtitle={String(year)}
+                        icon={BriefcaseBusiness}
+                        metrics={personnelMetrics}
+                        evolution={peopleEvolution(personnelMonthSeries)}
+                        evolutionLabel="Nouveaux membres"
+                        distribution={personnelParRole.map((role) => ({ label: role.label, value: Number(role.value ?? 0) }))}
+                        distributionTitle="Répartition par rôle"
+                        distributionSubtitle="Fonctions de l’équipe"
+                        total={stats.personnel_total ?? 0}
+                        totalLabel="membres"
+                        actionHref="/agence/personnel"
+                        actionLabel="Gérer le personnel"
+                    />
                 ) : null}
 
                 {activeTab === 'finances' ? <FinancesTab d={d} tauxRecouvrement={tauxRecouvrement} /> : null}
@@ -802,4 +1092,3 @@ export default function Statistiques() {
         </AgenceLayout>
     );
 }
-

@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import {
     CheckCircle2,
     ArrowLeft,
@@ -90,11 +90,7 @@ export default function NouvelleDemande({ support }) {
     );
 
     const handleFiles = (list) => {
-        const next = Array.from(list).map((file, index) => ({
-            id: `${Date.now()}-${index}`,
-            name: file.name,
-            size: file.size,
-        }));
+        const next = Array.from(list).map((file, index) => ({ id: `${Date.now()}-${index}`, name: file.name, size: file.size, file }));
         setFiles((prev) => [...prev, ...next].slice(0, 5));
     };
 
@@ -110,12 +106,7 @@ export default function NouvelleDemande({ support }) {
     const handleSubmit = (event) => {
         event.preventDefault();
         if (!canSubmit) return;
-        setSubmitted({
-            id: `T-${Math.floor(1043 + Math.random() * 50)}`,
-            subject: subject.trim(),
-            category: selectedCategory.label,
-        });
-        resetForm();
+        router.post('/agence/support', { category, subject: subject.trim(), message: message.trim(), files: files.map((item) => item.file) }, { forceFormData: true });
     };
 
     return (

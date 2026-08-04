@@ -31,7 +31,18 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
 use App\Repositories\Repository\UserRepository;
 use App\Services\UserService;
 
+use  App\Repositories\Agence\Interfaces\ReversementDetailRepositoryInterface;
+use  App\Repositories\Agence\Interfaces\ReversementRepositoryInterface;
+use App\Repositories\Agence\Repository\ReversementRepository;
+use App\Repositories\Agence\Repository\ReversementDetailRepository;
+use App\Repositories\Agence\Interfaces\SupportTicketRepositoryInterface;
+use App\Repositories\Agence\Repository\SupportTicketRepository;
+
 // ── Agence ─────────────────────────────────────────────────────
+
+
+
+
 use App\Repositories\Agence\Interfaces\LotRepositoryInterface;
 use App\Repositories\Agence\Repository\LotRepository;
 
@@ -82,6 +93,10 @@ class RepositoryServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(SupportTicketRepositoryInterface::class, SupportTicketRepository::class);
+                $this->app->bind(ReversementRepositoryInterface::class, ReversementRepository::class);
+        $this->app->bind(ReversementDetailRepositoryInterface::class, ReversementDetailRepository::class);
+
         $this->app->bind(MaintenanceRepositoryInterface::class, MaintenanceRepository::class);
         $this->app->bind(MaintenancierRepositoryInterface::class, MaintenancierRepository::class);
         $this->app->bind(FonctionMaintenanceRepositoryInterface::class, FonctionMaintenanceRepository::class);

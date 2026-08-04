@@ -109,23 +109,31 @@ function StatCard({ icon: Icon, label, value, tone }) {
     );
 }
 
-export default function Demandes() {
+export default function Demandes({ tickets = { data: [] }, stats = {} }) {
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('all');
 
+    const requests = tickets.data.map((ticket) => ({
+        id: ticket.reference,
+        uuid: ticket.support_ticket_id,
+        subject: ticket.sujet,
+        category: ticket.categorie,
+        status: ticket.statut,
+        excerpt: ticket.description,
+        createdAt: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(new Date(ticket.created_at)),
+        updatedAt: ticket.updated_at,
+        replies: ticket.messages_count ?? 0,
+    }));
+
     const counts = useMemo(() => {
         return {
-            all: MOCK_REQUESTS.length,
-            open: MOCK_REQUESTS.filter((r) => r.status === 'open').length,
-            pending: MOCK_REQUESTS.filter((r) => r.status === 'pending').length,
-            resolved: MOCK_REQUESTS.filter((r) => r.status === 'resolved').length,
-            closed: MOCK_REQUESTS.filter((r) => r.status === 'closed').length,
+            all: Number(stats.all ?? requests.length), open: Number(stats.open ?? 0), pending: Number(stats.pending ?? 0), resolved: Number(stats.resolved ?? 0), closed: Number(stats.closed ?? 0),
         };
-    }, []);
+    }, [stats, requests.length]);
 
     const filtered = useMemo(() => {
         const term = search.trim().toLowerCase();
-        return MOCK_REQUESTS.filter((request) => {
+        return requests.filter((request) => {
             const matchStatus = filter === 'all' || request.status === filter;
             const matchSearch =
                 term.length === 0 ||
@@ -134,7 +142,7 @@ export default function Demandes() {
                 request.category.toLowerCase().includes(term);
             return matchStatus && matchSearch;
         });
-    }, [search, filter]);
+    }, [search, filter, requests]);
 
     return (
         <AgenceLayout title="Mes demandes">

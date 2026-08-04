@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import {
     ArrowLeft,
@@ -38,6 +38,10 @@ export default function Show({ ticket = {} }) {
         endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }, [messages.length]);
 
+    useEffect(() => {
+        setMessages(ticket.messages ?? []);
+    }, [ticket.messages]);
+
   
 
     const canSend = draft.trim().length > 0;
@@ -50,20 +54,14 @@ export default function Show({ ticket = {} }) {
             return;
         }
 
-        const time = new Intl.DateTimeFormat('fr-FR', {
-            hour: '2-digit',
-            minute: '2-digit',
-        }).format(new Date());
-
-        setMessages((current) => [
-            ...current,
+        router.post(
+            `/agence/support/${ticket.uuid ?? ticket.id}/reponses`,
+            { message: body },
             {
-                author: 'Agence',
-                time,
-                body,
+                preserveScroll: true,
+                onSuccess: () => setDraft(''),
             },
-        ]);
-        setDraft('');
+        );
     };
 
     const handleKeyDown = (event) => {
