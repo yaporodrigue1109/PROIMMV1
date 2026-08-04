@@ -42,7 +42,7 @@ class ReversementController extends Controller
     {
         $agenceId = $this->agenceId();
 
-        $proprietaires = $this->proprietaireService->getAllProprietaireByAgence($agenceId);
+        $proprietaires = $this->proprietaireService->getPaginated($agenceId);
 
         $proprietaireId = $request->input('proprietaire');
         $dateDebut = $request->input('date_debut');
@@ -477,7 +477,8 @@ public function historique(Request $request)
         ];
     });
 
-    $proprietaires = $this->proprietaireService->getAllProprietaireByAgence($agenceId)
+    $proprietaires = $this->proprietaireService->getPaginated($agenceId, 1000)
+        ->getCollection()
         ->map(fn($p) => [
             'id' => $p->proprietaire_id,
             'nom' => $p->name ?? $p->nom_complet ?? '—',
