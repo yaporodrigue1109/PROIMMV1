@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { router } from '@inertiajs/react';
 import {
     ArrowLeft,
     CheckCircle2,
@@ -314,7 +315,7 @@ function Conversation({ ticket, onBack, onSend, onStatusChange }) {
                 {ticket.messages.map((message) => {
                     const isAgent = message.role === 'agent';
                     return (
-                        <div key={message.id} className={cn('flex gap-3', isAgent ? 'flex-row-reverse' : 'flex-row')}>
+                        <div key={message.id} className={cn('flex gap-3', isAgent ? 'flex-row' : 'flex-row-reverse')}>
                             <span
                                 className={cn(
                                     'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
@@ -324,7 +325,7 @@ function Conversation({ ticket, onBack, onSend, onStatusChange }) {
                                 {isAgent ? 'PI' : initials(message.author)}
                             </span>
 
-                            <div className={cn('max-w-[78%]', isAgent ? 'items-end text-right' : 'items-start')}>
+                            <div className={cn('max-w-[78%]', isAgent ? 'items-start' : 'items-end text-right')}>
                                 <div className="mb-1 flex items-center gap-2 text-xs text-[#5f7182]">
                                     <span className="font-medium text-[#334155]">{message.author}</span>
                                     <span>{message.at}</span>
@@ -388,11 +389,11 @@ function Conversation({ ticket, onBack, onSend, onStatusChange }) {
     );
 }
 
-export default function Tickets() {
-    const [tickets, setTickets] = useState(MOCK_TICKETS);
+export default function Tickets({ tickets: initialTickets = [], stats = {} }) {
+    const [tickets, setTickets] = useState(initialTickets);
     const [filter, setFilter] = useState('all');
     const [search, setSearch] = useState('');
-    const [activeId, setActiveId] = useState(MOCK_TICKETS[0]?.id ?? null);
+    const [activeId, setActiveId] = useState(initialTickets[0]?.id ?? null);
     const [mobileShowConversation, setMobileShowConversation] = useState(false);
 
     const filteredTickets = useMemo(() => {
@@ -430,6 +431,9 @@ export default function Tickets() {
     };
 
     const handleSend = (id, body) => {
+        const ticket = tickets.find((item) => item.id === id);
+        if (!ticket) return;
+        router.post(`/admin/tickets/${ticket.uuid ?? id}/reponses`, { message: body }, { preserveScroll: true });
         setTickets((prev) =>
             prev.map((ticket) =>
                 ticket.id === id
@@ -454,6 +458,9 @@ export default function Tickets() {
     };
 
     const handleStatusChange = (id, status) => {
+        const ticket = tickets.find((item) => item.id === id);
+        if (!ticket) return;
+        router.patch(`/admin/tickets/${ticket.uuid ?? id}/statut`, { status }, { preserveScroll: true });
         setTickets((prev) => prev.map((ticket) => (ticket.id === id ? { ...ticket, status } : ticket)));
     };
 

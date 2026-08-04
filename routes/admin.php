@@ -174,6 +174,8 @@ Route::middleware(['admin'])->group(function () {
         Route::get('/', [TicketController::class, 'index'])
             ->middleware('permission:view_tickets')
             ->name('index');
+        Route::post('/{ticket}/reponses', [TicketController::class, 'reply'])->name('reply');
+        Route::patch('/{ticket}/statut', [TicketController::class, 'updateStatus'])->name('status');
     });
 
     /*
