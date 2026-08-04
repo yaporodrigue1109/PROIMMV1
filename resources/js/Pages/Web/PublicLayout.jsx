@@ -54,7 +54,7 @@ export default function PublicLayout({ children }) {
 
                     <div className="hidden items-center gap-3 lg:flex">
                         <Link href="/agence/login" className="rounded-full border border-[#00559b]/20 px-5 py-2.5 text-sm font-semibold text-[#00559b] transition hover:bg-[#eef7fd]">Connexion</Link>
-                        <Link href="/contact" className="rounded-full bg-[#76c206] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#76c206]/20 transition hover:-translate-y-0.5 hover:bg-[#66aa04]">Confier un bien</Link>
+                        <Link href="/inscription-agence" className="rounded-full bg-[#76c206] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#76c206]/20 transition hover:-translate-y-0.5 hover:bg-[#66aa04]">Créer mon agence</Link>
                     </div>
 
                     <button type="button" onClick={() => setMenuOpen((open) => !open)} className="rounded-xl border border-slate-200 p-2.5 text-[#111f3d] lg:hidden" aria-label="Ouvrir le menu">
@@ -67,6 +67,7 @@ export default function PublicLayout({ children }) {
                         <div className="flex flex-col gap-1">
                             {navigation.map((item) => <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-xl px-4 py-3 text-sm font-semibold hover:bg-slate-50">{item.label}</Link>)}
                             <Link href="/agence/login" className="mt-3 rounded-xl bg-[#00559b] px-4 py-3 text-center text-sm font-bold text-white">Connexion agence</Link>
+                            <Link href="/inscription-agence" className="rounded-xl bg-[#76c206] px-4 py-3 text-center text-sm font-bold text-white">Créer mon agence</Link>
                         </div>
                     </div>
                 ) : null}

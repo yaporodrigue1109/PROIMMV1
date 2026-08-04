@@ -97,8 +97,8 @@ export default function Pricing({ tarifs = {} }) {
                                 ) : null}
 
                                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                                    <Link href="/agence/login" className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#00559b] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#00457c]">
-                                        Accéder à mon espace <ArrowRight className="h-4 w-4" />
+                                    <Link href="/inscription-agence" className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#00559b] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#00457c]">
+                                        Créer mon agence <ArrowRight className="h-4 w-4" />
                                     </Link>
                                     <Link href="/contact" className="inline-flex flex-1 items-center justify-center rounded-full border border-[#00559b]/20 px-6 py-3.5 text-sm font-bold text-[#00559b] transition hover:bg-[#eef7fd]">
                                         Demander une démonstration
