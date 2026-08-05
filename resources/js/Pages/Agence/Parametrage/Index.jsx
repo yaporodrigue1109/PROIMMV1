@@ -4,6 +4,7 @@ import {
     Bell,
     Brush,
     Check,
+    ChevronLeft,
     ChevronDown,
     FileImage,
     FileText,
@@ -12,11 +13,13 @@ import {
     Images,
     Layers3,
     LayoutGrid,
+    KeyRound,
     Mail,
     Save,
     ShieldCheck,
     Sparkles,
     Upload,
+    UsersRound,
     Search,
 } from 'lucide-react';
 import AgenceLayout from '../../../Layouts/AgenceLayout';
@@ -43,6 +46,19 @@ const getValue = (object, key, fallback = '') => object?.[key] ?? fallback;
 
 const defaultPreview = (path) => (path ? `/storage/${path}` : '');
 
+const scrollToTop = () => {
+    requestAnimationFrame(() => {
+        const container = document.getElementById(
+            'agence-scroll-container'
+        );
+
+        container?.scrollTo({
+            top: 0,
+            behavior: 'auto',
+        });
+    });
+};
+
 // Ordre + métadonnées de la navigation latérale.
 const NAV_ITEMS = [
     { value: 'agence', label: 'Agence', description: "Identité & coordonnées", icon: Home, step: '01' },
@@ -51,7 +67,169 @@ const NAV_ITEMS = [
     { value: 'visuel', label: 'Visuel', description: 'Logos & cachet', icon: Images, step: '06' },
     { value: 'signatures', label: 'Signatures', description: 'DG, SG & comptabilité', icon: ShieldCheck, step: '08' },
     { value: 'notifications', label: 'Notifications', description: 'Alertes & destinataires', icon: Bell, step: '10' },
+    { value: 'roles', label: 'Rôles et permissions', description: 'Accès du personnel', icon: KeyRound, step: '12' },
 ];
+
+const STATIC_ROLES = [
+    {
+        role_id: 'role-responsable',
+        name: 'Responsable',
+        description: "Administration complète de l'agence, des équipes et des paramètres.",
+    },
+    {
+        role_id: 'role-agent',
+        name: 'Agent',
+        description: 'Gestion opérationnelle des biens, propriétaires, locataires et demandes courantes.',
+    },
+    {
+        role_id: 'role-comptable',
+        name: 'Comptable',
+        description: 'Suivi des loyers, dépenses, ventes, reversements et indicateurs financiers.',
+    },
+    {
+        role_id: 'role-technicien',
+        name: 'Technicien',
+        description: 'Prise en charge des maintenances, interventions et tâches techniques.',
+    },
+];
+
+const ALL_ROLES = STATIC_ROLES.map((role) => role.role_id);
+const MANAGEMENT_ROLES = ['role-responsable', 'role-agent'];
+const FINANCE_ROLES = ['role-responsable', 'role-comptable'];
+const MAINTENANCE_ROLES = ['role-responsable', 'role-agent', 'role-technicien'];
+
+const PERMISSION_GROUPS = [
+    {
+        label: 'Tableau de bord',
+        permissions: [
+            { key: 'dashboard.view', label: "Consulter le tableau de bord de l'agence", roles: ALL_ROLES },
+        ],
+    },
+    {
+        label: 'Propriétés',
+        permissions: [
+            { key: 'properties.view', label: 'Consulter les propriétés et leurs détails', roles: ALL_ROLES },
+            { key: 'properties.create', label: 'Ajouter une propriété', roles: MANAGEMENT_ROLES },
+            { key: 'properties.update', label: 'Modifier une propriété', roles: MANAGEMENT_ROLES },
+            { key: 'properties.occupancy', label: "Changer l'état libre ou occupé d'une porte", roles: MANAGEMENT_ROLES },
+            { key: 'properties.delete', label: 'Supprimer une propriété', roles: ['role-responsable'] },
+            { key: 'properties.catalogs', label: 'Gérer les types, équipements et proximités', roles: ['role-responsable'] },
+        ],
+    },
+    {
+        label: 'Propriétaires et lots',
+        permissions: [
+            { key: 'owners.view', label: 'Consulter les propriétaires et leurs lots', roles: ['role-responsable', 'role-agent', 'role-comptable'] },
+            { key: 'owners.create', label: 'Ajouter un propriétaire', roles: MANAGEMENT_ROLES },
+            { key: 'owners.update', label: 'Modifier ou activer un propriétaire', roles: MANAGEMENT_ROLES },
+            { key: 'owners.lots', label: 'Ajouter et modifier les lots confiés', roles: MANAGEMENT_ROLES },
+            { key: 'owners.delete', label: 'Supprimer un propriétaire ou un lot', roles: ['role-responsable'] },
+        ],
+    },
+    {
+        label: 'Locataires et baux',
+        permissions: [
+            { key: 'tenants.view', label: 'Consulter les locataires, contrats et documents', roles: ['role-responsable', 'role-agent', 'role-comptable'] },
+            { key: 'tenants.create', label: 'Enregistrer un locataire et son bail', roles: MANAGEMENT_ROLES },
+            { key: 'tenants.update', label: 'Modifier un locataire ou son bail', roles: MANAGEMENT_ROLES },
+            { key: 'tenants.terminate', label: 'Résilier un bail', roles: ['role-responsable'] },
+            { key: 'tenants.delete', label: 'Supprimer un dossier locataire', roles: ['role-responsable'] },
+        ],
+    },
+    {
+        label: 'Personnel',
+        permissions: [
+            { key: 'staff.view', label: 'Consulter le personnel', roles: ['role-responsable'] },
+            { key: 'staff.create', label: 'Créer un compte personnel', roles: ['role-responsable'] },
+            { key: 'staff.update', label: 'Modifier, activer ou suspendre un compte', roles: ['role-responsable'] },
+            { key: 'staff.delete', label: 'Supprimer un membre du personnel', roles: ['role-responsable'] },
+            { key: 'staff.permissions', label: 'Consulter les rôles et permissions', roles: ['role-responsable'] },
+        ],
+    },
+    {
+        label: 'Maintenance',
+        permissions: [
+            { key: 'maintenance.view', label: 'Consulter les demandes et interventions', roles: MAINTENANCE_ROLES },
+            { key: 'maintenance.create', label: 'Créer une demande ou une intervention', roles: MAINTENANCE_ROLES },
+            { key: 'maintenance.update', label: 'Modifier une intervention et ses tâches', roles: MAINTENANCE_ROLES },
+            { key: 'maintenance.status', label: "Mettre à jour le statut d'une intervention", roles: MAINTENANCE_ROLES },
+            { key: 'maintenance.catalogs', label: 'Gérer maintenanciers, fonctions et types', roles: ['role-responsable'] },
+            { key: 'maintenance.delete', label: 'Supprimer les référentiels de maintenance', roles: ['role-responsable'] },
+        ],
+    },
+    {
+        label: 'Caisse et loyers',
+        permissions: [
+            { key: 'cash.view', label: 'Consulter le tableau de caisse', roles: FINANCE_ROLES },
+            { key: 'rent.view', label: 'Consulter les loyers et échéances', roles: ['role-responsable', 'role-agent', 'role-comptable'] },
+            { key: 'rent.pay', label: 'Enregistrer un paiement de loyer', roles: FINANCE_ROLES },
+            { key: 'cash.maintenance', label: 'Enregistrer les opérations de maintenance', roles: FINANCE_ROLES },
+            { key: 'cash.expenses', label: "Gérer les dépenses de l'agence", roles: FINANCE_ROLES },
+            { key: 'cash.sales', label: 'Enregistrer les ventes de biens', roles: FINANCE_ROLES },
+        ],
+    },
+    {
+        label: 'Reversements propriétaires',
+        permissions: [
+            { key: 'payouts.view', label: 'Consulter les reversements et leur historique', roles: FINANCE_ROLES },
+            { key: 'payouts.create', label: 'Préparer un reversement', roles: FINANCE_ROLES },
+            { key: 'payouts.update', label: 'Modifier les montants et paiements', roles: FINANCE_ROLES },
+            { key: 'payouts.validate', label: 'Valider ou marquer un reversement effectué', roles: ['role-responsable'] },
+            { key: 'payouts.cancel', label: 'Annuler ou supprimer un reversement', roles: ['role-responsable'] },
+            { key: 'payouts.export', label: 'Télécharger les fiches et historiques PDF', roles: FINANCE_ROLES },
+        ],
+    },
+    {
+        label: 'Statistiques',
+        permissions: [
+            { key: 'statistics.view', label: 'Consulter les indicateurs et rapports', roles: ['role-responsable', 'role-agent', 'role-comptable'] },
+            { key: 'statistics.financial', label: 'Consulter les indicateurs financiers détaillés', roles: FINANCE_ROLES },
+        ],
+    },
+    {
+        label: 'Support',
+        permissions: [
+            { key: 'support.view', label: 'Consulter les tickets de support', roles: ALL_ROLES },
+            { key: 'support.create', label: 'Créer une demande de support', roles: ALL_ROLES },
+            { key: 'support.reply', label: 'Répondre à un ticket', roles: ALL_ROLES },
+        ],
+    },
+    {
+        label: 'Paramétrage',
+        permissions: [
+            { key: 'settings.view', label: "Consulter les paramètres de l'agence", roles: ['role-responsable'] },
+            { key: 'settings.agency', label: "Modifier l'identité et les préférences générales", roles: ['role-responsable'] },
+            { key: 'settings.billing', label: 'Modifier la facturation, les taxes et commissions', roles: ['role-responsable'] },
+            { key: 'settings.branding', label: 'Modifier les logos, cachets et signatures', roles: ['role-responsable'] },
+            { key: 'settings.notifications', label: 'Modifier les notifications et destinataires', roles: ['role-responsable'] },
+        ],
+    },
+    {
+        label: 'Compte et abonnement',
+        permissions: [
+            { key: 'profile.view', label: 'Consulter son profil', roles: ALL_ROLES },
+            { key: 'subscription.view', label: "Consulter l'abonnement et les reçus", roles: ['role-responsable'] },
+            { key: 'subscription.manage', label: "Souscrire ou renouveler l'abonnement", roles: ['role-responsable'] },
+        ],
+    },
+];
+
+const permissionsForRole = (roleId) =>
+    PERMISSION_GROUPS.flatMap((group) =>
+        group.permissions
+            .filter((permission) => permission.roles.includes(roleId))
+            .map((permission) => permission.key)
+    );
+
+const INITIAL_ROLE_PERMISSIONS = Object.fromEntries(
+    STATIC_ROLES.map((role) => [role.role_id, permissionsForRole(role.role_id)])
+);
+
+
+
+const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap((group) =>
+    group.permissions.map((permission) => permission.key)
+);
 
 function Field({ label, required, children, className }) {
     return (
@@ -266,7 +444,20 @@ function UploadBox({ label, help, name, preview, onChange, onClear, icon: Icon }
 }
 
 export default function Index({ parametrage, agence, regions = [], villes = [], modePaiement = [] }) {
+    const [rolePermissions, setRolePermissions] = useState(INITIAL_ROLE_PERMISSIONS);
+    const [selectedPermissionRole, setSelectedPermissionRole] = useState('');
+    const [permissionDraft, setPermissionDraft] = useState([]);
+    const [permissionSearch, setPermissionSearch] = useState('');
+    const roles = STATIC_ROLES.map((role) => ({
+        ...role,
+        permissions: rolePermissions[role.role_id] ?? [],
+    }));
     const [tab, setTab] = useState('agence');
+
+    const changeTab = (value) => {
+        setTab(value);
+        scrollToTop();
+    };
     const [visuals, setVisuals] = useState({
         logo: defaultPreview(getValue(parametrage, 'logo')),
         logo_tutelle: defaultPreview(getValue(parametrage, 'logo_tutelle')),
@@ -307,6 +498,60 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
         setVisuals((current) => ({ ...current, [name]: previewUrl }));
     };
 
+
+    const returnToRoles = () => changeTab('roles');
+
+    const openPermissionForm = () => {
+        setSelectedPermissionRole('');
+        setPermissionDraft([]);
+        setPermissionSearch('');
+        changeTab('permission-form');
+    };
+    const changePermissionRole = (roleId) => {
+        setSelectedPermissionRole(roleId);
+        setPermissionDraft([...(rolePermissions[roleId] ?? [])]);
+    };
+
+    const togglePermission = (permissionKey) => {
+        setPermissionDraft((current) =>
+            current.includes(permissionKey)
+                ? current.filter((key) => key !== permissionKey)
+                : [...current, permissionKey]
+        );
+    };
+
+    const togglePermissionGroup = (group) => {
+        const groupKeys = group.permissions.map((permission) => permission.key);
+        const groupIsSelected = groupKeys.every((key) => permissionDraft.includes(key));
+
+        setPermissionDraft((current) =>
+            groupIsSelected
+                ? current.filter((key) => !groupKeys.includes(key))
+                : Array.from(new Set([...current, ...groupKeys]))
+        );
+    };
+
+    const filteredPermissionGroups = PERMISSION_GROUPS.map((group) => ({
+        ...group,
+        permissions: group.permissions.filter((permission) =>
+            `${group.label} ${permission.label}`.toLowerCase().includes(permissionSearch.trim().toLowerCase())
+        ),
+    })).filter((group) => group.permissions.length > 0);
+
+    const savePermissionPreview = (event) => {
+        event.preventDefault();
+
+        if (!selectedPermissionRole) {
+            return;
+        }
+
+        setRolePermissions((current) => ({
+            ...current,
+            [selectedPermissionRole]: permissionDraft,
+        }));
+        changeTab('roles');
+    };
+
     return (
         <AgenceLayout title="Paramétrage">
             <Head title="Paramétrage" />
@@ -343,7 +588,7 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                             <button
                                                 key={item.value}
                                                 type="button"
-                                                onClick={() => setTab(item.value)}
+                                                onClick={() => changeTab(item.value)}
                                                 aria-current={isActive ? 'page' : undefined}
                                                 className={cn(
                                                     'group flex w-full min-w-0 items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition',
@@ -884,6 +1129,313 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                             <Save className="h-4 w-4" />
                                             Enregistrer
                                         </Button>
+                                    </div>
+                                </form>
+                            </TabsContent>
+
+                            <TabsContent value="roles">
+                                <div className="space-y-6">
+                                    <SectionCard
+                                        icon={UsersRound}
+                                        title="Rôles du personnel"
+                                        description="Profils de référence proposés pour organiser les accès de l'agence."
+                                        step="12"
+                                        action={(
+                                            <Button
+                                                type="button"
+                                                onClick={openPermissionForm}
+                                                className="rounded-xl bg-[#00559b] text-white hover:bg-[#004980]"
+                                            >
+                                                <KeyRound className="h-4 w-4" />
+                                                Configurer les permissions
+                                            </Button>
+                                        )}
+                                    >
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            {roles.map((role) => (
+                                                <div
+                                                    key={role.role_id}
+                                                    className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-4"
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eaf4fb] text-[#00559b]">
+                                                                    <ShieldCheck className="h-4 w-4" />
+                                                                </span>
+                                                                <p className="truncate text-sm font-semibold text-[#0f172a]">{role.name}</p>
+                                                            </div>
+                                                            <p className="mt-3 text-xs leading-5 text-[#5f7182]">{role.description}</p>
+                                                        </div>
+                                                        <Badge variant="outline" className="shrink-0 rounded-full border-[#c8d4de] bg-white text-xs">
+                                                            {role.permissions.length} accès
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </SectionCard>
+
+                                    <SectionCard
+                                        icon={KeyRound}
+                                        title="Matrice des permissions"
+                                        description="Proposition statique basée sur l'ensemble des fonctionnalités de l'interface Agence."
+                                        step="13"
+                                    >
+                                        <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0]">
+                                            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+                                                <thead className="bg-[#f8fafc] text-xs uppercase tracking-wide text-[#5f7182]">
+                                                    <tr>
+                                                        <th className="border-b border-[#e2e8f0] px-4 py-3 font-semibold">Permission</th>
+                                                        {roles.map((role) => (
+                                                            <th key={role.role_id} className="border-b border-[#e2e8f0] px-4 py-3 text-center font-semibold">
+                                                                {role.name}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {PERMISSION_GROUPS.flatMap((group) => [
+                                                        <tr key={`${group.label}-heading`} className="bg-[#eaf4fb]/60">
+                                                            <td
+                                                                colSpan={Math.max(roles.length + 1, 1)}
+                                                                className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#00559b]"
+                                                            >
+                                                                {group.label}
+                                                            </td>
+                                                        </tr>,
+                                                        ...group.permissions.map((permission) => (
+                                                            <tr key={permission.key} className="border-t border-[#e2e8f0] bg-white">
+                                                                <td className="px-4 py-3 font-medium text-[#0f172a]">{permission.label}</td>
+                                                                {roles.map((role) => {
+                                                                    const allowed = permission.roles.includes(role.role_id);
+
+                                                                    return (
+                                                                        <td key={`${role.role_id}-${permission.key}`} className="px-4 py-3 text-center">
+                                                                            <span
+                                                                                className={cn(
+                                                                                    'inline-flex h-7 w-7 items-center justify-center rounded-full',
+                                                                                    allowed
+                                                                                        ? 'bg-[#e9f5d7] text-[#4d8500]'
+                                                                                        : 'bg-[#f1f5f9] text-[#94a3b8]'
+                                                                                )}
+                                                                                aria-label={allowed ? 'Autorisé' : 'Non autorisé'}
+                                                                                title={allowed ? 'Autorisé' : 'Non autorisé'}
+                                                                            >
+                                                                                {allowed ? <Check className="h-4 w-4" /> : <span aria-hidden="true">—</span>}
+                                                                            </span>
+                                                                        </td>
+                                                                    );
+                                                                })}
+                                                            </tr>
+                                                        )),
+                                                    ])}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <p className="mt-3 text-xs text-[#5f7182]">
+                                            Cette matrice est informative pour le moment : elle ne modifie pas encore les accès réels des utilisateurs.
+                                        </p>
+                                    </SectionCard>
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="permission-form">
+                                <form onSubmit={savePermissionPreview} className="space-y-6">
+                                    <SectionCard
+                                        icon={KeyRound}
+                                        title="Configurer les permissions"
+                                        description="Choisissez un profil et adaptez précisément ses accès par module."
+                                        action={(
+                                            <Badge variant="outline" className="rounded-full border-[#f0c36a] bg-[#fffbeb] text-[#9a6700]">
+                                                Prévisualisation
+                                            </Badge>
+                                        )}
+                                    >
+                                        <div className="shrink-0 rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                                            <div className="grid items-end gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+                                                <Field label="Rôle à configurer" required>
+                                                    <Select value={selectedPermissionRole} onValueChange={changePermissionRole}>
+                                                        <SelectTrigger className={cn(inputClassName, 'h-11 bg-white')}>
+                                                            <SelectValue placeholder="Sélectionner un rôle" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {STATIC_ROLES.map((role) => (
+                                                                <SelectItem key={role.role_id} value={role.role_id}>
+                                                                    {role.name}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </Field>
+
+                                                {selectedPermissionRole ? (
+                                                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                                                        <Badge variant="outline" className="rounded-full border-[#8dbddd] bg-white text-[#00559b]">
+                                                            {permissionDraft.length} accès sélectionnés
+                                                        </Badge>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            className="h-9 rounded-xl border-[#c8d4de] bg-white text-xs"
+                                                            onClick={() => setPermissionDraft([...ALL_PERMISSION_KEYS])}
+                                                        >
+                                                            Tout autoriser
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            className="h-9 rounded-xl border-[#c8d4de] bg-white text-xs"
+                                                            onClick={() => setPermissionDraft([])}
+                                                        >
+                                                            Tout retirer
+                                                        </Button>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </div>
+
+                                        {selectedPermissionRole ? (
+                                            <div className="mt-5 min-w-0 space-y-4">
+                                                <div className="relative shrink-0">
+                                                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
+                                                    <Input
+                                                        value={permissionSearch}
+                                                        onChange={(event) => setPermissionSearch(event.target.value)}
+                                                        placeholder="Rechercher une permission ou un module..."
+                                                        className={cn(inputClassName, 'h-11 pl-10')}
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    {filteredPermissionGroups.length ? (
+                                                        <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white">
+                                                            <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+                                                                <thead className="bg-[#f8fafc] text-xs uppercase tracking-wide text-[#5f7182]">
+                                                                    <tr>
+                                                                        <th className="border-b border-[#e2e8f0] px-4 py-3 font-semibold">
+                                                                            Permission
+                                                                        </th>
+                                                                        <th className="w-40 border-b border-[#e2e8f0] px-4 py-3 text-center font-semibold">
+                                                                            Autorisation
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {filteredPermissionGroups.flatMap((group) => {
+                                                                        const selectedCount = group.permissions.filter((permission) =>
+                                                                            permissionDraft.includes(permission.key)
+                                                                        ).length;
+                                                                        const groupIsSelected = selectedCount === group.permissions.length;
+
+                                                                        return [
+                                                                            <tr key={`${group.label}-heading`} className="bg-[#eaf4fb]/60">
+                                                                                <td colSpan={2} className="border-b border-[#d7e6f0] px-4 py-3">
+                                                                                    <div className="flex items-center justify-between gap-4">
+                                                                                        <div className="flex min-w-0 items-center gap-3">
+                                                                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[#00559b] shadow-sm">
+                                                                                                <Layers3 className="h-4 w-4" />
+                                                                                            </span>
+                                                                                            <div className="min-w-0">
+                                                                                                <p className="font-semibold text-[#00559b]">{group.label}</p>
+                                                                                                <p className="text-xs text-[#5f7182]">
+                                                                                                    {selectedCount} sur {group.permissions.length} sélectionné{selectedCount > 1 ? 's' : ''}
+                                                                                                </p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => togglePermissionGroup(group)}
+                                                                                            className="shrink-0 text-xs font-semibold text-[#00559b] hover:underline"
+                                                                                        >
+                                                                                            {groupIsSelected ? 'Tout décocher' : 'Tout cocher'}
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>,
+                                                                            ...group.permissions.map((permission) => {
+                                                                                const checked = permissionDraft.includes(permission.key);
+
+                                                                                return (
+                                                                                    <tr
+                                                                                        key={permission.key}
+                                                                                        className={cn(
+                                                                                            'border-b border-[#edf2f6] transition last:border-b-0',
+                                                                                            checked ? 'bg-[#f4faff]' : 'bg-white hover:bg-[#f8fafc]'
+                                                                                        )}
+                                                                                    >
+                                                                                        <td className="px-4 py-3 font-medium text-[#0f172a]">
+                                                                                            {permission.label}
+                                                                                        </td>
+                                                                                        <td className="px-4 py-3 text-center">
+                                                                                            <label className="inline-flex cursor-pointer items-center justify-center">
+                                                                                                <input
+                                                                                                    type="checkbox"
+                                                                                                    checked={checked}
+                                                                                                    onChange={() => togglePermission(permission.key)}
+                                                                                                    className="sr-only"
+                                                                                                />
+                                                                                                <span
+                                                                                                    className={cn(
+                                                                                                        'flex h-7 w-7 items-center justify-center rounded-lg border transition',
+                                                                                                        checked
+                                                                                                            ? 'border-[#00559b] bg-[#00559b] text-white'
+                                                                                                            : 'border-[#c8d4de] bg-white text-transparent hover:border-[#00559b]'
+                                                                                                    )}
+                                                                                                >
+                                                                                                    <Check className="h-4 w-4" />
+                                                                                                </span>
+                                                                                                <span className="sr-only">
+                                                                                                    {checked ? 'Retirer' : 'Accorder'} la permission {permission.label}
+                                                                                                </span>
+                                                                                            </label>
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                );
+                                                                            }),
+                                                                        ];
+                                                                    })}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="rounded-2xl border border-dashed border-[#c8d4de] bg-[#f8fafc] px-6 py-12 text-center">
+                                                            <Search className="mx-auto h-8 w-8 text-[#94a3b8]" />
+                                                            <p className="mt-3 text-sm font-semibold text-[#0f172a]">Aucune permission trouvée</p>
+                                                            <p className="mt-1 text-xs text-[#5f7182]">Essayez un autre terme de recherche.</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex min-h-64 flex-1 items-center justify-center px-6 py-12 text-center">
+                                                <div>
+                                                    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf4fb] text-[#00559b]">
+                                                        <KeyRound className="h-6 w-6" />
+                                                    </span>
+                                                    <p className="mt-4 text-sm font-semibold text-[#0f172a]">Sélectionnez d'abord un rôle</p>
+                                                    <p className="mt-1 text-xs text-[#5f7182]">Les permissions apparaîtront après votre sélection.</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </SectionCard>
+
+                                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="rounded-xl border-[#c8d4de]"
+                                            onClick={returnToRoles}
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                            Retour à la matrice
+                                        </Button>
+                                        {selectedPermissionRole ? (
+                                            <Button type="submit" className="rounded-xl bg-[#00559b] text-white hover:bg-[#004980]">
+                                                <Save className="h-4 w-4" />
+                                                Enregistrer la prévisualisation
+                                            </Button>
+                                        ) : null}
                                     </div>
                                 </form>
                             </TabsContent>
