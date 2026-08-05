@@ -33,6 +33,7 @@ export default function Show({ ticket = {} }) {
     const [messages, setMessages] = useState(() => ticket.messages ?? []);
     const [draft, setDraft] = useState('');
     const endRef = useRef(null);
+    const isLocked = ticket.status === 'resolved';
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -42,15 +43,21 @@ export default function Show({ ticket = {} }) {
         setMessages(ticket.messages ?? []);
     }, [ticket.messages]);
 
+    useEffect(() => {
+        const refreshTicket = () => router.reload({ only: ['ticket'], preserveScroll: true });
+        window.addEventListener('focus', refreshTicket);
+        return () => window.removeEventListener('focus', refreshTicket);
+    }, []);
+
   
 
-    const canSend = draft.trim().length > 0;
+    const canSend = !isLocked && draft.trim().length > 0;
 
     const handleSend = (event) => {
         event.preventDefault();
 
         const body = draft.trim();
-        if (!body) {
+        if (!body || isLocked) {
             return;
         }
 
@@ -152,26 +159,33 @@ export default function Show({ ticket = {} }) {
 
                             <Separator />
 
-                            <form onSubmit={handleSend} className="space-y-3 p-5">
-                                <Textarea
-                                    value={draft}
-                                    onChange={(event) => setDraft(event.target.value)}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder="Écrire une réponse... (Entrée pour envoyer, Shift+Entrée pour une nouvelle ligne)"
-                                    className="min-h-[120px] resize-none rounded-xl border-[#c8d4de] bg-white"
-                                />
-                                <div className="flex flex-col gap-3 sm:flex-end">
-                                
-                                    <Button
-                                        type="submit"
-                                        className="h-10 rounded-xl bg-[#00559b] text-white hover:bg-[#004980]"
-                                        disabled={!canSend}
-                                    >
-                                        <Send className="h-4 w-4" />
-                                        Envoyer
-                                    </Button>
+                            {isLocked ? (
+                                <div className="p-5">
+                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-700">
+                                        Ce ticket est résolu. Il n&apos;est plus possible d&apos;ajouter une réponse.
+                                    </div>
                                 </div>
-                            </form>
+                            ) : (
+                                <form onSubmit={handleSend} className="space-y-3 p-5">
+                                    <Textarea
+                                        value={draft}
+                                        onChange={(event) => setDraft(event.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="Écrire une réponse... (Entrée pour envoyer, Shift+Entrée pour une nouvelle ligne)"
+                                        className="min-h-[120px] resize-none rounded-xl border-[#c8d4de] bg-white"
+                                    />
+                                    <div className="flex flex-col gap-3 sm:flex-end">
+                                        <Button
+                                            type="submit"
+                                            className="h-10 rounded-xl bg-[#00559b] text-white hover:bg-[#004980]"
+                                            disabled={!canSend}
+                                        >
+                                            <Send className="h-4 w-4" />
+                                            Envoyer
+                                        </Button>
+                                    </div>
+                                </form>
+                            )}
                         </CardContent>
                     </Card>
 

@@ -17,8 +17,9 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $agence = Auth::guard('user')->user();
-        $agenceId = $agence?->agence_id;
+        $user = Auth::guard('user')->user();
+        $agenceId = $user?->agence_id;
+        $agence = $user?->agence;
 
         $now = now();
         $currentMonth = $now->month;
@@ -138,13 +139,17 @@ class DashboardController extends Controller
         ];
 
         return Inertia::render('Agence/Dashboard/Index', [
-            'agence' => $agence?->only([
+            'agence' => $user?->only([
                 'id_users',
                 'name',
                 'email',
                 'phone',
                 'statut',
             ]),
+            'abonnement' => [
+                'dateFin' => $agence?->abonnement_end?->format('d/m/Y'),
+                'dateFinIso' => $agence?->abonnement_end?->toDateString(),
+            ],
             'stats' => $stats,
             'recentPayments' => $recentPayments,
             'upcomingLeases' => $upcomingLeases,

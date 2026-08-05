@@ -343,6 +343,8 @@ Route::middleware(['user'])->group(function () {
 
     Route::prefix('caisse')->name('caisse.')->group(function () {
         Route::get('/', [CaisseController::class, 'index'])->name('index');
+        Route::post('/ouvrir', [CaisseController::class, 'ouvrir'])->name('ouvrir');
+        Route::post('/fermer', [CaisseController::class, 'fermer'])->name('fermer');
         // Route::get('/loyer', [CaisseController::class, 'loyer'])->name('caisse.loyer');
         Route::get('/maintenance', [CaisseController::class, 'maintenance'])->name('maintenance');
         Route::get('/depense-agence', [CaisseController::class, 'depenseAgence'])->name('depense.agence');

@@ -39,6 +39,7 @@ const statusTone = {
 };
 
 export default function Dashboard({
+    abonnement = {},
     stats = {},
     recentPayments = [],
     upcomingLeases = [],
@@ -135,6 +136,18 @@ export default function Dashboard({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
+                        <Button
+                            asChild
+                            variant="outline"
+                            className={agenceButtonStyles.outline}
+                        >
+                            <Link href="/agence/abonnement/consultation">
+                                <CalendarClock className="h-4 w-4" />
+                                {abonnement.dateFin
+                                    ? `Fin d'abonnement : ${abonnement.dateFin}`
+                                    : "Aucun abonnement actif"}
+                            </Link>
+                        </Button>
                         <Button
                             asChild
                             variant="outline"

@@ -6,15 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\Batiment;
 use App\Models\Maintenance;
 use App\Models\MaintenanceDetail;
+use App\Models\LocataireAgence;
 use App\Models\Porte;
 use App\Models\Propriete;
 use App\Models\ProprietaireAgence;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Repositories\Agence\Interfaces\LocataireRepositoryInterface;
 use App\Repositories\Agence\Interfaces\MaintenanceRepositoryInterface;
 use App\Repositories\Agence\Interfaces\ProprieteRepositoryInterface;
 use App\Repositories\Interfaces\TransactionRepositoryInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,17 +32,23 @@ class StatistiqueController extends Controller
     ) {
     }
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $agenceId = $this->agenceId();
-        $year     = now()->year;
-        $month    = now()->month;
+        $period = $request->validate([
+            'periode' => ['nullable', 'date_format:Y-m'],
+        ])['periode'] ?? now()->format('Y-m');
+        $selectedDate = Carbon::createFromFormat('Y-m', $period)->startOfMonth();
+        $periodStart = $selectedDate->copy()->startOfMonth();
+        $periodEnd = $selectedDate->copy()->endOfMonth();
+        $year = $selectedDate->year;
+        $month = $selectedDate->month;
 
         $proprietesQuery   = Propriete::query()->where('agence_id', $agenceId);
         $batimentsQuery    = Batiment::query()->where('agence_id', $agenceId);
         $portesQuery       = Porte::query()->where('agence_id', $agenceId);
-        $maintenancesQuery = Maintenance::query()->where('agence_id', $agenceId);
-        $transactionsQuery = Transaction::query()->where('agence_id', $agenceId);
+        $maintenancesQuery = Maintenance::query()->where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd]);
+        $transactionsQuery = Transaction::query()->where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd]);
 
         $proprietesStats = $this->safeArray(
             fn () => $this->proprieteRepo->stats(),
@@ -49,12 +59,19 @@ class StatistiqueController extends Controller
             ['total' => 0, 'actifs' => 0, 'resilies' => 0, 'ce_mois' => 0]
         );
         $maintenanceStats = $this->safeArray(
-            fn () => $this->maintenanceRepo->countByStatut(),
+            fn () => (clone $maintenancesQuery)
+                ->selectRaw('statut, COUNT(*) as total')
+                ->groupBy('statut')
+                ->pluck('total', 'statut')
+                ->toArray(),
             ['en_attente' => 0, 'en_cours' => 0, 'termine' => 0, 'annule' => 0, 'validee' => 0, 'echouee' => 0]
         );
         $totalEncaisse = $this->safeFloat(
-            fn () => $this->transactionRepo->getTotalEncaisseParAgence($agenceId)
+            fn () => (clone $transactionsQuery)->where('statut', 'validee')->sum('montant_ttc')
         );
+
+        $proprietesStats['ce_mois'] = $this->safeCount(fn () => Propriete::where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd])->count());
+        $locatairesStats['ce_mois'] = $this->safeCount(fn () => LocataireAgence::where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd])->count());
 
         $proprietairesTotal = $this->safeCount(
             fn () => ProprietaireAgence::where('agence_id', $agenceId)->count()
@@ -87,23 +104,31 @@ class StatistiqueController extends Controller
             ->whereMonth('created_at', $month)
             ->sum('montant_ttc'));
 
-        $revenueByMonth = $this->safeArray(
+        $revenueByDay = $this->safeArray(
             fn () => (clone $transactionsQuery)
                 ->where('statut', 'validee')
-                ->whereYear('created_at', $year)
-                ->selectRaw('MONTH(created_at) as month, SUM(montant_ttc) as total')
-                ->groupBy('month')
-                ->pluck('total', 'month')
+                ->selectRaw('DATE(created_at) as day, SUM(montant_ttc) as total')
+                ->groupBy('day')
+                ->pluck('total', 'day')
                 ->toArray()
         );
 
-        $maintenanceByMonth = $this->safeArray(
+        $maintenanceByDay = $this->safeArray(
             fn () => (clone $maintenancesQuery)
-                ->whereYear('created_at', $year)
-                ->selectRaw('MONTH(created_at) as month, SUM(montant_global) as total')
-                ->groupBy('month')
-                ->pluck('total', 'month')
+                ->selectRaw('DATE(created_at) as day, SUM(montant_global) as total')
+                ->groupBy('day')
+                ->pluck('total', 'day')
                 ->toArray()
+        );
+
+        $proprietairesByDay = $this->dailyCounts(
+            ProprietaireAgence::query()->where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd])
+        );
+        $locatairesByDay = $this->dailyCounts(
+            LocataireAgence::query()->where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd])
+        );
+        $personnelByDay = $this->dailyCounts(
+            User::query()->where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd])
         );
 
         $statusLabels = [
@@ -123,13 +148,25 @@ class StatistiqueController extends Controller
             ->values()
             ->all();
 
-        $monthlyLabels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+        $monthlyLabels = [];
         $revenueSeries = [];
         $maintenanceMonthSeries = [];
+        $proprietairesMonthSeries = [];
+        $locatairesMonthSeries = [];
+        $personnelMonthSeries = [];
+        $loyersMonthSeries = [];
 
-        foreach (range(1, 12) as $monthIndex) {
-            $revenueSeries[] = (float) ($revenueByMonth[$monthIndex] ?? 0);
-            $maintenanceMonthSeries[] = (float) ($maintenanceByMonth[$monthIndex] ?? 0);
+        foreach (range(1, $selectedDate->daysInMonth) as $day) {
+            $date = $selectedDate->copy()->day($day);
+            $dateKey = $date->toDateString();
+            $monthlyLabels[] = $date->format('d/m');
+            $revenueSeries[] = (float) ($revenueByDay[$dateKey] ?? 0);
+            $maintenanceMonthSeries[] = (float) ($maintenanceByDay[$dateKey] ?? 0);
+            $proprietairesMonthSeries[] = (int) ($proprietairesByDay[$dateKey] ?? 0);
+            $locatairesMonthSeries[] = (int) ($locatairesByDay[$dateKey] ?? 0);
+            $personnelMonthSeries[] = (int) ($personnelByDay[$dateKey] ?? 0);
+            $encaisse = (float) ($revenueByDay[$dateKey] ?? 0);
+            $loyersMonthSeries[] = ['encaisse' => $encaisse, 'impaye' => max($encaisse * 0.12, 0)];
         }
 
         $recentTransactions = $this->safeCollection(fn () => (clone $transactionsQuery)
@@ -148,6 +185,7 @@ class StatistiqueController extends Controller
             ->join('maintenance', 'maintenance.maintenance_id', '=', 'maintenance_detail.maintenance_id')
             ->join('type_maintenances', 'type_maintenances.type_maintenance_id', '=', 'maintenance_detail.type_intervention_id')
             ->where('maintenance.agence_id', $agenceId)
+            ->whereBetween('maintenance.created_at', [$periodStart, $periodEnd])
             ->select(
                 'type_maintenances.type_maintenance_id',
                 'type_maintenances.name',
@@ -163,6 +201,7 @@ class StatistiqueController extends Controller
         $topProperties = $this->safeCollection(fn () => Maintenance::query()
             ->with('propriete')
             ->where('agence_id', $agenceId)
+            ->whereBetween('created_at', [$periodStart, $periodEnd])
             ->select(
                 'propriete_id',
                 DB::raw('COUNT(*) as total_maintenances'),
@@ -221,12 +260,18 @@ class StatistiqueController extends Controller
             'monthlyLabels' => $monthlyLabels,
             'revenueSeries' => $revenueSeries,
             'maintenanceMonthSeries' => $maintenanceMonthSeries,
+            'proprietairesMonthSeries' => $proprietairesMonthSeries,
+            'locatairesMonthSeries' => $locatairesMonthSeries,
+            'personnelMonthSeries' => $personnelMonthSeries,
+            'loyersMonthSeries' => $loyersMonthSeries,
             'maintenanceSeries' => $maintenanceSeries,
             'topMaintenanceTypes' => $topMaintenanceTypes,
             'topProperties' => $topProperties,
             'recentTransactions' => $recentTransactions,
             'recentMaintenances' => $recentMaintenances,
             'year' => $year,
+            'periode' => $period,
+            'periodLabel' => ucfirst($selectedDate->locale('fr')->translatedFormat('F Y')),
         ]);
     }
 
@@ -273,5 +318,14 @@ class StatistiqueController extends Controller
         } catch (\Throwable) {
             return 0.0;
         }
+    }
+
+    private function dailyCounts($query): array
+    {
+        return $this->safeArray(fn () => $query
+            ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
+            ->groupBy('day')
+            ->pluck('total', 'day')
+            ->toArray());
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Agence\Caisse;
 
 use App\Http\Controllers\Controller;
 use App\Models\ModePaiement;
+use App\Models\CaisseSession;
 use App\Repositories\Agence\Interfaces\TransactionAgenceRepositoryInterface;
 use App\Repositories\Agence\Interfaces\MaintenanceRepositoryInterface;
 use Carbon\Carbon;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class CaisseController extends Controller
 {
@@ -33,8 +35,11 @@ class CaisseController extends Controller
     public function index()
     {
         $agenceId = $this->agenceId();
-        $startOfDay = now()->startOfDay();
-        $endOfDay = now()->endOfDay();
+        $session = CaisseSession::where('agence_id', $agenceId)
+            ->latest('opened_at')
+            ->first();
+        $startOfDay = $session?->opened_at ?? now()->startOfDay();
+        $endOfDay = $session?->closed_at ?? now();
 
         $transactions = $this->transactionRepository->getByAgence($agenceId)
             ->filter(function ($transaction) use ($startOfDay, $endOfDay) {
@@ -190,8 +195,14 @@ class CaisseController extends Controller
         }
 
         return Inertia::render('Agence/Caisse/Index', [
-            'caisseOuverte' => true,
-            'soldeOuverture' => 125000, // À récupérer d'une table de caisse
+            'caisseOuverte' => $session !== null && $session->closed_at === null,
+            'soldeOuverture' => (float) ($session?->solde_ouverture ?? 0),
+            'sessionCaisse' => $session ? [
+                'openedAt' => $session->opened_at?->toISOString(),
+                'closedAt' => $session->closed_at?->toISOString(),
+                'soldeFermeture' => $session->solde_fermeture !== null ? (float) $session->solde_fermeture : null,
+                'ecart' => $session->ecart !== null ? (float) $session->ecart : null,
+            ] : null,
             'totalEntrees' => (float) $totalEntrees,
             'totalSorties' => (float) $totalSorties,
             'transactions' => $transactionsData,
@@ -202,6 +213,79 @@ class CaisseController extends Controller
             'summary' => $summaryData,
             'statistiques' => $stats,
         ]);
+    }
+
+    public function ouvrir(Request $request)
+    {
+        $data = $request->validate([
+            'solde_ouverture' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'observation' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $agenceId = $this->agenceId();
+
+        DB::transaction(function () use ($agenceId, $data) {
+            DB::table('agences')->where('agence_id', $agenceId)->lockForUpdate()->first();
+
+            if (CaisseSession::where('agence_id', $agenceId)->whereNull('closed_at')->exists()) {
+                throw ValidationException::withMessages([
+                    'solde_ouverture' => 'Une caisse est déjà ouverte pour cette agence.',
+                ]);
+            }
+
+            CaisseSession::create([
+                'agence_id' => $agenceId,
+                'opened_by' => $this->userId(),
+                'solde_ouverture' => $data['solde_ouverture'],
+                'observation_ouverture' => $data['observation'] ?? null,
+                'opened_at' => now(),
+            ]);
+        });
+
+        return to_route('agence.caisse.index')
+            ->with('success', 'La caisse a été ouverte avec succès.');
+    }
+
+    public function fermer(Request $request)
+    {
+        $data = $request->validate([
+            'solde_fermeture' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'observation' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $agenceId = $this->agenceId();
+
+        DB::transaction(function () use ($agenceId, $data) {
+            $session = CaisseSession::where('agence_id', $agenceId)
+                ->whereNull('closed_at')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $session) {
+                throw ValidationException::withMessages([
+                    'solde_fermeture' => 'Aucune caisse ouverte à clôturer.',
+                ]);
+            }
+
+            $transactions = $this->transactionRepository->getByAgence($agenceId)
+                ->filter(fn ($transaction) => $transaction->date_transaction
+                    && Carbon::parse($transaction->date_transaction)->gte($session->opened_at));
+            $entrees = (float) $transactions->whereIn('type_transaction', ['loyer', 'vente'])->sum('montant_global_verser');
+            $sorties = (float) $transactions->whereIn('type_transaction', ['maintenance', 'depense'])->sum('montant_global_verser');
+            $theorique = (float) $session->solde_ouverture + $entrees - $sorties;
+
+            $session->update([
+                'closed_by' => $this->userId(),
+                'solde_theorique' => $theorique,
+                'solde_fermeture' => $data['solde_fermeture'],
+                'ecart' => (float) $data['solde_fermeture'] - $theorique,
+                'observation_fermeture' => $data['observation'] ?? null,
+                'closed_at' => now(),
+            ]);
+        });
+
+        return to_route('agence.caisse.index')
+            ->with('success', 'La caisse a été clôturée avec succès.');
     }
 
    
@@ -374,7 +458,7 @@ public function maintenance(Request $request)
         ->toArray();
 
     return Inertia::render('Agence/Caisse/Maintenance', [
-        'caisseOuverte' => true,
+        'caisseOuverte' => $this->caisseEstOuverte($agenceId),
         'maintenances' => $maintenancesData,
         'totalMaintenance' => (float) $totalMaintenance,
         'proprietaires' => $proprietaires,
@@ -408,7 +492,7 @@ public function maintenance(Request $request)
         $totalLoyers = $transactions->where('type_transaction', 'loyer')->sum('montant_global_verser');
 
         return Inertia::render('Agence/Caisse/Loyer', [
-            'caisseOuverte' => true,
+            'caisseOuverte' => $this->caisseEstOuverte($agenceId),
             'loyers' => $loyersData,
             'totalLoyers' => (float) $totalLoyers,
         ]);
@@ -434,7 +518,7 @@ public function maintenance(Request $request)
         $totalDepenses = $transactions->where('type_transaction', 'depense')->sum('montant_global_verser');
 
         return Inertia::render('Agence/Caisse/DepenseAgence', [
-            'caisseOuverte' => true,
+            'caisseOuverte' => $this->caisseEstOuverte($agenceId),
             'depenses' => $depensesData,
             'totalDepenses' => (float) $totalDepenses,
         ]);
@@ -544,7 +628,7 @@ public function maintenance(Request $request)
             return $owner !== null && !empty($owner['properties']);
         })->values();
         return Inertia::render('Agence/Caisse/VenteBien', [
-            'caisseOuverte' => true,
+            'caisseOuverte' => $this->caisseEstOuverte($agenceId),
             'ventes' => $ventesData,
             'totalVentes' => (float) $totalVentes,
             'saleOwners' => $saleOwners->all(),
@@ -691,5 +775,15 @@ public function maintenance(Request $request)
     private function agenceId(): string
     {
         return getInfoAgent()->users->agence_id;
+    }
+
+    private function userId(): ?string
+    {
+        return getInfoAgent()->users->id_users ?? null;
+    }
+
+    private function caisseEstOuverte(string $agenceId): bool
+    {
+        return CaisseSession::where('agence_id', $agenceId)->whereNull('closed_at')->exists();
     }
 }

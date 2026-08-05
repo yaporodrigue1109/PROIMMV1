@@ -18,6 +18,7 @@ class TicketController extends Controller
         $tickets = $this->tickets->paginateForAdmin()->getCollection()->map(fn ($ticket) => [
             'id' => $ticket->reference, 'uuid' => $ticket->support_ticket_id, 'subject' => $ticket->sujet,
             'status' => $ticket->statut, 'priority' => $ticket->priorite, 'category' => $ticket->categorie,
+            'unread' => $ticket->admin_read_at === null,
             'updatedAt' => $ticket->updated_at?->diffForHumans(),
             'requester' => [
                 'name' => $ticket->demandeur?->name ?? 'Utilisateur inconnu',
@@ -29,6 +30,7 @@ class TicketController extends Controller
         return Inertia::render('Admin/Tickets/Index', ['tickets' => $tickets, 'stats' => $this->tickets->globalStatistics()]);
     }
 
-    public function reply(Request $request, string $ticket) { $model = $this->tickets->find($ticket); abort_unless($model, 404); $data = $request->validate(['message' => 'required|string|max:2000']); $model->messages()->create(['auteur_id' => auth('admin')->id(), 'auteur_type' => 'support', 'contenu' => $data['message']]); $this->tickets->updateStatus($model, 'pending'); return back(); }
+    public function reply(Request $request, string $ticket) { $model = $this->tickets->find($ticket); abort_unless($model, 404); $data = $request->validate(['message' => 'required|string|max:2000']); $model->messages()->create(['auteur_id' => auth('admin')->id(), 'auteur_type' => 'support', 'contenu' => $data['message']]); $this->tickets->updateStatus($model, 'pending'); $model->update(['admin_read_at' => now(), 'agence_read_at' => null]); return back(); }
+    public function markRead(string $ticket) { $model = $this->tickets->find($ticket); abort_unless($model, 404); $model->update(['admin_read_at' => now()]); return back(); }
     public function updateStatus(Request $request, string $ticket) { $model = $this->tickets->find($ticket); abort_unless($model, 404); $data = $request->validate(['status' => 'required|in:open,pending,resolved,closed']); $this->tickets->updateStatus($model, $data['status']); return back(); }
 }

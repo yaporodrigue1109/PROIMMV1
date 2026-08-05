@@ -176,6 +176,7 @@ Route::middleware(['admin'])->group(function () {
             ->name('index');
         Route::post('/{ticket}/reponses', [TicketController::class, 'reply'])->name('reply');
         Route::patch('/{ticket}/statut', [TicketController::class, 'updateStatus'])->name('status');
+        Route::patch('/{ticket}/lu', [TicketController::class, 'markRead'])->name('read');
     });
 
     /*

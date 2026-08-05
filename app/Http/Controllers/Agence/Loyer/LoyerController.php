@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Locataire;
 use App\Models\Loyer;
 use App\Models\ModePaiement;
+use App\Models\CaisseSession;
 use App\Services\Agence\PaiementLoyerService;
 use App\Http\Requests\Agence\PayerLoyerRequest;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ protected  $paiementLoyerService;
 
         return Inertia::render('Agence/Caisse/Loyer', [
             'modePaiement' => $modePaiement,
+            'caisseOuverte' => CaisseSession::where('agence_id', $this->agenceId())->whereNull('closed_at')->exists(),
         ]);
     }
 
@@ -230,6 +232,13 @@ protected  $paiementLoyerService;
   public function pay(PayerLoyerRequest $request)
 {
     $donnees = $request->validated();
+
+    if (! CaisseSession::where('agence_id', $this->agenceId())->whereNull('closed_at')->exists()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'La caisse doit être ouverte avant tout encaissement.',
+        ], 422);
+    }
  
     try {
         $resultat = $this->paiementLoyerService->payer(

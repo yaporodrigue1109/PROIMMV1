@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Head } from '@inertiajs/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Head, useForm } from '@inertiajs/react';
 import {
     ArrowDownCircle,
     ArrowUpCircle,
@@ -115,12 +115,27 @@ export default function Caisse({
         { mode: 'Orange Money', total: 50000, count: 1, commission: 5000, net: 45000, icon: CreditCard, accent: 'bg-[#fff2e6] text-[#c2410c]' },
     ],
 }) {
-    const [caisseOuverte, setCaisseOuverte] = useState(caisseOuverteProp);
+    const caisseOuverte = caisseOuverteProp;
     const [openCashForm, setOpenCashForm] = useState(false);
     const [closeCashForm, setCloseCashForm] = useState(false);
     const [activeTab, setActiveTab] = useState('transactions');
     const [txFilter, setTxFilter] = useState('all');
     const [mouvementOpen, setMouvementOpen] = useState(false);
+    const ouvertureForm = useForm({
+        solde_ouverture: soldeOuverture,
+        observation: '',
+    });
+    const fermetureForm = useForm({
+        solde_fermeture: soldeOuverture + totalEntrees - totalSorties,
+        observation: '',
+    });
+
+    useEffect(() => {
+        setOpenCashForm(false);
+        setCloseCashForm(false);
+        ouvertureForm.clearErrors();
+        fermetureForm.clearErrors();
+    }, [caisseOuverteProp]);
 
     const soldeTheorique = soldeOuverture + totalEntrees - totalSorties;
 
@@ -818,16 +833,23 @@ export default function Caisse({
                                             <span className="text-sm font-medium text-[#0f172a]">Solde d&apos;ouverture</span>
                                             <input
                                                 type="number"
-                                                defaultValue={soldeOuverture}
+                                                min="0"
+                                                step="0.01"
+                                                value={ouvertureForm.data.solde_ouverture}
+                                                onChange={(event) => ouvertureForm.setData('solde_ouverture', event.target.value)}
                                                 className="h-11 rounded-xl border border-[#c8d4de] bg-white px-3 text-sm text-[#0f172a] outline-none focus:border-[#00559b]"
                                             />
+                                            {ouvertureForm.errors.solde_ouverture ? <span className="text-xs text-[#b42318]">{ouvertureForm.errors.solde_ouverture}</span> : null}
                                         </label>
                                         <label className="flex flex-col gap-2 sm:col-span-2">
                                             <span className="text-sm font-medium text-[#0f172a]">Observation</span>
                                             <textarea
                                                 placeholder="Observation facultative..."
+                                                value={ouvertureForm.data.observation}
+                                                onChange={(event) => ouvertureForm.setData('observation', event.target.value)}
                                                 className="min-h-[80px] rounded-xl border border-[#c8d4de] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#00559b]"
                                             />
+                                            {ouvertureForm.errors.observation ? <span className="text-xs text-[#b42318]">{ouvertureForm.errors.observation}</span> : null}
                                         </label>
                                     </div>
                                     <div className="flex justify-center gap-2">
@@ -836,12 +858,10 @@ export default function Caisse({
                                         </Button>
                                         <Button
                                             className={agenceButtonStyles.primary}
-                                            onClick={() => {
-                                                setCaisseOuverte(true);
-                                                setOpenCashForm(false);
-                                            }}
+                                            disabled={ouvertureForm.processing}
+                                            onClick={() => ouvertureForm.post('/agence/caisse/ouvrir')}
                                         >
-                                            Valider l&apos;ouverture
+                                            {ouvertureForm.processing ? 'Ouverture...' : 'Valider l\'ouverture'}
                                         </Button>
                                     </div>
                                 </div>
@@ -872,16 +892,23 @@ export default function Caisse({
                                     <span className="text-sm font-medium text-[#0f172a]">Solde réel de fermeture</span>
                                     <input
                                         type="number"
-                                        defaultValue={soldeTheorique}
+                                        min="0"
+                                        step="0.01"
+                                        value={fermetureForm.data.solde_fermeture}
+                                        onChange={(event) => fermetureForm.setData('solde_fermeture', event.target.value)}
                                         className="h-11 rounded-xl border border-[#c8d4de] bg-white px-3 text-sm text-[#0f172a] outline-none focus:border-[#00559b]"
                                     />
+                                    {fermetureForm.errors.solde_fermeture ? <span className="text-xs text-[#b42318]">{fermetureForm.errors.solde_fermeture}</span> : null}
                                 </label>
                                 <label className="flex flex-col gap-2 sm:col-span-2">
                                     <span className="text-sm font-medium text-[#0f172a]">Observation de fermeture</span>
                                     <textarea
                                         placeholder="Observation facultative..."
+                                        value={fermetureForm.data.observation}
+                                        onChange={(event) => fermetureForm.setData('observation', event.target.value)}
                                         className="min-h-[80px] rounded-xl border border-[#c8d4de] bg-white px-3 py-2 text-sm text-[#0f172a] outline-none focus:border-[#00559b]"
                                     />
+                                    {fermetureForm.errors.observation ? <span className="text-xs text-[#b42318]">{fermetureForm.errors.observation}</span> : null}
                                 </label>
                             </div>
 
@@ -891,12 +918,10 @@ export default function Caisse({
                                 </Button>
                                 <Button
                                     className={agenceButtonStyles.primary}
-                                    onClick={() => {
-                                        setCaisseOuverte(false);
-                                        setCloseCashForm(false);
-                                    }}
+                                    disabled={fermetureForm.processing}
+                                    onClick={() => fermetureForm.post('/agence/caisse/fermer')}
                                 >
-                                    Valider &amp; clôturer
+                                    {fermetureForm.processing ? 'Clôture...' : 'Valider & clôturer'}
                                 </Button>
                             </div>
                         </CardContent>

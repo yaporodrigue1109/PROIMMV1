@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import {
     Bar,
     BarChart,
@@ -38,12 +38,6 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { cn } from '../../../lib/utils';
 
 const BRAND = '#00559b';
-
-const PERIODS = [
-    { key: 'month', label: '1 - 30 Juin 2025' },
-    { key: 'quarter', label: '1 Avr - 30 Juin 2025' },
-    { key: 'year', label: '1 Jan - 31 Déc 2025' },
-];
 
 const TABS = [
     { key: 'overview', label: "Vue d'ensemble", icon: TrendingUp },
@@ -554,7 +548,7 @@ function FinancesTab({ d, tauxRecouvrement }) {
             <aside className="grid h-full gap-6">
                 <Card className=" rounded-2xl border-[#cfe0ef] bg-[#eef6fc] text-slate-900 shadow-sm">
                     <CardContent className="mt-4 p-5">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-[#00559b]">Loyers attendus (Juin)</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#00559b]">Loyers attendus (période sélectionnée)</p>
                         <p className="mt-1 text-4xl font-semibold text-slate-900">{fmtF(d.finances.loyersAttendus)}</p>
 
                         <div className="mt-4 space-y-3 border-t border-[#d7e4f1] pt-4">
@@ -632,7 +626,7 @@ function MaintenanceTab({ d }) {
                             </div>
                             <div className="text-right">
                                 <p className="text-2xl font-semibold text-[#0d8ae6]">{d.maintenance.interventionsCloturees}</p>
-                                <p className="text-xs text-slate-500">Clôturées (Juin)</p>
+                                <p className="text-xs text-slate-500">Clôturées sur la période</p>
                             </div>
                         </div>
                         <Button className="mt-5 h-9 w-full rounded-xl bg-[#eaf4fb] text-[#00559b] hover:bg-[#deeffa]">
@@ -714,8 +708,9 @@ export default function Statistiques({
     recentTransactions = [],
     recentMaintenances = [],
     year = new Date().getFullYear(),
+    periode = new Date().toISOString().slice(0, 7),
+    periodLabel = '',
 }) {
-    const [period, setPeriod] = useState('month');
     const [activeTab, setActiveTab] = useState('overview');
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('recent');
@@ -925,37 +920,27 @@ export default function Statistiques({
         { icon: BriefcaseBusiness, label: 'Rôles attribués', value: String(personnelParRole.length), sub: 'Fonctions représentées', tone: 'brand' },
     ];
 
-    const currentPeriod = PERIODS.find((item) => item.key === period) ?? PERIODS[0];
-
     return (
         <AgenceLayout title="Statistiques">
             <div className="mx-auto max-w-[1520px] px-4 py-6 md:px-6">
                 <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold text-slate-900">Statistiques & Indicateurs</h1>
-                        <p className="mt-1 text-sm text-slate-500">Vue d'ensemble des performances de l'agence — Juin 2025</p>
+                        <p className="mt-1 text-sm text-slate-500">Vue d'ensemble des performances de l'agence — {periodLabel}</p>
                     </div>
 
                     <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            className="h-10 justify-between rounded-xl border-[#d8e1ea] bg-white px-3 text-sm text-slate-600 shadow-sm"
-                            onClick={() =>
-                                setPeriod((current) => {
-                                    const index = PERIODS.findIndex((item) => item.key === current);
-                                    return PERIODS[(index + 1) % PERIODS.length].key;
-                                })
-                            }
-                        >
-                            <span className="flex items-center gap-2">
-                                <CalendarClock className="h-4 w-4 text-[#00559b]" />
-                                {currentPeriod.label}
-                            </span>
-                            <ChevronRight className="h-4 w-4 rotate-90 text-slate-400" />
-                        </Button>
+                        <label className="flex h-10 items-center gap-2 rounded-xl border border-[#d8e1ea] bg-white px-3 text-sm text-slate-600 shadow-sm">
+                            <CalendarClock className="h-4 w-4 text-[#00559b]" />
+                            <input
+                                type="month"
+                                value={periode}
+                                onChange={(event) => router.get('/agence/statistiques', { periode: event.target.value }, { preserveState: true, preserveScroll: true })}
+                                className="bg-transparent text-sm text-slate-700 outline-none"
+                            />
+                        </label>
 
-                        <div className="flex items-center gap-2">
+                        {/* <div className="flex items-center gap-2">
                             <Button variant="outline" className="h-10 rounded-xl border-[#d8e1ea] bg-white px-3 text-sm text-slate-700 shadow-sm">
                                 <FileText className="mr-2 h-4 w-4 text-red-500" />
                                 PDF Rapport
@@ -964,7 +949,7 @@ export default function Statistiques({
                                 <FileText className="mr-2 h-4 w-4 text-emerald-500" />
                                 Excel Data
                             </Button>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 

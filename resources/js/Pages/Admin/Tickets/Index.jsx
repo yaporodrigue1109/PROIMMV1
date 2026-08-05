@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { router } from '@inertiajs/react';
 import {
     ArrowLeft,
@@ -15,6 +15,7 @@ import {
     Send,
     Tag,
     User as UserIcon,
+    X,
 } from 'lucide-react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import { Button } from '../../../components/ui/button';
@@ -299,17 +300,8 @@ function Conversation({ ticket, onBack, onSend, onStatusChange }) {
                     </div>
                 </div>
 
-                <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                    {ticket.status !== 'resolved' ? (
-                        <Button
-                            variant="outline"
-                            className="h-9 rounded-xl border-[#c8d4de] text-[#0f172a]"
-                            onClick={() => onStatusChange(ticket.id, 'resolved')}
-                        >
-                            <CheckCircle2 className="h-4 w-4" />
-                            Marquer résolu
-                        </Button>
-                    ) : (
+                <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+                    {ticket.status === 'closed' ? (
                         <Button
                             variant="outline"
                             className="h-9 rounded-xl border-[#c8d4de] text-[#0f172a]"
@@ -318,6 +310,36 @@ function Conversation({ ticket, onBack, onSend, onStatusChange }) {
                             <Circle className="h-4 w-4" />
                             Rouvrir
                         </Button>
+                    ) : (
+                        <>
+                            {ticket.status !== 'resolved' ? (
+                                <Button
+                                    variant="outline"
+                                    className="h-9 rounded-xl border-[#c8d4de] text-[#0f172a]"
+                                    onClick={() => onStatusChange(ticket.id, 'resolved')}
+                                >
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    Marquer résolu
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    className="h-9 rounded-xl border-[#c8d4de] text-[#0f172a]"
+                                    onClick={() => onStatusChange(ticket.id, 'open')}
+                                >
+                                    <Circle className="h-4 w-4" />
+                                    Rouvrir
+                                </Button>
+                            )}
+                            <Button
+                                variant="outline"
+                                className="h-9 rounded-xl border-rose-200 text-rose-700 hover:bg-rose-50"
+                                onClick={() => onStatusChange(ticket.id, 'closed')}
+                            >
+                                <X className="h-4 w-4" />
+                                Fermer
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
@@ -407,6 +429,17 @@ export default function Tickets({ tickets: initialTickets = [], stats = {} }) {
     const [activeId, setActiveId] = useState(initialTickets[0]?.id ?? null);
     const [mobileShowConversation, setMobileShowConversation] = useState(false);
 
+    useEffect(() => {
+        setTickets(initialTickets);
+    }, [initialTickets]);
+
+    useEffect(() => {
+        const ticket = initialTickets.find((item) => item.id === activeId);
+        if (ticket?.unread) {
+            router.patch(`/admin/tickets/${ticket.uuid ?? ticket.id}/lu`, {}, { preserveScroll: true });
+        }
+    }, [activeId, initialTickets]);
+
     const filteredTickets = useMemo(() => {
         const term = search.trim().toLowerCase();
         return tickets.filter((ticket) => {
@@ -472,7 +505,6 @@ export default function Tickets({ tickets: initialTickets = [], stats = {} }) {
         const ticket = tickets.find((item) => item.id === id);
         if (!ticket) return;
         router.patch(`/admin/tickets/${ticket.uuid ?? id}/statut`, { status }, { preserveScroll: true });
-        setTickets((prev) => prev.map((ticket) => (ticket.id === id ? { ...ticket, status } : ticket)));
     };
 
     return (

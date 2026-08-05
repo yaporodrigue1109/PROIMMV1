@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, router } from '@inertiajs/react';
 import {
     CheckCircle2,
     ChevronRight,
@@ -113,12 +113,19 @@ export default function Demandes({ tickets = { data: [] }, stats = {} }) {
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('all');
 
+    useEffect(() => {
+        const refreshTickets = () => router.reload({ only: ['tickets', 'stats'], preserveScroll: true });
+        window.addEventListener('focus', refreshTickets);
+        return () => window.removeEventListener('focus', refreshTickets);
+    }, []);
+
     const requests = tickets.data.map((ticket) => ({
         id: ticket.reference,
         uuid: ticket.support_ticket_id,
         subject: ticket.sujet,
         category: ticket.categorie,
         status: ticket.statut,
+        unread: ticket.agence_read_at === null,
         excerpt: ticket.description,
         createdAt: new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(new Date(ticket.created_at)),
         updatedAt: ticket.updated_at,
@@ -241,6 +248,7 @@ export default function Demandes({ tickets = { data: [] }, stats = {} }) {
                                                 >
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2">
+                                                            {request.unread ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#00559b]" /> : null}
                                                             <span className="text-xs font-medium text-[#94a7b8]">
                                                                 {request.id}
                                                             </span>
@@ -249,7 +257,7 @@ export default function Demandes({ tickets = { data: [] }, stats = {} }) {
                                                                 {request.category}
                                                             </span>
                                                         </div>
-                                                        <p className="mt-0.5 truncate text-sm font-medium text-[#0f172a]">
+                                                        <p className={cn('mt-0.5 truncate text-sm text-[#0f172a]', request.unread ? 'font-semibold' : 'font-medium')}>
                                                             {request.subject}
                                                         </p>
                                                         <p className="truncate text-xs text-[#5f7182]">
