@@ -123,9 +123,10 @@ function normalizeProperty(propriete, equipementLabelMap = new Map()) {
     const portes_total = batiments.reduce((acc, b) => acc + b.portes_total, 0);
     const portes_occupees = batiments.reduce((acc, b) => acc + b.portes_occupees, 0);
     const porteModes = batiments.flatMap((b) => b.portes.map((porte) => porte.is_allocation));
-    let market_mode = propriete?.is_allocation ? 'location' : 'vente';
+    const sale_type = propriete?.sale_type ?? 'none';
+    let market_mode = sale_type === 'whole' ? 'vente' : propriete?.is_allocation ? 'location' : 'vente';
 
-    if (porteModes.length) {
+    if (sale_type !== 'whole' && porteModes.length) {
         const hasLocation = porteModes.some((value) => value === true);
         const hasSale = porteModes.some((value) => value === false);
         market_mode = hasLocation && hasSale ? 'mixte' : hasLocation ? 'location' : 'vente';
@@ -140,6 +141,8 @@ function normalizeProperty(propriete, equipementLabelMap = new Map()) {
         is_actif: propriete?.is_actif ?? true,
         type: propriete?.type?.name ?? propriete?.type ?? 'N/A',
         lot: propriete?.lot?.name ?? propriete?.lot ?? '',
+        sale_type,
+        sale_price: Number(propriete?.sale_price ?? 0),
         market_mode,
         proprietaire: {
             name: propriete?.proprietaire?.name ?? 'N/A',
@@ -302,7 +305,7 @@ function marketModeBadge(mode) {
     );
 }
 
-function PorteCard({ porte, index, batimentEtages = 0 }) {
+function PorteCard({ porte, index, batimentEtages = 0, structuralOnly = false }) {
     return (
         <div className="rounded-2xl border border-[#c8d4de] bg-[#f8fafc] p-4">
             <div className="flex items-start justify-between gap-3">
@@ -357,9 +360,9 @@ function PorteCard({ porte, index, batimentEtages = 0 }) {
                 </div>
             ) : null}
 
-            <Separator className="my-4" />
+            {!structuralOnly ? <Separator className="my-4" /> : null}
 
-            <div className="rounded-xl border border-[#e2e8f0] bg-white p-4">
+            {!structuralOnly ? <div className="rounded-xl border border-[#e2e8f0] bg-white p-4">
                 <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-[#0f172a]">
                     <Wallet className="h-4 w-4 text-[#00559b]" />
                     Tarification
@@ -397,12 +400,12 @@ function PorteCard({ porte, index, batimentEtages = 0 }) {
                     label="Frais de dossier"
                     value={porte.tarif.mt_frais_dossier === null || porte.tarif.mt_frais_dossier === '' ? '—' : money(porte.tarif.mt_frais_dossier)}
                 />
-            </div>
+            </div> : null}
         </div>
     );
 }
 
-function BatimentPanel({ batiment }) {
+function BatimentPanel({ batiment, structuralOnly = false }) {
     return (
         <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-[#e2e8f0] py-4">
@@ -433,7 +436,7 @@ function BatimentPanel({ batiment }) {
                 ) : (
                     <div className="grid grid-cols-1 gap-4">
                         {batiment.portes.map((porte, index) => (
-                            <PorteCard key={porte.id} porte={porte} index={index} batimentEtages={batiment.nbre_etages} />
+                            <PorteCard key={porte.id} porte={porte} index={index} batimentEtages={batiment.nbre_etages} structuralOnly={structuralOnly} />
                         ))}
                     </div>
                 )}
@@ -565,6 +568,9 @@ export default function Show({ propriete = null, proximites = [], equipements = 
                            
                             <InfoRow icon={MapPin} label="Adresse" value={property.adresse_complete} />
                             <InfoRow icon={Home} label="Lot" value={property.lot} />
+                            {property.sale_type === 'whole' ? (
+                                <InfoRow icon={Wallet} label="Prix de vente global" value={money(property.sale_price)} />
+                            ) : null}
                             {property.proprietaire.tel1 ? (
                                 <InfoRow icon={Phone} label="Téléphone" value={property.proprietaire.tel1} />
                             ) : null}
@@ -632,7 +638,7 @@ export default function Show({ propriete = null, proximites = [], equipements = 
 
                                 {property.batiments.map((batiment) => (
                                     <TabsContent key={batiment.id} value={String(batiment.id)} className="mt-0">
-                                        <BatimentPanel batiment={batiment} />
+                                        <BatimentPanel batiment={batiment} structuralOnly={property.sale_type === 'whole'} />
                                     </TabsContent>
                                 ))}
                             </Tabs>

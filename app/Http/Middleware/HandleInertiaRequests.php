@@ -37,6 +37,8 @@ class HandleInertiaRequests extends Middleware
                         'agence_id' => $user->agence->agence_id,
                         'name' => $user->agence->name,
                         'code_agence' => $user->agence->code_agence,
+                        'statut' => $user->agence->statut,
+                        'is_demo' => $user->agence->statut === 'en_demo' && ! $user->agence->abonnement_id,
                         'abonnement_id' => $user->agence->abonnement_id,
                         'abonnement_start' => $user->agence->abonnement_start,
                         'abonnement_end' => $user->agence->abonnement_end,

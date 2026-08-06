@@ -23,6 +23,8 @@ class ProprietaireLot extends Model
         'region_id',
         'ville_id',
         'adresse',
+        'is_for_sale',
+        'sale_price',
         'num_lot',
         'num_ilot',
         'proprietaire_id',
@@ -36,6 +38,8 @@ class ProprietaireLot extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'is_for_sale' => 'boolean',
+        'sale_price' => 'decimal:2',
     ];
 
     protected static function boot()

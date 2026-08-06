@@ -9,3 +9,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Schedule::command('caisse:cloturer-expirees')
+    ->dailyAt('00:00')
+    ->withoutOverlapping();

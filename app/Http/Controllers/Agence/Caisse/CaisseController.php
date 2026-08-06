@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Agence\Caisse;
 use App\Http\Controllers\Controller;
 use App\Models\ModePaiement;
 use App\Models\CaisseSession;
+use App\Services\Agence\CaisseClotureService;
 use App\Repositories\Agence\Interfaces\TransactionAgenceRepositoryInterface;
 use App\Repositories\Agence\Interfaces\MaintenanceRepositoryInterface;
 use Carbon\Carbon;
@@ -26,7 +27,7 @@ class CaisseController extends Controller
     protected $transactionRepository;
     protected $maintenanceRepository;
 
-    public function __construct(TransactionAgenceRepositoryInterface $transactionRepository,MaintenanceRepositoryInterface $maintenanceRepository)
+    public function __construct(TransactionAgenceRepositoryInterface $transactionRepository,MaintenanceRepositoryInterface $maintenanceRepository, private CaisseClotureService $caisseClotureService)
     {
         $this->transactionRepository = $transactionRepository;
         $this->maintenanceRepository = $maintenanceRepository;
@@ -35,6 +36,7 @@ class CaisseController extends Controller
     public function index()
     {
         $agenceId = $this->agenceId();
+        $this->caisseClotureService->cloturerCaissesExpirees($agenceId);
         $session = CaisseSession::where('agence_id', $agenceId)
             ->latest('opened_at')
             ->first();
@@ -223,6 +225,7 @@ class CaisseController extends Controller
         ]);
 
         $agenceId = $this->agenceId();
+        $this->caisseClotureService->cloturerCaissesExpirees($agenceId);
 
         DB::transaction(function () use ($agenceId, $data) {
             DB::table('agences')->where('agence_id', $agenceId)->lockForUpdate()->first();
@@ -548,7 +551,7 @@ public function maintenance(Request $request)
             ->where('agence_id', $agenceId)
             ->where('is_active', true)
             ->with(['proprietaire' => function ($query) use ($agenceId) {
-                $query->with(['proprietes' => function ($propertyQuery) use ($agenceId) {
+                $query->with(['lots' => fn ($lotQuery) => $lotQuery->where('agence_id', $agenceId)->where('is_for_sale', true), 'proprietes' => function ($propertyQuery) use ($agenceId) {
                     $propertyQuery->where('agence_id', $agenceId)
                         ->where('is_actif', true)
                         ->with(['batiments' => function ($batimentQuery) {
@@ -567,56 +570,46 @@ public function maintenance(Request $request)
                 return null;
             }
 
-            $properties = $owner->proprietes->filter(function ($property) {
-                return $property->is_allocation === false;
-            })->values()->map(function ($property) {
-                $buildings = $property->batiments->map(function ($building) {
-                    $doors = $building->portes->filter(function ($door) {
-                        return $door->is_actif && $door->is_occupe === false && $door->is_allocation === false;
-                    })->values()->map(function ($door) {
-                        $tarif = $door->tarifActif;
-                        return [
-                            'id' => $door->porte_id,
-                            'title' => $door->numero_porte ?? 'Porte',
-                            'forSale' => true,
-                            'price' => (float) ($tarif->mt_vente ?? 0),
-                        ];
-                    });
+            $lotsForSale = $owner->lots->map(fn ($lot) => $this->saleTarget(
+                'lot-'.$lot->propreietaire_lot_id,
+                $lot->name ?? 'Lot',
+                $lot->adresse ?? '',
+                'Lot entier',
+                (float) $lot->sale_price,
+                $lot->num_lot ?? ''
+            ));
 
-                    return [
-                        'id' => $building->batiment_id,
-                        'title' => $building->name ?? 'Bâtiment',
-                        'forSale' => $doors->isNotEmpty(),
-                        'doors' => $doors->values()->all(),
-                    ];
-                })->values();
+            $propertiesForSale = $owner->proprietes->flatMap(function ($property) {
+                if (($property->sale_type ?? 'none') === 'whole') {
+                    return [$this->saleTarget(
+                        'property-'.$property->propriete_id,
+                        $property->reference ?? 'Propriété',
+                        $property->adresse_complete ?? '',
+                        'Propriété entière',
+                        (float) $property->sale_price,
+                        $property->reference ?? ''
+                    )];
+                }
 
-                $propertyForSale = $property->is_allocation === false && $property->batiments->contains(function ($building) {
-                    return $building->portes->contains(function ($door) {
-                        return $door->is_actif && $door->is_occupe === false && $door->is_allocation === false;
-                    });
+                if (($property->sale_type ?? 'none') !== 'by_door') {
+                    return [];
+                }
+
+                return $property->batiments->flatMap(function ($building) use ($property) {
+                    return $building->portes
+                        ->filter(fn ($door) => $door->is_actif && ! $door->is_occupe && $door->is_allocation === false && $door->tarifActif?->mt_vente)
+                        ->map(fn ($door) => $this->saleTarget(
+                            'door-'.$door->porte_id,
+                            ($property->reference ?? 'Propriété').' · '.($door->numero_porte ?? 'Porte'),
+                            $property->adresse_complete ?? '',
+                            'Vente par porte',
+                            (float) $door->tarifActif->mt_vente,
+                            $door->numero_porte ?? ''
+                        ));
                 });
+            });
 
-                return [
-                    'id' => $property->propriete_id,
-                    'title' => $property->reference ?? 'Bien immobilier',
-                    'location' => $property->adresse_complete ?? '',
-                    'type' => $property->typePropriete->name ?? 'Bien',
-                    'price' => 0,
-                    'commission' => 0,
-                    'ownerAmount' => 0,
-                    'buyer' => '',
-                    'status' => 'Disponible',
-                    'badge' => 'Disponible',
-                    'reference' => $property->reference ?? '',
-                    'date' => '',
-                    'observation' => 'Disponible à la vente',
-                    'forSale' => $propertyForSale,
-                    'buildings' => $buildings->values()->all(),
-                ];
-            })->filter(function ($property) {
-                return $property['forSale'] || collect($property['buildings'])->contains(fn ($building) => $building['forSale']);
-            })->values();
+            $properties = $lotsForSale->concat($propertiesForSale)->values();
 
             return [
                 'id' => $owner->proprietaire_id,
@@ -633,6 +626,16 @@ public function maintenance(Request $request)
             'totalVentes' => (float) $totalVentes,
             'saleOwners' => $saleOwners->all(),
         ]);
+    }
+
+    private function saleTarget(string $id, string $title, string $location, string $type, float $price, string $reference): array
+    {
+        return [
+            'id' => $id, 'title' => $title, 'location' => $location, 'type' => $type,
+            'price' => $price, 'commission' => 0, 'ownerAmount' => 0, 'buyer' => '',
+            'status' => 'Disponible', 'badge' => 'Disponible', 'reference' => $reference,
+            'date' => '', 'observation' => 'Disponible à la vente', 'forSale' => true,
+        ];
     }
 
     // Méthodes privées utilitaires
@@ -784,6 +787,8 @@ public function maintenance(Request $request)
 
     private function caisseEstOuverte(string $agenceId): bool
     {
+        $this->caisseClotureService->cloturerCaissesExpirees($agenceId);
+
         return CaisseSession::where('agence_id', $agenceId)->whereNull('closed_at')->exists();
     }
 }

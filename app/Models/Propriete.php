@@ -25,12 +25,15 @@ class Propriete extends Model
         'adresse_complete',
         'videos_url',
         'is_allocation',
+        'sale_type',
+        'sale_price',
         'is_actif',
         'prossimites'
     ];
 
     protected $casts = [
         'is_allocation' => 'boolean',
+        'sale_price'    => 'decimal:2',
         'is_actif'      => 'boolean',
         'videos_url'    => 'array',
     ];

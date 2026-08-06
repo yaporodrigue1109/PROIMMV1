@@ -79,6 +79,8 @@ const buildEmptyLotForm = () => ({
     adresse: '',
     region_id: '',
     ville_id: '',
+    is_for_sale: false,
+    sale_price: '',
 });
 
 const toId = (value) => (value === null || value === undefined || value === '' ? '' : String(value));
@@ -471,6 +473,7 @@ function PorteBlock({
     onRemove,
     canRemove,
     nbreEtages = 0,
+    structuralOnly = false,
 }) {
     const [showDetails, setShowDetails] = useState(false);
     const setPorte = (patch) => onChange({ ...porte, ...patch });
@@ -638,7 +641,7 @@ function PorteBlock({
 
 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 
-    <Field
+    {!structuralOnly ? <Field
                             label="Mode de mise en marché"
                             required
                             error={errors?.[`${errorKey}.is_allocation`]}
@@ -683,7 +686,11 @@ function PorteBlock({
                                     </span>
                                 </label>
                             </div>
-                        </Field>
+                        </Field> : (
+                            <div className="rounded-xl border border-[#c8d4de] bg-white px-3 py-2 text-sm text-[#5f7182] md:col-span-3">
+                                Porte descriptive — le prix est défini pour la propriété entière.
+                            </div>
+                        )}
 
     <Field label="Numéro de porte" required error={errors?.[`${errorKey}.numero_porte`]}>
         <Input
@@ -708,7 +715,7 @@ function PorteBlock({
         </Select>
     </Field>
 
-    <Field label={prixFieldLabel} required error={prixFieldError}>
+    {!structuralOnly ? <Field label={prixFieldLabel} required error={prixFieldError}>
         <Input
             type="text"
             min="0"
@@ -721,10 +728,10 @@ function PorteBlock({
             onChange={(e) => setTarif({ [prixFieldKey]: digitsOnly(e.target.value) })}
             placeholder={prixFieldPlaceholder}
         />
-    </Field>
+    </Field> : null}
 </div>
 
-<div className="rounded-xl mt-4">
+{!structuralOnly ? <div className="rounded-xl mt-4">
     <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#0f172a]">
         <Wallet className="h-4 w-4 text-[#00559b]" /> Frais complémentaires
     </div>
@@ -747,7 +754,7 @@ function PorteBlock({
             </Field>
         ))}
     </div>
-</div>
+</div> : null}
 
             {showDetails ? (
                 <div className="mt-4 space-y-5 rounded-xl border border-dashed border-[#c8d4de] bg-white p-4">
@@ -811,7 +818,7 @@ function PorteBlock({
 // Batiment block
 // ─────────────────────────────────────────────────────────────
 
-function BatimentBlock({ index, batiment, typesPorte, equipements, errors, onChange, onRemove, canRemove, mode = 'full' }) {
+function BatimentBlock({ index, batiment, typesPorte, equipements, errors, onChange, onRemove, canRemove, mode = 'full', structuralOnly = false }) {
     const setBatiment = (patch) => onChange({ ...batiment, ...patch });
     const [showStructureOptions, setShowStructureOptions] = useState(false);
 
@@ -943,6 +950,7 @@ function BatimentBlock({ index, batiment, typesPorte, equipements, errors, onCha
                                     onRemove={() => removePorte(porteIndex)}
                                     canRemove={true}
                                     nbreEtages={batiment.nbre_etages}
+                                    structuralOnly={structuralOnly}
                                 />
                             ))}
                         </div>
@@ -1066,6 +1074,8 @@ export default function Form({
         proprietaire_id: toId(propriete?.proprietaire_id),
         lot_id: toId(propriete?.lot_id),
         is_allocation: propriete?.is_allocation ?? true,
+        sale_type: propriete?.sale_type ?? 'none',
+        sale_price: integerValue(propriete?.sale_price),
         is_actif: propriete?.is_actif ?? true,
         proximites: Array.isArray(propriete?.proximites)
             ? propriete.proximites.map(normalizeProximiteSelection).filter(Boolean)
@@ -1108,6 +1118,8 @@ export default function Form({
                 label: lot.name,
                 adresse: lot.adresse,
                 proprietaire_id: toId(lot.proprietaire_id),
+                is_for_sale: Boolean(lot.is_for_sale),
+                sale_price: lot.sale_price,
             })),
         [localLots]
     );
@@ -1174,7 +1186,7 @@ export default function Form({
     }, [ownerOptions, ownerSearch]);
 
     const availableLotOptions = useMemo(
-        () => lotOptions.filter((lot) => lot.proprietaire_id === selectedProprietaireId),
+        () => lotOptions.filter((lot) => lot.proprietaire_id === selectedProprietaireId && (!lot.is_for_sale || lot.value === toId(propriete?.lot_id))),
         [lotOptions, selectedProprietaireId]
     );
 
@@ -1371,6 +1383,9 @@ export default function Form({
         }
 
         if (index === 3) {
+            if (data.sale_type === 'whole') {
+                return localErrors;
+            }
             data.batiments.forEach((batiment, bIndex) => {
                 batiment.portes.forEach((porte, pIndex) => {
                     const prefix = `batiments.${bIndex}.portes.${pIndex}`;
@@ -1399,6 +1414,10 @@ export default function Form({
                     }
                 });
             });
+        }
+
+        if (index === 0 && data.sale_type === 'whole' && !data.sale_price) {
+            localErrors.sale_price = 'Le prix de vente de la propriété est obligatoire.';
         }
 
         return localErrors;
@@ -1564,6 +1583,38 @@ export default function Form({
                                     </p>
                                 ) : null}
                             </Field>
+
+                            <Field label="Mode de commercialisation" required error={mergedErrors.sale_type} className="md:col-span-2">
+                                <Select
+                                    value={data.sale_type}
+                                    onValueChange={(value) => {
+                                        setData('sale_type', value);
+                                        if (value !== 'whole') setData('sale_price', '');
+                                    }}
+                                >
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">Location uniquement</SelectItem>
+                                        <SelectItem value="whole">Vente de la propriété/cour entière</SelectItem>
+                                        <SelectItem value="by_door">Vente par porte</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-[#94a3b8]">
+                                    En vente entière, les bâtiments et portes restent descriptifs mais aucun prix n’est saisi par porte.
+                                </p>
+                            </Field>
+
+                            {data.sale_type === 'whole' ? (
+                                <Field label="Prix de vente de la propriété" required error={mergedErrors.sale_price} className="md:col-span-2">
+                                    <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={data.sale_price}
+                                        onChange={(event) => setData('sale_price', digitsOnly(event.target.value))}
+                                        placeholder="Ex : 75000000"
+                                    />
+                                </Field>
+                            ) : null}
 
                             <Field label="Note" className="md:col-span-2">
                                 <textarea
@@ -1745,6 +1796,7 @@ export default function Form({
                                         onRemove={() => removeBatiment(selectedBatimentIndex)}
                                         canRemove={data.batiments.length > 1}
                                         mode="doors"
+                                        structuralOnly={data.sale_type === 'whole'}
                                     />
                                 ) : (
                                     <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
@@ -1978,6 +2030,28 @@ export default function Form({
                                             placeholder="Cocody Riviera 3"
                                         />
                                     </Field>
+
+                                    <label className="flex items-center gap-3 rounded-xl border border-[#c8d4de] p-3 md:col-span-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={lotForm.is_for_sale}
+                                            onChange={(event) => setLotForm((current) => ({ ...current, is_for_sale: event.target.checked, sale_price: event.target.checked ? current.sale_price : '' }))}
+                                            className="h-4 w-4 accent-[#00559b]"
+                                        />
+                                        <span className="text-sm font-medium text-[#0f172a]">Mettre ce lot entier en vente</span>
+                                    </label>
+
+                                    {lotForm.is_for_sale ? (
+                                        <Field label="Prix de vente du lot" required error={lotErrors.sale_price} className="md:col-span-2">
+                                            <Input
+                                                type="text"
+                                                inputMode="numeric"
+                                                value={lotForm.sale_price}
+                                                onChange={(event) => setLotForm((current) => ({ ...current, sale_price: digitsOnly(event.target.value) }))}
+                                                placeholder="Ex : 50000000"
+                                            />
+                                        </Field>
+                                    ) : null}
 
                                     
                                 </div>

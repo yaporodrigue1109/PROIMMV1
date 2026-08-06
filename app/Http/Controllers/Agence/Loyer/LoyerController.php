@@ -8,6 +8,7 @@ use App\Models\Loyer;
 use App\Models\ModePaiement;
 use App\Models\CaisseSession;
 use App\Services\Agence\PaiementLoyerService;
+use App\Services\Agence\CaisseClotureService;
 use App\Http\Requests\Agence\PayerLoyerRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,13 +19,14 @@ use Inertia\Inertia;
 class LoyerController extends Controller
 {
 protected  $paiementLoyerService;
- public function __construct( PaiementLoyerService $paiementLoyerService)
+ public function __construct(PaiementLoyerService $paiementLoyerService, private CaisseClotureService $caisseClotureService)
     {
         $this->paiementLoyerService = $paiementLoyerService;
     }
 
     public function index()
     {
+        $this->caisseClotureService->cloturerCaissesExpirees($this->agenceId());
         $modePaiement = ModePaiement::query()
             ->orderBy('name')
             ->get(['id', 'name']);
@@ -232,6 +234,7 @@ protected  $paiementLoyerService;
   public function pay(PayerLoyerRequest $request)
 {
     $donnees = $request->validated();
+    $this->caisseClotureService->cloturerCaissesExpirees($this->agenceId());
 
     if (! CaisseSession::where('agence_id', $this->agenceId())->whereNull('closed_at')->exists()) {
         return response()->json([

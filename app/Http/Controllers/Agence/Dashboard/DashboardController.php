@@ -22,6 +22,8 @@ class DashboardController extends Controller
         $agence = $user?->agence;
 
         $now = now();
+        $monthStart = $now->copy()->startOfMonth();
+        $monthEnd = $now->copy()->endOfMonth();
         $currentMonth = $now->month;
         $currentYear = $now->year;
         $previousMonth = $now->copy()->subMonth()->month;
@@ -77,6 +79,7 @@ class DashboardController extends Controller
             ->with(['locataire', 'propriete'])
             ->where('agence_id', $agenceId)
             ->whereNotNull('date_paiement')
+            ->whereBetween('date_paiement', [$monthStart, $monthEnd])
             ->orderByDesc('date_paiement')
             ->limit(5)
             ->get()
@@ -154,6 +157,7 @@ class DashboardController extends Controller
             'recentPayments' => $recentPayments,
             'upcomingLeases' => $upcomingLeases,
             'recentProperties' => $recentProperties,
+            'periodLabel' => ucfirst($now->locale('fr')->translatedFormat('F Y')),
         ]);
     }
 }

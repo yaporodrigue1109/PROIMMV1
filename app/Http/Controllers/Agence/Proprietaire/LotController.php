@@ -23,6 +23,7 @@ class LotController extends Controller
             'proprietaire_id' => $proprietaireId,
             'agence_id'       => $this->agenceId(),
         ]);
+        $data['sale_price'] = ($data['is_for_sale'] ?? false) ? $data['sale_price'] : null;
 
         $lot = $this->lotRepository->create($data);
 
@@ -35,7 +36,18 @@ class LotController extends Controller
 
     public function update(LotRequest $request, string $id): JsonResponse
     {
-        $lot = $this->lotRepository->update($id, $request->validated());
+        $existingLot = $this->lotRepository->findById($id);
+        $data = $request->validated();
+        $data['sale_price'] = ($data['is_for_sale'] ?? false) ? $data['sale_price'] : null;
+
+        if (($data['is_for_sale'] ?? false) && $existingLot->proprietes()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Un lot qui contient déjà une propriété ne peut pas être mis en vente comme lot entier.',
+            ], 422);
+        }
+
+        $lot = $this->lotRepository->update($id, $data);
 
         return response()->json([
             'success' => true,

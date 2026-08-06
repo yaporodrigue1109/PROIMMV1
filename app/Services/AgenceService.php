@@ -32,6 +32,7 @@ class AgenceService
         protected AbonnementRepositoryInterface $abonnementRepository,
         protected ConfigurationTarifService $configurationTarifService,
         protected NotificationService $notificationService,
+        protected AgenceDemoDataService $demoDataService,
     ) {}
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -72,6 +73,9 @@ class AgenceService
             // 6. Événement
 
             $updateUser = $this->userRepository->update($responsableId,['agence_id' => $agence['agence_id']]);
+            if (($data['statut'] ?? 'en_demo') === 'en_demo') {
+                $this->demoDataService->seed($agence, (string) $responsableId);
+            }
          //   dd($agence['agence_id']);
             DB::commit();
 
@@ -121,6 +125,9 @@ class AgenceService
             // Gestion abonnement si passage en active
             if (($data['statut'] ?? $oldStatut) === 'active') {
                 $this->handleAbonnementActif($agence, $data, isUpdate: true);
+                if ($oldStatut === 'en_demo') {
+                    $this->demoDataService->purge($agence);
+                }
             }
 
             // Mise à jour responsable si changé

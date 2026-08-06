@@ -38,6 +38,8 @@ const buildEmptyLotForm = () => ({
     adresse: '',
     region_id: '',
     ville_id: '',
+    is_for_sale: false,
+    sale_price: '',
 });
 
 const number = (value) => new Intl.NumberFormat('fr-FR').format(Number(value ?? 0));
@@ -187,6 +189,7 @@ function LotCard({ lot, onEdit, onDelete, canDelete }) {
                     <span>{lot.superficie ? `${lot.superficie} m²` : 'Superficie non renseignée'}</span>
                 </p>
                 <p className="text-[#0f172a]">{lot.adresse || 'Adresse non renseignée'}</p>
+                {lot.is_for_sale ? <p className="font-semibold text-[#4d8500]">En vente · {number(lot.sale_price)} FCFA</p> : null}
             </div>
         </div>
     );
@@ -343,6 +346,8 @@ export default function Show({ proprietaire, liaison = null, lots = [], propriet
             adresse: lot?.adresse ?? '',
             region_id: String(lot?.region_id ?? ''),
             ville_id: String(lot?.ville_id ?? ''),
+            is_for_sale: Boolean(lot?.is_for_sale),
+            sale_price: lot?.sale_price ?? '',
         });
         setIsLotModalOpen(true);
     };
@@ -790,6 +795,20 @@ export default function Show({ proprietaire, liaison = null, lots = [], propriet
                                         </SelectContent>
                                     </Select>
                                 </Field>
+                                <label className="flex items-center gap-3 rounded-xl border border-[#c8d4de] p-3 md:col-span-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={lotForm.is_for_sale}
+                                        onChange={(event) => setLotForm((current) => ({ ...current, is_for_sale: event.target.checked, sale_price: event.target.checked ? current.sale_price : '' }))}
+                                        className="h-4 w-4 accent-[#00559b]"
+                                    />
+                                    <span className="text-sm font-medium text-[#0f172a]">Mettre le lot entier en vente</span>
+                                </label>
+                                {lotForm.is_for_sale ? (
+                                    <Field label="Prix de vente du lot" required className="md:col-span-2">
+                                        <Input type="number" min="1" value={lotForm.sale_price} onChange={(event) => setLotForm((current) => ({ ...current, sale_price: event.target.value }))} placeholder="Ex : 50000000" />
+                                    </Field>
+                                ) : null}
                             </div>
 
                             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

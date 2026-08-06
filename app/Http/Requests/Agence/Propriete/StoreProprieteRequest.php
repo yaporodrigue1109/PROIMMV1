@@ -32,6 +32,8 @@ class StoreProprieteRequest extends FormRequest
             'videos_url'        => ['nullable', 'array'],
             'videos_url.*'      => ['url'],
             'is_allocation'     => ['boolean'],
+            'sale_type'         => ['required', Rule::in(['none', 'whole', 'by_door'])],
+            'sale_price'        => ['nullable', 'required_if:sale_type,whole', 'numeric', 'min:0.01'],
             'is_actif'          => ['boolean'],
             'proximites'        => ['nullable', 'array'],
             'proximites.*.id'   => ['required', 'string'],
@@ -73,11 +75,21 @@ class StoreProprieteRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
+            $saleType = $this->input('sale_type', 'none');
             foreach ($this->input('batiments', []) as $bIndex => $batiment) {
                 foreach (($batiment['portes'] ?? []) as $pIndex => $porte) {
                     $prefix = "batiments.{$bIndex}.portes.{$pIndex}.tarif";
                     $isAllocation = filter_var($porte['is_allocation'] ?? true, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
                     $isAllocation = $isAllocation === null ? true : $isAllocation;
+
+                    if ($saleType === 'whole') {
+                        continue;
+                    }
+
+                    if ($saleType === 'none' && ! $isAllocation) {
+                        $validator->errors()->add("batiments.{$bIndex}.portes.{$pIndex}.is_allocation", 'Choisissez la vente par porte pour vendre cette porte.');
+                        continue;
+                    }
 
                     if ($isAllocation) {
                         if (($porte['tarif']['mt_loyer'] ?? '') === '' || ($porte['tarif']['mt_loyer'] ?? null) === null) {
@@ -100,6 +112,15 @@ class StoreProprieteRequest extends FormRequest
                             $validator->errors()->add("{$prefix}.mt_vente", 'Le prix de vente est obligatoire.');
                         }
                     }
+                }
+            }
+
+            if ($saleType === 'by_door') {
+                $hasSaleDoor = collect($this->input('batiments', []))
+                    ->flatMap(fn ($building) => $building['portes'] ?? [])
+                    ->contains(fn ($door) => filter_var($door['is_allocation'] ?? true, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === false);
+                if (! $hasSaleDoor) {
+                    $validator->errors()->add('sale_type', 'Sélectionnez au moins une porte à vendre.');
                 }
             }
         });

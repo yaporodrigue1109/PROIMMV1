@@ -23,6 +23,7 @@ use App\Http\Controllers\Agence\Propriete\ProssimiteProprieteController;
 use App\Http\Controllers\Agence\Parametrage\ParametrageController;
 use App\Http\Controllers\Agence\Reversement\ReversementDetailController;
 use App\Http\Controllers\Agence\Support\SupportController;
+use App\Http\Middleware\BlockDemoAgenceMutations;
 use Inertia\Inertia;
 
 
@@ -36,7 +37,7 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('/login', 'login')->name('login.post');
 });
 
-Route::middleware(['user'])->group(function () {
+Route::middleware(['user', BlockDemoAgenceMutations::class])->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 

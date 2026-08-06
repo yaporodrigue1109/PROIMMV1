@@ -40,6 +40,7 @@ const statusTone = {
 
 export default function Dashboard({
     abonnement = {},
+    periodLabel = '',
     stats = {},
     recentPayments = [],
     upcomingLeases = [],
@@ -129,7 +130,7 @@ export default function Dashboard({
                 {/* En-tête */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <p className="text-sm text-[#5f7182]">Vue d&apos;ensemble</p>
+                        <p className="text-sm text-[#5f7182]">Activité financière · {periodLabel}</p>
                         <h2 className="text-2xl font-semibold text-[#0f172a]">
                             Bonjour, voici votre activité
                         </h2>

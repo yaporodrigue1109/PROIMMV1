@@ -119,6 +119,14 @@ const isActiveSubscription = (agence) => {
     return endDate >= today;
 };
 
+function DemoModeBanner() {
+    return (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-800">
+            Mode démonstration — les données affichées sont fictives. Elles seront retirées lors de votre premier abonnement.
+        </div>
+    );
+}
+
 function SubscriptionPromoCard() {
     return (
         <Card className="overflow-hidden rounded-[1.5rem] border border-[#d3dce5] bg-[linear-gradient(180deg,rgba(0,85,155,0.08)_0%,rgba(255,255,255,0.96)_100%)] shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
@@ -462,6 +470,8 @@ export default function AgenceLayout({ title, children }) {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </header>
+
+                    {currentAgency?.is_demo ? <DemoModeBanner /> : null}
 
                     <div id="agence-scroll-container" className="min-h-0 flex-1 overflow-y-auto p-6">
                         {toast ? (

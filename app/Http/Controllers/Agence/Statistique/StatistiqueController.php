@@ -10,7 +10,7 @@ use App\Models\LocataireAgence;
 use App\Models\Porte;
 use App\Models\Propriete;
 use App\Models\ProprietaireAgence;
-use App\Models\Transaction;
+use App\Models\TransactionAgence;
 use App\Models\User;
 use App\Repositories\Agence\Interfaces\LocataireRepositoryInterface;
 use App\Repositories\Agence\Interfaces\MaintenanceRepositoryInterface;
@@ -48,7 +48,9 @@ class StatistiqueController extends Controller
         $batimentsQuery    = Batiment::query()->where('agence_id', $agenceId);
         $portesQuery       = Porte::query()->where('agence_id', $agenceId);
         $maintenancesQuery = Maintenance::query()->where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd]);
-        $transactionsQuery = Transaction::query()->where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd]);
+        $transactionsQuery = TransactionAgence::query()
+            ->where('agence_id', $agenceId)
+            ->whereBetween('date_transaction', [$periodStart, $periodEnd]);
 
         $proprietesStats = $this->safeArray(
             fn () => $this->proprieteRepo->stats(),
@@ -67,7 +69,9 @@ class StatistiqueController extends Controller
             ['en_attente' => 0, 'en_cours' => 0, 'termine' => 0, 'annule' => 0, 'validee' => 0, 'echouee' => 0]
         );
         $totalEncaisse = $this->safeFloat(
-            fn () => (clone $transactionsQuery)->where('statut', 'validee')->sum('montant_ttc')
+            fn () => (clone $transactionsQuery)
+                ->whereIn('type_transaction', ['loyer', 'vente'])
+                ->sum('montant_global_verser')
         );
 
         $proprietesStats['ce_mois'] = $this->safeCount(fn () => Propriete::where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd])->count());
@@ -95,19 +99,31 @@ class StatistiqueController extends Controller
             ->whereMonth('created_at', $month)
             ->sum('montant_global'));
 
-        $transactionsValidees = $this->safeCount(fn () => (clone $transactionsQuery)->where('statut', 'validee')->count());
-        $transactionsEnAttente = $this->safeCount(fn () => (clone $transactionsQuery)->where('statut', 'en_attente')->count());
-        $transactionsEchouees = $this->safeCount(fn () => (clone $transactionsQuery)->where('statut', 'echouee')->count());
+        $transactionsValidees = $this->safeCount(fn () => (clone $transactionsQuery)->count());
+        $transactionsEnAttente = 0;
+        $transactionsEchouees = 0;
         $revenuMois = $this->safeFloat(fn () => (clone $transactionsQuery)
-            ->where('statut', 'validee')
-            ->whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->sum('montant_ttc'));
+            ->where('type_transaction', 'loyer')
+            ->sum('montant_global_verser'));
+        $ventesMontant = $this->safeFloat(fn () => (clone $transactionsQuery)
+            ->where('type_transaction', 'vente')
+            ->sum('montant_global_verser'));
+        $ventesNombre = $this->safeCount(fn () => (clone $transactionsQuery)
+            ->where('type_transaction', 'vente')
+            ->count());
 
         $revenueByDay = $this->safeArray(
             fn () => (clone $transactionsQuery)
-                ->where('statut', 'validee')
-                ->selectRaw('DATE(created_at) as day, SUM(montant_ttc) as total')
+                ->where('type_transaction', 'loyer')
+                ->selectRaw('DATE(date_transaction) as day, SUM(montant_global_verser) as total')
+                ->groupBy('day')
+                ->pluck('total', 'day')
+                ->toArray()
+        );
+        $salesByDay = $this->safeArray(
+            fn () => (clone $transactionsQuery)
+                ->where('type_transaction', 'vente')
+                ->selectRaw('DATE(date_transaction) as day, SUM(montant_global_verser) as total')
                 ->groupBy('day')
                 ->pluck('total', 'day')
                 ->toArray()
@@ -150,6 +166,7 @@ class StatistiqueController extends Controller
 
         $monthlyLabels = [];
         $revenueSeries = [];
+        $salesMonthSeries = [];
         $maintenanceMonthSeries = [];
         $proprietairesMonthSeries = [];
         $locatairesMonthSeries = [];
@@ -161,6 +178,7 @@ class StatistiqueController extends Controller
             $dateKey = $date->toDateString();
             $monthlyLabels[] = $date->format('d/m');
             $revenueSeries[] = (float) ($revenueByDay[$dateKey] ?? 0);
+            $salesMonthSeries[] = (float) ($salesByDay[$dateKey] ?? 0);
             $maintenanceMonthSeries[] = (float) ($maintenanceByDay[$dateKey] ?? 0);
             $proprietairesMonthSeries[] = (int) ($proprietairesByDay[$dateKey] ?? 0);
             $locatairesMonthSeries[] = (int) ($locatairesByDay[$dateKey] ?? 0);
@@ -170,10 +188,16 @@ class StatistiqueController extends Controller
         }
 
         $recentTransactions = $this->safeCollection(fn () => (clone $transactionsQuery)
-            ->with('abonnement')
-            ->latest('created_at')
+            ->latest('date_transaction')
             ->limit(6)
-            ->get());
+            ->get()
+            ->map(fn ($transaction) => [
+                'id' => $transaction->transaction_agence_id,
+                'type' => $transaction->type_transaction,
+                'tenant' => ucfirst((string) $transaction->type_transaction),
+                'amount' => (float) $transaction->montant_global_verser,
+                'date' => optional($transaction->date_transaction)->format('d/m/Y H:i'),
+            ]));
 
         $recentMaintenances = $this->safeCollection(fn () => (clone $maintenancesQuery)
             ->with(['proprietaire', 'propriete'])
@@ -245,6 +269,8 @@ class StatistiqueController extends Controller
             'maintenances_annulees' => $maintenancesAnnulees,
             'cout_maintenance_mois' => $coutMaintenanceMois,
             'revenu_mois' => $revenuMois,
+            'ventes_montant' => $ventesMontant,
+            'ventes_nombre' => $ventesNombre,
             'total_encaisse' => $totalEncaisse,
             'transactions_validees' => $transactionsValidees,
             'transactions_en_attente' => $transactionsEnAttente,
@@ -259,6 +285,7 @@ class StatistiqueController extends Controller
             'stats' => $stats,
             'monthlyLabels' => $monthlyLabels,
             'revenueSeries' => $revenueSeries,
+            'salesMonthSeries' => $salesMonthSeries,
             'maintenanceMonthSeries' => $maintenanceMonthSeries,
             'proprietairesMonthSeries' => $proprietairesMonthSeries,
             'locatairesMonthSeries' => $locatairesMonthSeries,

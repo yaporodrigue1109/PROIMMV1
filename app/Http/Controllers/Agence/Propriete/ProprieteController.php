@@ -178,6 +178,11 @@ class ProprieteController extends Controller
 
     public function store(StoreProprieteRequest $request): RedirectResponse
     {
+        $selectedLot = $this->lotRepo->findById($request->validated('lot_id'));
+        if ($selectedLot->is_for_sale) {
+            return back()->withInput()->withErrors(['lot_id' => 'Ce lot est en vente et ne peut pas recevoir de propriété.']);
+        }
+
         try {
 
             DB::transaction(function () use ($request) {
@@ -186,7 +191,7 @@ class ProprieteController extends Controller
                 $data['adresse_complete'] = $this->lotRepo->findById($data['lot_id'])->adresse;
 
                 $batimentsData = $data['batiments'] ?? [];
-                $data['is_allocation'] = $this->resolvePropertyAllocation($batimentsData);
+                $this->applySaleStrategy($data, $batimentsData);
                 unset($data['batiments']);
 
                 // 1. Créer la propriété
@@ -268,19 +273,29 @@ class ProprieteController extends Controller
 
         abort_if(!$propriete, 404, 'Propriété introuvable.');
 
+        $selectedLot = $this->lotRepo->findById($request->validated('lot_id'));
+        if ($selectedLot->is_for_sale) {
+            return back()->withInput()->withErrors(['lot_id' => 'Ce lot est en vente et ne peut pas recevoir de propriété.']);
+        }
+
         try {
             DB::transaction(function () use ($request, $propriete) {
                 $data = $request->validated();
                 $data['agence_id'] = $this->agenceId();
                 $data['adresse_complete'] = $this->lotRepo->findById($data['lot_id'])->adresse;
                 $batimentsData = $data['batiments'] ?? [];
-                $data['is_allocation'] = $this->resolvePropertyAllocation($batimentsData);
+                $this->applySaleStrategy($data, $batimentsData);
                 unset($data['batiments']);
 
                 // 1. Mettre à jour les infos générales
                 $this->proprieteRepo->update($propriete, $data);
 
                 $existingBatiments = $this->batimentRepo->getByPropriete($propriete->propriete_id);
+                if (($data['sale_type'] ?? 'none') === 'whole') {
+                    $existingDoorIds = $existingBatiments->flatMap(fn ($building) => $building->portes)->pluck('porte_id');
+                    DB::table('tarif_porte')->whereIn('porte_id', $existingDoorIds)->where('is_actif', true)->update(['is_actif' => false]);
+                    DB::table('porte')->whereIn('porte_id', $existingDoorIds)->update(['is_allocation' => false, 'mt_loyer' => 0]);
+                }
                 $incomingBatimentIds = collect($batimentsData)
                     ->pluck('batiment_id')
                     ->filter()
@@ -512,6 +527,30 @@ class ProprieteController extends Controller
         return $porteModes->contains(true);
     }
 
+    private function applySaleStrategy(array &$data, array &$batimentsData): void
+    {
+        $saleType = $data['sale_type'] ?? 'none';
+        $data['sale_price'] = $saleType === 'whole' ? ($data['sale_price'] ?? null) : null;
+
+        if ($saleType === 'whole') {
+            $data['is_allocation'] = false;
+            foreach ($batimentsData as &$building) {
+                foreach ($building['portes'] ?? [] as &$door) {
+                    $door['is_allocation'] = false;
+                    unset($door['tarif']);
+                }
+                unset($door);
+            }
+            unset($building);
+
+            return;
+        }
+
+        $data['is_allocation'] = $saleType === 'none'
+            ? true
+            : $this->resolvePropertyAllocation($batimentsData);
+    }
+
     private function proprieteFormPayload(?Propriete $propriete = null): array
     {
         $typesPropriete = collect();
@@ -577,6 +616,8 @@ class ProprieteController extends Controller
                     'adresse' => $lot->adresse,
                     'proprietaire_id' => $lot->proprietaire_id,
                     'superficie' => $lot->superficie,
+                    'is_for_sale' => (bool) $lot->is_for_sale,
+                    'sale_price' => $lot->sale_price,
                 ];
             })->values();
         }
@@ -618,6 +659,8 @@ class ProprieteController extends Controller
                 'lot_id' => $propriete->lot_id,
                 'type_propriete_id' => $propriete->type_propriete_id,
                 'is_allocation' => (bool) $propriete->is_allocation,
+                'sale_type' => $propriete->sale_type ?? 'none',
+                'sale_price' => $propriete->sale_price,
                 'is_actif' => (bool) $propriete->is_actif,
                 'proximites' => $this->propertyProximitesPayload($propriete, $proximites->all()),
                 'batiments' => $propriete->batiments->values()->map(function ($batiment) {
@@ -746,6 +789,8 @@ class ProprieteController extends Controller
             'description' => $propriete->description,
             'adresse_complete' => $propriete->adresse_complete,
             'is_allocation' => (bool) $propriete->is_allocation,
+            'sale_type' => $propriete->sale_type ?? 'none',
+            'sale_price' => $propriete->sale_price,
             'is_actif' => (bool) $propriete->is_actif,
             'type' => [
                 'id' => $propriete->typePropriete?->getKey(),
@@ -821,4 +866,3 @@ class ProprieteController extends Controller
 
 
 }
-

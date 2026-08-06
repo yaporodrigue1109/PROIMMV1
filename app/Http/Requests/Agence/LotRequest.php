@@ -18,6 +18,8 @@ class LotRequest extends FormRequest
             'num_ilot'   => ['nullable', 'string', 'max:100'],
             'region_id'  => ['nullable', 'integer', 'exists:regions,id'],
             'ville_id'   => ['nullable', 'integer', 'exists:villes,id'],
+            'is_for_sale' => ['required', 'boolean'],
+            'sale_price' => ['nullable', 'required_if:is_for_sale,1,true', 'numeric', 'min:0.01'],
         ];
     }
 

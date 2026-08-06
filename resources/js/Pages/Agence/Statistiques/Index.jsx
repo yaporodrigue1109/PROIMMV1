@@ -130,7 +130,8 @@ function ComboChart({ data }) {
                             border: '1px solid #c8d4de',
                         }}
                     />
-                    <Bar dataKey="encaisse" name="Encaissements" fill="rgba(0,85,155,0.78)" radius={[3, 3, 0, 0]} barSize={24} />
+                    <Bar dataKey="loyers" name="Loyers encaissés" stackId="revenus" fill="rgba(0,85,155,0.78)" radius={[0, 0, 0, 0]} barSize={24} />
+                    <Bar dataKey="ventes" name="Ventes" stackId="revenus" fill="#4d8500" radius={[3, 3, 0, 0]} barSize={24} />
                     <Line type="monotone" dataKey="impaye" name="Impayés" stroke="#ff5a6f" strokeWidth={2.5} dot={false} />
                 </ComposedChart>
             </ResponsiveContainer>
@@ -557,6 +558,10 @@ function FinancesTab({ d, tauxRecouvrement }) {
                                 <span className="font-semibold text-slate-900">{fmtF(d.finances.loyersEncaisses)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
+                                <span className="text-slate-600">Ventes réalisées ({d.finances.ventesNombre})</span>
+                                <span className="font-semibold text-[#4d8500]">{fmtF(d.finances.ventesMontant)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
                                 <span className="text-slate-600">Impayés du mois</span>
                                 <span className="font-semibold text-[#b42318]">{fmtF(d.finances.impayes)}</span>
                             </div>
@@ -570,9 +575,9 @@ function FinancesTab({ d, tauxRecouvrement }) {
 
                 <DonutCard
                     icon={Wallet}
-                    title="Répartition dépenses"
-                    subtitle="Structure des charges de l'agence"
-                    segments={d.tresorerie.depensesParCategorie}
+                    title="Répartition des encaissements"
+                    subtitle="Loyers et ventes de la période sélectionnée"
+                    segments={d.tresorerie.encaissementsParCategorie}
                     centerValue={`${tauxRecouvrement}%`}
                     centerLabel="Recouvrement"
                     legendFormatter={(value) => fmtShort(value) + ' F'}
@@ -696,6 +701,7 @@ export default function Statistiques({
     stats = {},
     monthlyLabels = [],
     revenueSeries = [],
+    salesMonthSeries = [],
     maintenanceMonthSeries = [],
     proprietairesMonthSeries = [],
     locatairesMonthSeries = [],
@@ -732,6 +738,8 @@ export default function Statistiques({
         finances: {
             loyersAttendus: Number(stats.reversements_attendu ?? stats.revenu_mois ?? 0),
             loyersEncaisses: Number(stats.revenu_mois ?? 0),
+            ventesMontant: Number(stats.ventes_montant ?? 0),
+            ventesNombre: Number(stats.ventes_nombre ?? 0),
             impayes: Math.max(Number(stats.reversements_attendu ?? 0) - Number(stats.revenu_mois ?? 0), 0),
             locatairesRetard: 0,
             arrieres: Number(stats.reversements_attendu ?? 0),
@@ -739,11 +747,9 @@ export default function Statistiques({
         tresorerie: {
             depensesAgence: Number(stats.cout_maintenance_mois ?? 0),
             soldeCaisse: Number(stats.total_encaisse ?? 0),
-            depensesParCategorie: [
+            encaissementsParCategorie: [
                 { label: 'Ventes', montant: Number(stats.ventes_montant ?? 0) },
-                { label: 'Reversements', montant: Number(stats.reversements_net ?? 0) },
-                { label: 'Maintenance', montant: Number(stats.cout_maintenance_mois ?? 0) },
-                { label: 'Transactions', montant: Number(stats.total_encaisse ?? 0) },
+                { label: 'Loyers', montant: Number(stats.revenu_mois ?? 0) },
             ].filter((item) => item.montant > 0),
         },
         maintenance: {
@@ -756,7 +762,8 @@ export default function Statistiques({
         },
         evolution: monthlyLabels.map((label, index) => ({
             mois: label,
-            encaisse: Number(revenueSeries[index] ?? 0),
+            loyers: Number(revenueSeries[index] ?? 0),
+            ventes: Number(salesMonthSeries[index] ?? 0),
             impaye: Math.max(Number(revenueSeries[index] ?? 0) * 0.12, 0),
         })),
         topRentables: topProperties.map((item) => ({
@@ -782,7 +789,7 @@ export default function Statistiques({
             action: `a enregistré un paiement de ${fmtF(Number(item.amount ?? 0))}`,
             temps: item.date ?? '—',
         })),
-    }), [stats, monthlyLabels, revenueSeries, maintenanceSeries, topProperties, recentTransactions]);
+    }), [stats, monthlyLabels, revenueSeries, salesMonthSeries, maintenanceSeries, topProperties, recentTransactions]);
 
     const tauxOccupation = useMemo(() => {
         const total = Number(d.patrimoine.lots || d.patrimoine.proprietes || 0);
