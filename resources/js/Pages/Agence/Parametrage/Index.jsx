@@ -6,6 +6,7 @@ import {
     Check,
     ChevronLeft,
     ChevronDown,
+    ChevronRight,
     FileImage,
     FileText,
     Globe,
@@ -14,6 +15,7 @@ import {
     Layers3,
     LayoutGrid,
     KeyRound,
+    LockKeyhole,
     Mail,
     Save,
     ShieldCheck,
@@ -21,8 +23,11 @@ import {
     Upload,
     UsersRound,
     Search,
+    Trash2,
 } from 'lucide-react';
 import AgenceLayout from '../../../Layouts/AgenceLayout';
+import CreateRolePage from './Roles/Create';
+import RolePermissionsPage from './Roles/Permissions';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -230,6 +235,26 @@ const INITIAL_ROLE_PERMISSIONS = Object.fromEntries(
 const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap((group) =>
     group.permissions.map((permission) => permission.key)
 );
+
+const SENSITIVE_PERMISSION_KEYS = new Set([
+    'properties.delete',
+    'properties.catalogs',
+    'owners.delete',
+    'tenants.terminate',
+    'tenants.delete',
+    'staff.create',
+    'staff.update',
+    'staff.delete',
+    'staff.permissions',
+    'maintenance.delete',
+    'payouts.validate',
+    'payouts.cancel',
+    'settings.agency',
+    'settings.billing',
+    'settings.branding',
+    'settings.notifications',
+    'subscription.manage',
+]);
 
 function Field({ label, required, children, className }) {
     return (
@@ -444,15 +469,56 @@ function UploadBox({ label, help, name, preview, onChange, onClear, icon: Icon }
 }
 
 export default function Index({ parametrage, agence, regions = [], villes = [], modePaiement = [] }) {
+    const initialRolePage = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('role-page')
+        : null;
     const [rolePermissions, setRolePermissions] = useState(INITIAL_ROLE_PERMISSIONS);
+    const [customRoles, setCustomRoles] = useState([]);
     const [selectedPermissionRole, setSelectedPermissionRole] = useState('');
     const [permissionDraft, setPermissionDraft] = useState([]);
     const [permissionSearch, setPermissionSearch] = useState('');
-    const roles = STATIC_ROLES.map((role) => ({
+    const [roleFormMode, setRoleFormMode] = useState(initialRolePage === 'create' ? 'create' : 'edit');
+    const [newRole, setNewRole] = useState({ name: '', description: '' });
+    const [roleTemplate, setRoleTemplate] = useState('empty');
+    const [roleFormErrors, setRoleFormErrors] = useState({});
+    const roles = [...STATIC_ROLES, ...customRoles].map((role) => ({
         ...role,
         permissions: rolePermissions[role.role_id] ?? [],
     }));
-    const [tab, setTab] = useState('agence');
+    const [tab, setTab] = useState(initialRolePage ? 'permission-form' : 'agence');
+    const [matrixRoleIds, setMatrixRoleIds] = useState(STATIC_ROLES.map((role) => role.role_id));
+    const [matrixPermissionSearch, setMatrixPermissionSearch] = useState('');
+    const [matrixFilter, setMatrixFilter] = useState('all');
+    const [collapsedPermissionGroups, setCollapsedPermissionGroups] = useState([]);
+    const isRoleEditorPage = tab === 'permission-form';
+
+    const updateRolePageUrl = (page = null) => {
+        const url = new URL(window.location.href);
+
+        if (page) {
+            url.searchParams.set('role-page', page);
+        } else {
+            url.searchParams.delete('role-page');
+        }
+
+        window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    };
+
+    useEffect(() => {
+        const syncRolePageWithUrl = () => {
+            const rolePage = new URLSearchParams(window.location.search).get('role-page');
+
+            if (rolePage === 'create' || rolePage === 'permissions') {
+                setRoleFormMode(rolePage === 'create' ? 'create' : 'edit');
+                setTab('permission-form');
+            } else {
+                setTab((current) => current === 'permission-form' ? 'roles' : current);
+            }
+        };
+
+        window.addEventListener('popstate', syncRolePageWithUrl);
+        return () => window.removeEventListener('popstate', syncRolePageWithUrl);
+    }, []);
 
     const changeTab = (value) => {
         setTab(value);
@@ -499,17 +565,59 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
     };
 
 
-    const returnToRoles = () => changeTab('roles');
+    const returnToRoles = () => {
+        updateRolePageUrl();
+        changeTab('roles');
+    };
 
     const openPermissionForm = () => {
+        setRoleFormMode('edit');
         setSelectedPermissionRole('');
         setPermissionDraft([]);
         setPermissionSearch('');
+        setRoleFormErrors({});
+        updateRolePageUrl('permissions');
+        changeTab('permission-form');
+    };
+    const openRoleForm = () => {
+        setRoleFormMode('create');
+        setRoleTemplate('empty');
+        setNewRole({ name: '', description: '' });
+        setSelectedPermissionRole('');
+        setPermissionDraft([]);
+        setPermissionSearch('');
+        setRoleFormErrors({});
+        updateRolePageUrl('create');
         changeTab('permission-form');
     };
     const changePermissionRole = (roleId) => {
         setSelectedPermissionRole(roleId);
         setPermissionDraft([...(rolePermissions[roleId] ?? [])]);
+    };
+
+    const changeRoleTemplate = (templateId) => {
+        setRoleTemplate(templateId);
+        setPermissionDraft(templateId === 'empty' ? [] : [...(rolePermissions[templateId] ?? [])]);
+    };
+
+    const deleteRole = (role) => {
+        if (!role.is_custom) return;
+
+        const userCount = Number(role.user_count ?? 0);
+        if (userCount > 0) {
+            window.alert(`Ce rôle est attribué à ${userCount} utilisateur${userCount > 1 ? 's' : ''}. Réaffectez-les avant de le supprimer.`);
+            return;
+        }
+
+        if (!window.confirm(`Supprimer le rôle « ${role.name} » ?`)) return;
+
+        setCustomRoles((current) => current.filter((item) => item.role_id !== role.role_id));
+        setRolePermissions((current) => {
+            const next = { ...current };
+            delete next[role.role_id];
+            return next;
+        });
+        setMatrixRoleIds((current) => current.filter((roleId) => roleId !== role.role_id));
     };
 
     const togglePermission = (permissionKey) => {
@@ -538,8 +646,46 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
         ),
     })).filter((group) => group.permissions.length > 0);
 
-    const savePermissionPreview = (event) => {
+    const saveRolePermissions = (event) => {
         event.preventDefault();
+
+        const previousPermissions = roleFormMode === 'create'
+            ? []
+            : (rolePermissions[selectedPermissionRole] ?? []);
+        const newSensitivePermissions = permissionDraft.filter(
+            (permission) => SENSITIVE_PERMISSION_KEYS.has(permission) && !previousPermissions.includes(permission)
+        );
+
+        if (newSensitivePermissions.length > 0 && !window.confirm(
+            `${newSensitivePermissions.length} permission${newSensitivePermissions.length > 1 ? 's sensibles seront accordées' : ' sensible sera accordée'}. Continuer ?`
+        )) {
+            return;
+        }
+
+        if (roleFormMode === 'create') {
+            if (!newRole.name.trim()) return;
+
+            const duplicate = roles.some((role) => role.name.trim().toLowerCase() === newRole.name.trim().toLowerCase());
+            if (duplicate) {
+                setRoleFormErrors({ name: 'Un rôle portant ce nom existe déjà.' });
+                return;
+            }
+
+            const roleId = `role-custom-${Date.now()}`;
+            setCustomRoles((current) => [
+                ...current,
+                {
+                    role_id: roleId,
+                    name: newRole.name.trim(),
+                    description: newRole.description.trim() || 'Rôle personnalisé de l’agence.',
+                    is_custom: true,
+                    user_count: 0,
+                },
+            ]);
+            setRolePermissions((current) => ({ ...current, [roleId]: [...permissionDraft] }));
+            returnToRoles();
+            return;
+        }
 
         if (!selectedPermissionRole) {
             return;
@@ -547,33 +693,121 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
 
         setRolePermissions((current) => ({
             ...current,
-            [selectedPermissionRole]: permissionDraft,
+            [selectedPermissionRole]: [...permissionDraft],
         }));
-        changeTab('roles');
+        returnToRoles();
     };
+
+    const permissionEditorVisible = roleFormMode === 'create' || Boolean(selectedPermissionRole);
+
+    const toggleMatrixRole = (roleId) => {
+        setMatrixRoleIds((current) => {
+            if (current.includes(roleId)) return current.filter((id) => id !== roleId);
+            if (current.length >= 5) return current;
+            return [...current, roleId];
+        });
+    };
+
+    const toggleMatrixGroup = (groupLabel) => {
+        setCollapsedPermissionGroups((current) =>
+            current.includes(groupLabel)
+                ? current.filter((label) => label !== groupLabel)
+                : [...current, groupLabel]
+        );
+    };
+
+    const matrixRoles = roles.filter((role) => matrixRoleIds.includes(role.role_id));
+    const visibleMatrixGroups = PERMISSION_GROUPS.map((group) => ({
+        ...group,
+        permissions: group.permissions.filter((permission) => {
+            const matchesSearch = `${group.label} ${permission.label}`
+                .toLowerCase()
+                .includes(matrixPermissionSearch.trim().toLowerCase());
+            const allowedCount = matrixRoles.filter((role) => role.permissions.includes(permission.key)).length;
+            const matchesFilter = matrixFilter === 'granted'
+                ? allowedCount > 0
+                : matrixFilter === 'differences'
+                    ? allowedCount > 0 && allowedCount < matrixRoles.length
+                    : true;
+
+            return matchesSearch && matchesFilter;
+        }),
+    })).filter((group) => group.permissions.length > 0);
+
+    if (isRoleEditorPage) {
+        const RolePage = roleFormMode === 'create' ? CreateRolePage : RolePermissionsPage;
+
+        return (
+            <AgenceLayout title={roleFormMode === 'create' ? 'Créer un rôle' : 'Configurer les permissions'}>
+                <RolePage
+                    roles={roles}
+                    newRole={newRole}
+                    setNewRole={setNewRole}
+                    roleTemplate={roleTemplate}
+                    onRoleTemplateChange={changeRoleTemplate}
+                    errors={roleFormErrors}
+                    selectedRole={selectedPermissionRole}
+                    onRoleChange={changePermissionRole}
+                    permissionDraft={permissionDraft}
+                    permissionSearch={permissionSearch}
+                    setPermissionSearch={setPermissionSearch}
+                    filteredPermissionGroups={filteredPermissionGroups}
+                    allPermissionKeys={ALL_PERMISSION_KEYS}
+                    sensitivePermissionKeys={SENSITIVE_PERMISSION_KEYS}
+                    onSetPermissions={setPermissionDraft}
+                    onTogglePermission={togglePermission}
+                    onToggleGroup={togglePermissionGroup}
+                    onSubmit={saveRolePermissions}
+                    onBack={returnToRoles}
+                />
+            </AgenceLayout>
+        );
+    }
 
     return (
         <AgenceLayout title="Paramétrage">
             <Head title="Paramétrage" />
 
-            <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 pb-10 sm:px-6 lg:px-8">
+            <div className={cn(
+                'mx-auto flex flex-col gap-6 px-4 pb-10 sm:px-6 lg:px-8',
+                isRoleEditorPage ? 'max-w-5xl' : 'max-w-7xl'
+            )}>
                 {/* En-tête */}
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-2xl font-semibold text-[#0f172a]">Paramétrage</h2>
-                          
+                {isRoleEditorPage ? (
+                    <div className="flex flex-col gap-4 border-b border-[#e2e8f0] pb-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                            <button type="button" onClick={returnToRoles} className="mb-3 inline-flex items-center gap-2 text-sm font-medium text-[#00559b] hover:underline">
+                                <ChevronLeft className="h-4 w-4" />
+                                Rôles et permissions
+                            </button>
+                            <h2 className="text-2xl font-semibold text-[#0f172a]">
+                                {roleFormMode === 'create' ? 'Créer un rôle' : 'Configurer les permissions'}
+                            </h2>
+                            <p className="mt-1 text-sm text-[#5f7182]">
+                                {roleFormMode === 'create'
+                                    ? "Créez un profil personnalisé et choisissez ses accès."
+                                    : "Sélectionnez un rôle puis définissez précisément ses accès."}
+                            </p>
                         </div>
-                        <p className="mt-1 text-sm text-[#5f7182]">Configurez votre agence, la facturation, les visuels et les notifications.</p>
                     </div>
-
-                  
-                </div>
+                ) : (
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h2 className="text-2xl font-semibold text-[#0f172a]">Paramétrage</h2>
+                            </div>
+                            <p className="mt-1 text-sm text-[#5f7182]">Configurez votre agence, la facturation, les visuels et les notifications.</p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Disposition sidebar + contenu */}
-                <div className="grid items-start gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+                <div className={cn(
+                    'grid items-start gap-6',
+                    !isRoleEditorPage && 'xl:grid-cols-[280px_minmax(0,1fr)]'
+                )}>
                     {/* Colonne latérale */}
-                    <aside className="flex flex-col gap-4 xl:sticky xl:top-6">
+                    {!isRoleEditorPage ? <aside className="flex flex-col gap-4 xl:sticky xl:top-6">
                         <Card className="rounded-3xl border-[#c8d4de] bg-white shadow-sm">
                             <CardContent className="mt-4 p-3">
                                 <p className="px-3 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-wide text-[#94a3b8]">
@@ -618,7 +852,7 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                             </CardContent>
                         </Card>
 
-                    </aside>
+                    </aside> : null}
 
                     {/* Colonne de contenu */}
                     <div className="min-w-0">
@@ -1138,17 +1372,18 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                     <SectionCard
                                         icon={UsersRound}
                                         title="Rôles du personnel"
-                                        description="Profils de référence proposés pour organiser les accès de l'agence."
                                         step="12"
                                         action={(
-                                            <Button
-                                                type="button"
-                                                onClick={openPermissionForm}
-                                                className="rounded-xl bg-[#00559b] text-white hover:bg-[#004980]"
-                                            >
-                                                <KeyRound className="h-4 w-4" />
-                                                Configurer les permissions
-                                            </Button>
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button type="button" variant="outline" onClick={openPermissionForm} className="rounded-xl border-[#c8d4de] bg-white text-[#00559b] hover:border-[#00559b]">
+                                                    <KeyRound className="h-4 w-4" />
+                                                    Modifier les permissions
+                                                </Button>
+                                                <Button type="button" onClick={openRoleForm} className="rounded-xl bg-[#00559b] text-white hover:bg-[#004980]">
+                                                    <UsersRound className="h-4 w-4" />
+                                                    Créer un rôle
+                                                </Button>
+                                            </div>
                                         )}
                                     >
                                         <div className="grid gap-4 md:grid-cols-2">
@@ -1163,13 +1398,33 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eaf4fb] text-[#00559b]">
                                                                     <ShieldCheck className="h-4 w-4" />
                                                                 </span>
-                                                                <p className="truncate text-sm font-semibold text-[#0f172a]">{role.name}</p>
+                                                                <div className="min-w-0">
+                                                                    <p className="truncate text-sm font-semibold text-[#0f172a]">{role.name}</p>
+                                                                    <Badge variant="outline" className={cn(
+                                                                        'mt-1 rounded-full px-2 py-0 text-[10px]',
+                                                                        role.is_custom
+                                                                            ? 'border-[#8dbddd] bg-white text-[#00559b]'
+                                                                            : 'border-[#c8d4de] bg-[#f1f5f9] text-[#5f7182]'
+                                                                    )}>
+                                                                        {role.is_custom ? 'Personnalisé' : 'Prédéfini'}
+                                                                    </Badge>
+                                                                </div>
                                                             </div>
                                                             <p className="mt-3 text-xs leading-5 text-[#5f7182]">{role.description}</p>
                                                         </div>
                                                         <Badge variant="outline" className="shrink-0 rounded-full border-[#c8d4de] bg-white text-xs">
                                                             {role.permissions.length} accès
                                                         </Badge>
+                                                    </div>
+                                                    <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#e2e8f0] pt-3">
+                                                        <span className="mr-auto text-xs text-[#5f7182]">
+                                                            {Number(role.user_count ?? 0)} utilisateur{Number(role.user_count ?? 0) > 1 ? 's' : ''}
+                                                        </span>
+                                                        {role.is_custom ? (
+                                                            <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-[#f1b8b5] text-xs text-[#b42318] hover:bg-[#fef2f2]" onClick={() => deleteRole(role)}>
+                                                                <Trash2 className="h-3.5 w-3.5" />Supprimer
+                                                            </Button>
+                                                        ) : null}
                                                     </div>
                                                 </div>
                                             ))}
@@ -1179,123 +1434,149 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                     <SectionCard
                                         icon={KeyRound}
                                         title="Matrice des permissions"
-                                        description="Proposition statique basée sur l'ensemble des fonctionnalités de l'interface Agence."
+                                        description="Visualisez les accès attribués à chaque rôle de l'agence."
                                         step="13"
                                     >
-                                        <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0]">
-                                            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-                                                <thead className="bg-[#f8fafc] text-xs uppercase tracking-wide text-[#5f7182]">
-                                                    <tr>
-                                                        <th className="border-b border-[#e2e8f0] px-4 py-3 font-semibold">Permission</th>
-                                                        {roles.map((role) => (
-                                                            <th key={role.role_id} className="border-b border-[#e2e8f0] px-4 py-3 text-center font-semibold">
-                                                                {role.name}
-                                                            </th>
-                                                        ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {PERMISSION_GROUPS.flatMap((group) => [
-                                                        <tr key={`${group.label}-heading`} className="bg-[#eaf4fb]/60">
-                                                            <td
-                                                                colSpan={Math.max(roles.length + 1, 1)}
-                                                                className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#00559b]"
-                                                            >
-                                                                {group.label}
-                                                            </td>
-                                                        </tr>,
-                                                        ...group.permissions.map((permission) => (
-                                                            <tr key={permission.key} className="border-t border-[#e2e8f0] bg-white">
-                                                                <td className="px-4 py-3 font-medium text-[#0f172a]">{permission.label}</td>
-                                                                {roles.map((role) => {
-                                                                    const allowed = permission.roles.includes(role.role_id);
+                                        <div className="mb-4 space-y-4 rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                                          
 
-                                                                    return (
-                                                                        <td key={`${role.role_id}-${permission.key}`} className="px-4 py-3 text-center">
-                                                                            <span
-                                                                                className={cn(
-                                                                                    'inline-flex h-7 w-7 items-center justify-center rounded-full',
-                                                                                    allowed
-                                                                                        ? 'bg-[#e9f5d7] text-[#4d8500]'
-                                                                                        : 'bg-[#f1f5f9] text-[#94a3b8]'
-                                                                                )}
-                                                                                aria-label={allowed ? 'Autorisé' : 'Non autorisé'}
-                                                                                title={allowed ? 'Autorisé' : 'Non autorisé'}
-                                                                            >
-                                                                                {allowed ? <Check className="h-4 w-4" /> : <span aria-hidden="true">—</span>}
-                                                                            </span>
-                                                                        </td>
-                                                                    );
-                                                                })}
-                                                            </tr>
-                                                        )),
-                                                    ])}
-                                                </tbody>
-                                            </table>
+                                            <div>
+                                                <div className="mb-2 flex items-center justify-between gap-3">
+                                                    <p className="text-xs font-semibold uppercase tracking-wide text-[#5f7182]">Rôles comparés</p>
+                                                    <span className="text-xs text-[#5f7182]">{matrixRoleIds.length}/5 sélectionnés</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {roles.map((role) => {
+                                                        const selected = matrixRoleIds.includes(role.role_id);
+                                                        const disabled = !selected && matrixRoleIds.length >= 5;
+                                                        return (
+                                                            <button key={role.role_id} type="button" disabled={disabled} onClick={() => toggleMatrixRole(role.role_id)} className={cn(
+                                                                'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition',
+                                                                selected ? 'border-[#00559b] bg-[#eaf4fb] text-[#00559b]' : 'border-[#c8d4de] bg-white text-[#5f7182]',
+                                                                disabled && 'cursor-not-allowed opacity-40'
+                                                            )}>
+                                                                <span className={cn('flex h-4 w-4 items-center justify-center rounded border', selected ? 'border-[#00559b] bg-[#00559b] text-white' : 'border-[#c8d4de]')}>
+                                                                    {selected ? <Check className="h-3 w-3" /> : null}
+                                                                </span>
+                                                                {role.name}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <p className="mt-3 text-xs text-[#5f7182]">
-                                            Cette matrice est informative pour le moment : elle ne modifie pas encore les accès réels des utilisateurs.
-                                        </p>
+
+                                        {matrixRoles.length ? (
+                                            <div className="max-h-[620px] overflow-auto rounded-2xl border border-[#e2e8f0]">
+                                                <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left text-sm">
+                                                    <thead className="sticky top-0 z-20 bg-[#f8fafc] text-xs uppercase tracking-wide text-[#5f7182] shadow-sm">
+                                                        <tr>
+                                                            <th className="sticky left-0 z-30 min-w-72 border-b border-r border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 font-semibold">Permission</th>
+                                                            {matrixRoles.map((role) => <th key={role.role_id} className="min-w-36 border-b border-[#e2e8f0] px-4 py-3 text-center font-semibold">{role.name}</th>)}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {visibleMatrixGroups.flatMap((group) => {
+                                                            const collapsed = collapsedPermissionGroups.includes(group.label);
+                                                            return [
+                                                                <tr key={`${group.label}-heading`} className="bg-[#eaf4fb]">
+                                                                    <td colSpan={matrixRoles.length + 1} className="sticky left-0 px-4 py-2">
+                                                                        <button type="button" onClick={() => toggleMatrixGroup(group.label)} className="flex w-full items-center gap-2 text-left text-xs font-semibold uppercase tracking-wide text-[#00559b]">
+                                                                            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                                            {group.label}<span className="font-normal text-[#5f7182]">({group.permissions.length})</span>
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>,
+                                                                ...(collapsed ? [] : group.permissions.map((permission) => (
+                                                                    <tr key={permission.key} className="bg-white hover:bg-[#f8fafc]">
+                                                                        <td className="sticky left-0 z-10 border-b border-r border-[#edf2f6] bg-inherit px-4 py-3 font-medium text-[#0f172a]">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span>{permission.label}</span>
+                                                                                {SENSITIVE_PERMISSION_KEYS.has(permission.key) ? <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-[#9a6700]" aria-label="Permission sensible" /> : null}
+                                                                            </div>
+                                                                        </td>
+                                                                        {matrixRoles.map((role) => {
+                                                                            const allowed = role.permissions.includes(permission.key);
+                                                                            return <td key={`${role.role_id}-${permission.key}`} className="border-b border-[#edf2f6] px-4 py-3 text-center"><span className={cn('inline-flex h-7 w-7 items-center justify-center rounded-full', allowed ? 'bg-[#e9f5d7] text-[#4d8500]' : 'bg-[#f1f5f9] text-[#94a3b8]')} title={allowed ? 'Autorisé' : 'Non autorisé'}>{allowed ? <Check className="h-4 w-4" /> : <span>—</span>}</span></td>;
+                                                                        })}
+                                                                    </tr>
+                                                                ))),
+                                                            ];
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : <div className="rounded-2xl border border-dashed border-[#c8d4de] p-10 text-center text-sm text-[#5f7182]">Sélectionnez au moins un rôle à comparer.</div>}
+
+                                        {matrixRoles.length && !visibleMatrixGroups.length ? <div className="mt-3 rounded-xl bg-[#f8fafc] p-4 text-center text-sm text-[#5f7182]">Aucune permission ne correspond aux filtres.</div> : null}
                                     </SectionCard>
                                 </div>
                             </TabsContent>
 
                             <TabsContent value="permission-form">
-                                <form onSubmit={savePermissionPreview} className="space-y-6">
+                                <form onSubmit={saveRolePermissions} className="space-y-6">
                                     <SectionCard
                                         icon={KeyRound}
-                                        title="Configurer les permissions"
-                                        description="Choisissez un profil et adaptez précisément ses accès par module."
-                                        action={(
-                                            <Badge variant="outline" className="rounded-full border-[#f0c36a] bg-[#fffbeb] text-[#9a6700]">
-                                                Prévisualisation
-                                            </Badge>
-                                        )}
+                                        title={roleFormMode === 'create' ? 'Informations et accès du rôle' : 'Droits d’accès'}
+                                        description={roleFormMode === 'create'
+                                            ? "Définissez le rôle puis attribuez-lui ses accès."
+                                            : 'Choisissez un profil et adaptez précisément ses accès par module.'}
                                     >
                                         <div className="shrink-0 rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
-                                            <div className="grid items-end gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+                                            {roleFormMode === 'create' ? (
+                                                <div className="grid gap-4 lg:grid-cols-2">
+                                                    <Field label="Nom du rôle" required>
+                                                        <Input
+                                                            value={newRole.name}
+                                                            onChange={(event) => setNewRole((current) => ({ ...current, name: event.target.value }))}
+                                                            placeholder="Ex. Gestionnaire locatif"
+                                                            className={cn(inputClassName, 'h-11 bg-white')}
+                                                        />
+                                                        {roleFormErrors.name ? <p className="mt-1 text-xs text-[#b42318]">{roleFormErrors.name}</p> : null}
+                                                    </Field>
+                                                    <Field label="Description">
+                                                        <Input
+                                                            value={newRole.description}
+                                                            onChange={(event) => setNewRole((current) => ({ ...current, description: event.target.value }))}
+                                                            placeholder="Mission principale de ce rôle"
+                                                            className={cn(inputClassName, 'h-11 bg-white')}
+                                                        />
+                                                        {roleFormErrors.description ? <p className="mt-1 text-xs text-[#b42318]">{roleFormErrors.description}</p> : null}
+                                                    </Field>
+                                                </div>
+                                            ) : (
                                                 <Field label="Rôle à configurer" required>
                                                     <Select value={selectedPermissionRole} onValueChange={changePermissionRole}>
                                                         <SelectTrigger className={cn(inputClassName, 'h-11 bg-white')}>
                                                             <SelectValue placeholder="Sélectionner un rôle" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {STATIC_ROLES.map((role) => (
-                                                                <SelectItem key={role.role_id} value={role.role_id}>
+                                                            {roles.map((role) => (
+                                                                <SelectItem key={role.role_id} value={String(role.role_id)}>
                                                                     {role.name}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
                                                 </Field>
+                                            )}
 
-                                                {selectedPermissionRole ? (
-                                                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                                                        <Badge variant="outline" className="rounded-full border-[#8dbddd] bg-white text-[#00559b]">
-                                                            {permissionDraft.length} accès sélectionnés
-                                                        </Badge>
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            className="h-9 rounded-xl border-[#c8d4de] bg-white text-xs"
-                                                            onClick={() => setPermissionDraft([...ALL_PERMISSION_KEYS])}
-                                                        >
-                                                            Tout autoriser
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            className="h-9 rounded-xl border-[#c8d4de] bg-white text-xs"
-                                                            onClick={() => setPermissionDraft([])}
-                                                        >
-                                                            Tout retirer
-                                                        </Button>
-                                                    </div>
-                                                ) : null}
-                                            </div>
+                                            {permissionEditorVisible ? (
+                                                <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-[#e2e8f0] pt-4">
+                                                    <Badge variant="outline" className="mr-auto rounded-full border-[#8dbddd] bg-white text-[#00559b]">
+                                                        {permissionDraft.length} accès sélectionnés
+                                                    </Badge>
+                                                    <Button type="button" variant="outline" className="h-9 rounded-xl border-[#c8d4de] bg-white text-xs" onClick={() => setPermissionDraft([...ALL_PERMISSION_KEYS])}>
+                                                        Tout autoriser
+                                                    </Button>
+                                                    <Button type="button" variant="outline" className="h-9 rounded-xl border-[#c8d4de] bg-white text-xs" onClick={() => setPermissionDraft([])}>
+                                                        Tout retirer
+                                                    </Button>
+                                                </div>
+                                            ) : null}
                                         </div>
 
-                                        {selectedPermissionRole ? (
+                                        {permissionEditorVisible ? (
                                             <div className="mt-5 min-w-0 space-y-4">
                                                 <div className="relative shrink-0">
                                                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94a3b8]" />
@@ -1430,10 +1711,14 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                             <ChevronLeft className="h-4 w-4" />
                                             Retour à la matrice
                                         </Button>
-                                        {selectedPermissionRole ? (
-                                            <Button type="submit" className="rounded-xl bg-[#00559b] text-white hover:bg-[#004980]">
+                                        {permissionEditorVisible ? (
+                                            <Button
+                                                type="submit"
+                                                disabled={roleFormMode === 'create' && !newRole.name.trim()}
+                                                className="rounded-xl bg-[#00559b] text-white hover:bg-[#004980]"
+                                            >
                                                 <Save className="h-4 w-4" />
-                                                Enregistrer la prévisualisation
+                                                {roleFormMode === 'create' ? 'Créer le rôle' : 'Enregistrer les permissions'}
                                             </Button>
                                         ) : null}
                                     </div>
