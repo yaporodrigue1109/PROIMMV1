@@ -11,6 +11,9 @@ import {
     Send,
 } from 'lucide-react';
 
+import { Input } from '../../components/ui/input';
+import { PhoneInput } from '../../components/ui/phone-input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import PublicLayout from './PublicLayout';
 
 const contactDetails = [
@@ -129,43 +132,32 @@ export default function Contact() {
                                     error={form.errors.request_type}
                                     className="sm:col-span-2"
                                 >
-                                    <select
+                                    <Select
                                         value={form.data.request_type}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'request_type',
-                                                event.target.value,
-                                            )
-                                        }
-                                        className={inputClass}
+                                        onValueChange={(value) => form.setData('request_type', value)}
                                     >
-                                        <option value="">Sélectionner un motif</option>
-                                        <option value="demo">
-                                            Demande de démonstration
-                                        </option>
-                                        <option value="inscription">
-                                            Inscription ou abonnement
-                                        </option>
-                                        <option value="support">
-                                            Assistance et support
-                                        </option>
-                                        <option value="partenariat">
-                                            Partenariat
-                                        </option>
-                                        <option value="autre">Autre demande</option>
-                                    </select>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Sélectionner un motif" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="demo">Demande de démonstration</SelectItem>
+                                            <SelectItem value="inscription">Inscription ou abonnement</SelectItem>
+                                            <SelectItem value="support">Assistance et support</SelectItem>
+                                            <SelectItem value="partenariat">Partenariat</SelectItem>
+                                            <SelectItem value="autre">Autre demande</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </Field>
 
                                 <Field
                                     label="Nom complet"
                                     error={form.errors.name}
                                 >
-                                    <input
+                                    <Input
                                         value={form.data.name}
                                         onChange={(event) =>
                                             form.setData('name', event.target.value)
                                         }
-                                        className={inputClass}
                                         placeholder="Votre nom et vos prénoms"
                                     />
                                 </Field>
@@ -174,13 +166,10 @@ export default function Contact() {
                                     label="Téléphone"
                                     error={form.errors.phone}
                                 >
-                                    <input
+                                    <PhoneInput
                                         value={form.data.phone}
-                                        onChange={(event) =>
-                                            form.setData('phone', event.target.value)
-                                        }
-                                        className={inputClass}
-                                        placeholder="+225 07 00 00 00 00"
+                                        onChange={(value) => form.setData('phone', value)}
+                                        placeholder="07 00 00 00 00"
                                     />
                                 </Field>
 
@@ -188,13 +177,12 @@ export default function Contact() {
                                     label="Adresse e-mail"
                                     error={form.errors.email}
                                 >
-                                    <input
+                                    <Input
                                         type="email"
                                         value={form.data.email}
                                         onChange={(event) =>
                                             form.setData('email', event.target.value)
                                         }
-                                        className={inputClass}
                                         placeholder="vous@agence.ci"
                                     />
                                 </Field>
@@ -203,7 +191,7 @@ export default function Contact() {
                                     label="Objet"
                                     error={form.errors.subject}
                                 >
-                                    <input
+                                    <Input
                                         value={form.data.subject}
                                         onChange={(event) =>
                                             form.setData(
@@ -211,7 +199,6 @@ export default function Contact() {
                                                 event.target.value,
                                             )
                                         }
-                                        className={inputClass}
                                         placeholder="Objet de votre demande"
                                     />
                                 </Field>
@@ -230,7 +217,7 @@ export default function Contact() {
                                                 event.target.value,
                                             )
                                         }
-                                        className={`${inputClass} h-auto resize-y py-3`}
+                                        className={textareaClass}
                                         placeholder="Expliquez-nous comment nous pouvons vous aider…"
                                     />
                                 </Field>
@@ -304,22 +291,22 @@ export default function Contact() {
     );
 }
 
-const inputClass =
-    'h-12 w-full rounded-lg border border-[#0b1730]/15 bg-white/70 px-4 text-sm text-[#111f3d] outline-none transition placeholder:text-slate-400 focus:border-[#00559b] focus:bg-white focus:ring-4 focus:ring-[#00559b]/10';
+const textareaClass =
+    'flex min-h-32 w-full resize-y rounded-md border border-[#c8d4de] bg-white px-3 py-2 text-sm text-[#0f172a] shadow-sm ring-offset-white placeholder:text-[#8798a5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00559b] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
 function Field({ label, error, className = '', children }) {
     return (
-        <label className={`block ${className}`}>
-            <span className="mb-2 block text-sm font-semibold text-[#334155]">
+        <div className={`space-y-1.5 ${className}`}>
+            <label className="block text-sm font-medium text-[#0f172a]">
                 {label}
-            </span>
+            </label>
             {children}
             {error ? (
                 <span className="mt-1.5 block text-xs font-medium text-red-600">
                     {error}
                 </span>
             ) : null}
-        </label>
+        </div>
     );
 }
 
