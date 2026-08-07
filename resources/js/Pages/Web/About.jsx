@@ -1,194 +1,286 @@
 import { Head, Link } from '@inertiajs/react';
-import {
-    ArrowRight,
-    BadgeCheck,
-    BarChart3,
-    Building2,
-    Check,
-    Clock3,
-    FileText,
-    Headphones,
-    KeyRound,
-    ShieldCheck,
-    Smartphone,
-    UsersRound,
-    WalletCards,
-} from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Check, Minus, Plus } from 'lucide-react';
+import { useState } from 'react';
+
 import PublicLayout from './PublicLayout';
 
-const benefits = [
+const gallery = [
     {
-        icon: Building2,
-        title: 'Tout votre patrimoine au même endroit',
-        text: 'Centralisez propriétés, bâtiments, portes, propriétaires et locataires dans un espace unique et structuré.',
+        src: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=85&w=1000',
+        alt: 'Équipe réunie autour d’une table de travail',
     },
     {
-        icon: WalletCards,
-        title: 'Des loyers mieux suivis',
-        text: 'Visualisez les paiements, impayés, arriérés et reversements sans multiplier les cahiers et fichiers Excel.',
+        src: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&q=85&w=1000',
+        alt: 'Collaborateurs de Pros Immobilier',
     },
     {
-        icon: BarChart3,
-        title: 'Des décisions basées sur vos chiffres',
-        text: 'Pilotez l’agence grâce à des statistiques claires sur l’occupation, les encaissements et la performance.',
+        src: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&q=85&w=1000',
+        alt: 'Réunion de travail dans une agence',
     },
     {
-        icon: UsersRound,
-        title: 'Une équipe mieux organisée',
-        text: 'Attribuez les accès à votre personnel et gardez une vision commune des opérations quotidiennes.',
-    },
-    {
-        icon: ShieldCheck,
-        title: 'Des données fiables et sécurisées',
-        text: 'Conservez contrats, documents et historiques dans un environnement protégé et accessible.',
-    },
-    {
-        icon: Headphones,
-        title: 'Un accompagnement disponible',
-        text: 'Créez et suivez vos demandes depuis le support intégré, avec une équipe prête à vous assister.',
+        src: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?auto=format&fit=crop&q=85&w=1000',
+        alt: 'Équipe échangeant dans un bureau',
     },
 ];
 
-const modules = [
-    'Gestion des propriétés et des lots',
-    'Dossiers propriétaires et locataires',
-    'Encaissement et suivi des loyers',
-    'Reversements aux propriétaires',
-    'Maintenance et interventions',
-    'Gestion du personnel et des accès',
-    'Statistiques et tableau de bord',
-    'Support et suivi des demandes',
+const commitments = [
+    'Une plateforme pensée pour les réalités des agences',
+    'Des données centralisées et accessibles à tout moment',
+    'Un accompagnement humain à chaque étape',
+];
+
+const faqs = [
+    {
+        question: 'Pourquoi choisir Pros Immobilier ?',
+        answer: 'La plateforme rassemble la gestion des biens, des locataires, des loyers, des reversements et des interventions dans un espace unique, clair et sécurisé.',
+    },
+    {
+        question: 'À qui s’adresse la plateforme ?',
+        answer: 'Pros Immobilier s’adresse aux agences immobilières de toutes tailles qui souhaitent structurer leurs opérations et offrir un meilleur suivi à leurs clients.',
+    },
+    {
+        question: 'Mes données sont-elles sécurisées ?',
+        answer: 'Oui. Chaque agence dispose de son propre espace isolé et les accès peuvent être organisés selon les responsabilités de chaque collaborateur.',
+    },
+    {
+        question: 'Puis-je essayer la solution avant de m’abonner ?',
+        answer: 'Oui. Vous pouvez demander une démonstration afin de découvrir les fonctionnalités et vérifier qu’elles correspondent aux besoins de votre agence.',
+    },
+    {
+        question: 'L’équipe accompagne-t-elle la prise en main ?',
+        answer: 'Oui. Notre équipe vous guide dans la configuration initiale et reste disponible pour vous aider à adopter la plateforme sereinement.',
+    },
+    {
+        question: 'Puis-je accéder à Pros Immobilier en déplacement ?',
+        answer: 'Oui. La plateforme est accessible depuis un navigateur sur ordinateur, tablette ou téléphone, partout où vous disposez d’une connexion internet.',
+    },
 ];
 
 export default function About() {
+    const [openFaq, setOpenFaq] = useState(0);
+
     return (
         <PublicLayout>
-            <Head title="Pourquoi Pros Immobilier" />
+            <Head title="À propos" />
 
-            <section className="relative overflow-hidden bg-[#111f3d] px-6 py-24 text-white lg:py-32">
-                <div className="absolute -right-28 -top-36 h-96 w-96 rounded-full bg-[#00559b]/45 blur-3xl" />
-                <div className="absolute -bottom-32 left-1/4 h-72 w-72 rounded-full bg-[#76c206]/20 blur-3xl" />
-                <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-                    <div>
-                        <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em]">
-                            <BadgeCheck className="h-4 w-4 text-[#76c206]" /> Pensé pour les agences immobilières
-                        </span>
-                        <h1 className="mt-6 max-w-3xl text-4xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
-                            Moins de tâches manuelles. <span className="text-[#76c206]">Plus de contrôle.</span>
-                        </h1>
-                        <p className="mt-6 max-w-2xl text-lg leading-8 text-white/70">
-                            Pros Immobilier aide votre agence à gagner du temps, sécuriser ses opérations et offrir un meilleur service aux propriétaires comme aux locataires.
+            <main className="overflow-hidden bg-[#f5f8fc] text-[#111f3d]">
+                {/* INTRODUCTION */}
+                <section className="relative px-5 pb-24 pt-20 sm:px-6 lg:pb-32 lg:pt-28">
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -left-40 -top-56 h-[540px] w-[540px] rounded-full border border-[#76c206]/50"
+                    />
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -right-44 top-10 h-[620px] w-[620px] rounded-full border border-[#00559b]/25"
+                    />
+                    
+
+                    <div className="relative mx-auto max-w-5xl">
+                        <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#67a900]">
+                            Notre histoire
                         </p>
-                        <div className="mt-9 flex flex-wrap gap-4">
-                            <Link href="/tarifs" className="inline-flex items-center gap-2 rounded-full bg-[#76c206] px-7 py-4 text-sm font-bold shadow-xl shadow-black/15 transition hover:-translate-y-0.5 hover:bg-[#66aa04]">
-                                Découvrir nos offres <ArrowRight className="h-4 w-4" />
-                            </Link>
-                            <Link href="/contact" className="rounded-full border border-white/30 bg-white/10 px-7 py-4 text-sm font-bold backdrop-blur transition hover:bg-white hover:text-[#111f3d]">
-                                Demander une démonstration
-                            </Link>
+
+                        <h1 className="mt-7 max-w-4xl text-balance text-5xl font-medium leading-[0.98] tracking-[-0.045em] text-[#0b1730] sm:text-6xl lg:text-[5rem]">
+                            Construire l’avenir de la
+                            <span className="relative block w-fit">
+                                gestion immobilière
+                            </span>
+
+                        </h1>
+
+                        <div className="mt-12 max-w-3xl space-y-6 text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
+                            <p>
+                                Pros Immobilier est né d’un constat simple : les
+                                agences perdent encore trop de temps entre les
+                                cahiers, les feuilles de calcul et des outils qui
+                                ne communiquent pas entre eux. Nous avons créé la
+                                plateforme qui rassemble enfin tout leur travail.
+                            </p>
+                            <p>
+                                Notre ambition est de rendre la gestion locative
+                                plus fluide, plus fiable et plus transparente.
+                                Chaque fonctionnalité répond à une réalité du
+                                terrain, du suivi d’un loyer au reversement d’un
+                                propriétaire, en passant par la maintenance.
+                            </p>
+                            <p>
+                                Nous avançons aux côtés des professionnels de
+                                l’immobilier pour bâtir un outil utile aujourd’hui
+                                et capable d’accompagner leur croissance demain.
+                            </p>
                         </div>
+
+                        <Link
+                            href="/contact"
+                            className="mt-9 inline-flex items-center gap-3 rounded-lg bg-[#76c206] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#66aa04]"
+                        >
+                            Rencontrer notre équipe
+                            <ArrowUpRight className="h-4 w-4" />
+                        </Link>
+                    </div>
+                </section>
+
+                {/* TEAM GALLERY */}
+                <section className="pb-24 lg:pb-32">
+                    <div className="mx-auto max-w-5xl px-5 sm:px-6">
+                        <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#67a900]">
+                            Derrière la plateforme
+                        </p>
+                        <h2 className="mt-4 text-4xl font-medium tracking-[-0.04em] text-[#0b1730] sm:text-5xl">
+                            Une équipe engagée
+                        </h2>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        {[
-                            ['Jusqu’à 60%', 'de temps gagné sur le suivi'],
-                            ['100%', 'des opérations centralisées'],
-                            ['24h/24', 'accès à vos informations'],
-                            ['1 espace', 'pour toute votre agence'],
-                        ].map(([value, label], index) => (
-                            <div key={label} className={`rounded-3xl border p-6 backdrop-blur ${index === 0 ? 'border-[#76c206]/50 bg-[#76c206]/15' : 'border-white/10 bg-white/5'}`}>
-                                <p className="text-2xl font-extrabold text-[#76c206] sm:text-3xl">{value}</p>
-                                <p className="mt-2 text-sm leading-6 text-white/60">{label}</p>
-                            </div>
+                    <div className="mt-10 grid grid-cols-2 gap-3 px-3 sm:grid-cols-4 sm:gap-4 lg:px-0">
+                        {gallery.map((image, index) => (
+                            <figure
+                                key={image.src}
+                                className={`overflow-hidden bg-slate-200 ${
+                                    index % 2 === 0 ? 'sm:translate-y-5' : ''
+                                }`}
+                            >
+                                <img
+                                    src={image.src}
+                                    alt={image.alt}
+                                    className="h-56 w-full object-cover grayscale-[15%] transition duration-500 hover:scale-105 hover:grayscale-0 sm:h-72 lg:h-80"
+                                />
+                            </figure>
                         ))}
                     </div>
-                </div>
-            </section>
+                </section>
 
-            <section className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
-                <div className="mx-auto max-w-3xl text-center">
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#76c206]">Pourquoi vous inscrire ?</p>
-                    <h2 className="mt-4 text-3xl font-extrabold text-[#111f3d] sm:text-4xl">Une application qui simplifie réellement le quotidien de votre agence</h2>
-                    <p className="mt-5 leading-7 text-slate-500">Chaque fonctionnalité répond à un besoin concret de gestion, de suivi ou de communication.</p>
-                </div>
-
-                <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {benefits.map(({ icon: Icon, title, text }) => (
-                        <article key={title} className="group rounded-3xl border border-slate-100 bg-white p-7 shadow-[0_14px_45px_rgba(17,31,61,0.07)] transition hover:-translate-y-1 hover:border-[#76c206]/40">
-                            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf4fb] text-[#00559b] transition group-hover:bg-[#76c206] group-hover:text-white"><Icon className="h-7 w-7" /></span>
-                            <h3 className="mt-5 text-xl font-bold text-[#111f3d]">{title}</h3>
-                            <p className="mt-3 leading-7 text-slate-500">{text}</p>
-                        </article>
-                    ))}
-                </div>
-            </section>
-
-            <section className="bg-[#f5f8fc] py-20 lg:py-28">
-                <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-2 lg:items-center">
-                    <div className="rounded-[2rem] bg-[#00559b] p-8 text-white shadow-2xl shadow-[#00559b]/15 sm:p-10">
-                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#b9ef68]">Une journée avec Pros Immobilier</p>
-                        <div className="mt-8 space-y-6">
-                            {[
-                                [Clock3, 'Le matin', 'Consultez les loyers reçus, les impayés et les tâches prioritaires depuis votre tableau de bord.'],
-                                [KeyRound, 'Dans la journée', 'Enregistrez un locataire, affectez une porte ou planifiez une intervention en quelques étapes.'],
-                                [FileText, 'En fin de période', 'Préparez les reversements propriétaires et retrouvez chaque détail sans recalcul manuel.'],
-                            ].map(([Icon, title, text]) => (
-                                <div key={title} className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#76c206]"><Icon className="h-5 w-5" /></span>
-                                    <div><h3 className="font-bold">{title}</h3><p className="mt-1 text-sm leading-6 text-white/65">{text}</p></div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#76c206]">Tout ce dont votre agence a besoin</p>
-                        <h2 className="mt-4 text-3xl font-extrabold leading-tight text-[#111f3d] sm:text-4xl">Remplacez les outils dispersés par une seule plateforme.</h2>
-                        <p className="mt-5 leading-7 text-slate-500">Vos collaborateurs travaillent avec les mêmes informations, vos historiques restent accessibles et vos clients bénéficient d’un suivi plus professionnel.</p>
-                        <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                            {modules.map((module) => (
-                                <div key={module} className="flex items-start gap-3 rounded-xl bg-white p-3 shadow-sm">
-                                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#76c206] text-white"><Check className="h-3 w-3" /></span>
-                                    <span className="text-sm font-medium text-[#334155]">{module}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section className="mx-auto max-w-7xl px-6 py-20 lg:py-28">
-                <div className="grid gap-6 md:grid-cols-3">
-                    {[
-                        [Smartphone, 'Accessible partout', 'Au bureau, sur le terrain ou en déplacement, consultez les informations utiles depuis votre navigateur.'],
-                        [ShieldCheck, 'Traçabilité renforcée', 'Conservez les paiements, contrats, interventions et échanges pour réduire les erreurs et les litiges.'],
-                        [BarChart3, 'Croissance maîtrisée', 'Gérez davantage de biens et de clients sans perdre en qualité de service ni en visibilité.'],
-                    ].map(([Icon, title, text]) => (
-                        <div key={title} className="text-center">
-                            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#eaf4fb] text-[#00559b]"><Icon className="h-8 w-8" /></span>
-                            <h3 className="mt-5 text-xl font-bold text-[#111f3d]">{title}</h3>
-                            <p className="mt-3 leading-7 text-slate-500">{text}</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            <section className="mx-auto max-w-7xl px-6 pb-20">
-                <div className="relative overflow-hidden rounded-[2rem] bg-[#111f3d] px-8 py-14 text-white sm:px-14">
-                    <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[#76c206]/25" />
-                    <div className="relative flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
+                {/* PURPOSE */}
+                <section className="border-y border-[#0b1730]/10 px-5 py-20 sm:px-6 lg:py-28">
+                    <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-24">
                         <div>
-                            <p className="text-sm font-bold text-[#9fdd42]">Prêt à moderniser votre agence ?</p>
-                            <h2 className="mt-2 max-w-2xl text-3xl font-extrabold">Inscrivez votre agence et commencez à gérer plus efficacement.</h2>
-                            <p className="mt-3 text-sm text-white/60">Notre équipe vous accompagne dans la prise en main de la plateforme.</p>
+                            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#67a900]">
+                                Notre mission
+                            </p>
+                            <h2 className="mt-5 text-4xl font-medium leading-tight tracking-[-0.04em] text-[#0b1730] sm:text-5xl">
+                                Simplifier pour mieux gérer.
+                            </h2>
                         </div>
-                        <div className="flex shrink-0 flex-wrap gap-3">
-                            <Link href="/contact" className="rounded-full border border-white/25 px-6 py-3.5 text-sm font-bold hover:bg-white hover:text-[#111f3d]">Demander une démo</Link>
-                            <Link href="/tarifs" className="inline-flex items-center gap-2 rounded-full bg-[#76c206] px-6 py-3.5 text-sm font-bold">Voir les offres <ArrowRight className="h-4 w-4" /></Link>
+
+                        <div>
+                            <p className="text-xl leading-8 text-[#0b1730] sm:text-2xl sm:leading-10">
+                                Donner aux agences une vision claire de leur
+                                activité et les libérer des tâches répétitives,
+                                afin qu’elles puissent se concentrer sur leurs
+                                clients et leur développement.
+                            </p>
+
+                            <div className="mt-10 divide-y divide-[#0b1730]/10 border-y border-[#0b1730]/10">
+                                {commitments.map((commitment) => (
+                                    <div
+                                        key={commitment}
+                                        className="flex items-center gap-4 py-5 text-sm font-semibold sm:text-base"
+                                    >
+                                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#76c206] text-white">
+                                            <Check className="h-4 w-4" />
+                                        </span>
+                                        {commitment}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
+
+                {/* FAQ */}
+                <section className="px-5 py-24 sm:px-6 lg:py-32">
+                    <div className="mx-auto grid max-w-5xl gap-12 lg:grid-cols-[240px_1fr] lg:gap-20">
+                        <div>
+                            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-[#67a900]">
+                                <span className="h-1.5 w-1.5 bg-[#76c206]" />
+                                FAQ
+                            </p>
+                            <h2 className="mt-5 text-4xl font-medium leading-[1.05] tracking-[-0.04em] text-[#0b1730]">
+                                Questions fréquentes
+                            </h2>
+                        </div>
+
+                        <div className="border-t border-[#0b1730]/10">
+                            {faqs.map((faq, index) => {
+                                const isOpen = openFaq === index;
+
+                                return (
+                                    <div
+                                        key={faq.question}
+                                        className="border-b border-[#0b1730]/10"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setOpenFaq(isOpen ? null : index)
+                                            }
+                                            className="flex w-full items-center justify-between gap-6 py-5 text-left text-base font-semibold text-[#0b1730] sm:py-6 sm:text-lg"
+                                            aria-expanded={isOpen}
+                                        >
+                                            {faq.question}
+                                            {isOpen ? (
+                                                <Minus className="h-5 w-5 shrink-0" />
+                                            ) : (
+                                                <Plus className="h-5 w-5 shrink-0" />
+                                            )}
+                                        </button>
+
+                                        {isOpen ? (
+                                            <p className="max-w-2xl pb-6 pr-10 text-sm leading-7 text-slate-600 sm:text-base">
+                                                {faq.answer}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </section>
+
+                {/* FINAL CTA */}
+                <section className="px-5 pb-24 sm:px-6 lg:pb-32">
+                    <div className="mx-auto max-w-5xl">
+                        <div className="flex flex-col justify-between gap-8 border-t border-[#0b1730]/10 pt-12 sm:flex-row sm:items-end">
+                            <div>
+                                <h2 className="text-4xl font-medium tracking-[-0.04em] text-[#0b1730] sm:text-6xl">
+                                    Lancez-vous en
+                                    <span className="text-[#76c206]"> quelques minutes</span>
+                                </h2>
+                                <p className="mt-5 max-w-xl leading-7 text-slate-600">
+                                    Découvrez une nouvelle façon de piloter votre
+                                    agence avec des informations fiables et un
+                                    accompagnement dédié.
+                                </p>
+                            </div>
+
+                            <div className="flex shrink-0 flex-wrap gap-3">
+                                <Link
+                                    href="/contact"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-[#76c206] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#66aa04]"
+                                >
+                                    Demander une démo
+                                    <ArrowUpRight className="h-4 w-4" />
+                                </Link>
+                                <Link
+                                    href="/tarifs"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3.5 text-sm font-bold text-[#0b1730] transition hover:bg-slate-100"
+                                >
+                                    Voir les offres
+                                    <ArrowRight className="h-4 w-4" />
+                                </Link>
+                            </div>
+                        </div>
+
+                        <div className="mt-12 h-56 overflow-hidden bg-slate-200 sm:h-72">
+                            <img
+                                src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=85&w=1800"
+                                alt="Immeubles modernes au coucher du soleil"
+                                className="h-full w-full object-cover"
+                            />
+                        </div>
+                    </div>
+                </section>
+            </main>
         </PublicLayout>
     );
 }

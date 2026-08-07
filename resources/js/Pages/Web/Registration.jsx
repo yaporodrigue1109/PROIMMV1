@@ -91,7 +91,7 @@ export default function Registration({ regions = [], villes = [] }) {
                                     J’accepte les conditions d’utilisation et le traitement des informations de mon agence.
                                 </label>
                                 {form.errors.accept_terms ? <p className="mt-2 text-xs text-red-300">{form.errors.accept_terms}</p> : null}
-                                <button type="submit" disabled={form.processing} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#76c206] px-5 py-3.5 text-sm font-extrabold text-white transition hover:bg-[#66aa04] disabled:opacity-60">
+                                <button type="submit" disabled={form.processing} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#76c206] px-5 py-3.5 text-sm font-extrabold text-white transition hover:bg-[#66aa04] disabled:opacity-60">
                                     {form.processing ? 'Création en cours…' : 'Créer mon agence'} <ArrowRight className="h-4 w-4" />
                                 </button>
                                 <p className="mt-5 text-center text-xs text-white/55">Déjà inscrit ? <Link href="/agence/login" className="font-bold text-white hover:text-[#76c206]">Se connecter</Link></p>
