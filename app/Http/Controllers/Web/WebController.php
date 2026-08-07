@@ -22,7 +22,12 @@ class WebController extends Controller
     ) {
     }
 
-    public function home(): Response { return Inertia::render('Web/Home', ['properties' => $this->listProperties(6)]); }
+    public function home(): Response
+    {
+        return Inertia::render('Web/Home', [
+            'tarifs' => $this->tarifService->getTarifsPublics(),
+        ]);
+    }
     public function properties(Request $request): Response { return Inertia::render('Web/Properties', ['properties' => $this->listProperties(24), 'mode' => $request->string('mode')->toString()]); }
     public function propertyDetails(Propriete $property): Response
     {
