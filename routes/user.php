@@ -332,7 +332,8 @@ Route::middleware(['user', BlockDemoAgenceMutations::class])->group(function () 
     });
 
 
-
+    Route::get('locataires/{locataire}/documents/{type}', [LocataireController::class, 'downloadContractDocument'])
+        ->name('locataires.documents.download');
     Route::resource('locataires', LocataireController::class);
 
     Route::patch('locataires/{locataire}/resilier',[LocataireController::class, 'resilier'])->name('locataires.resilier');
@@ -398,6 +399,7 @@ Route::middleware(['user', BlockDemoAgenceMutations::class])->group(function () 
         Route::get('/','index')->name('index');
         Route::get('/create','create')->name('create');
         Route::post('/','store')->name('store');
+        Route::get('/{id}/documents/{type}', 'downloadContractDocument')->name('documents.download');
         Route::get('/{id}', 'show')->name('show');
         Route::get('/{id}/edit','edit')->name('edit');
         Route::put('/{id}', 'update')->name('update');

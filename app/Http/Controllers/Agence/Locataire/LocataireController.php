@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Agence\Locataire;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agence\StoreLocataireRequest;
 use App\Models\Locataire;
+use App\Models\LocataireAgence;
+use App\Models\Loyer;
+use App\Models\Agence;
 use App\Models\Batiment;
 use App\Models\Genre;
 use App\Models\Porte;
@@ -16,6 +19,7 @@ use App\Models\Ville;
 use App\Models\ModePaiement;
 use App\Repositories\Agence\Interfaces\LocataireRepositoryInterface;
 use App\Repositories\Interfaces\ProprietaireRepositoryInterface;
+use App\Services\Agence\LocataireContractDocumentService;
 use Inertia\Inertia;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
 use Inertia\Response;
+use Illuminate\Http\Response as HttpResponse;
 
 class LocataireController extends Controller
 {
@@ -30,10 +35,55 @@ class LocataireController extends Controller
     protected $proprietaireRepo;
     public function __construct(
          LocataireRepositoryInterface $locataireRepo,
-         ProprietaireRepositoryInterface $proprietaireRepo
+         ProprietaireRepositoryInterface $proprietaireRepo,
+         protected LocataireContractDocumentService $contractDocumentService,
     ) {
         $this->locataireRepo = $locataireRepo;
         $this->proprietaireRepo = $proprietaireRepo;
+    }
+
+    public function downloadContractDocument(string $locataire, string $type): HttpResponse
+    {
+        abort_unless(in_array($type, LocataireContractDocumentService::TYPES, true), 404);
+
+        $agenceId = $this->agenceId();
+        abort_if(!$agenceId, 403, 'Agence introuvable.');
+
+        $tenant = Locataire::query()
+            ->whereHas('contrats', fn ($query) => $query->where('agence_id', $agenceId))
+            ->findOrFail($locataire);
+        $contract = LocataireAgence::query()
+            ->with([
+                'porte.tarifActif',
+                'porte.typePorte',
+                'propriete',
+                'proprietaire.typePiece',
+                'batiment',
+                'lot',
+            ])
+            ->where('agence_id', $agenceId)
+            ->where('locataire_id', $tenant->locataire_id)
+            ->where('is_active', true)
+            ->latest('date_debut_bail')
+            ->first();
+        abort_if(!$contract, 422, 'Aucun contrat actif disponible pour générer ce document.');
+
+        $agence = Agence::with(['responsable', 'parametrage'])->findOrFail($agenceId);
+        $impayes = (float) Loyer::query()
+            ->where('agence_id', $agenceId)
+            ->where('locataire_id', $tenant->locataire_id)
+            ->where('porte_id', $contract->porte_id)
+            ->whereIn('statut', [Loyer::STATUT_IMPAYE, Loyer::STATUT_PARTIEL])
+            ->sum('montant_restant');
+
+        $contents = $this->contractDocumentService->generate($type, $agence, $tenant, $contract, $impayes);
+        $filename = $type . '-' . str($tenant->name)->slug() . '.pdf';
+
+        return response($contents, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Length' => (string) strlen($contents),
+        ]);
     }
 
     // ─────────────────────────────────────────────────────────────

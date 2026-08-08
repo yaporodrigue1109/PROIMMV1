@@ -416,6 +416,14 @@ export default function Show({ locataire = null }) {
     ]
         .filter((document) => document.path)
         .map((document) => ({ ...document, url: fileUrl(document.path) }));
+    const contractDocuments = [
+        { type: 'avis-locataire', label: 'Avis au locataire', description: 'Information de transfert de gérance et renseignements.' },
+        { type: 'contrat-bail', label: 'Contrat de bail', description: 'Bail à usage d’habitation lié au contrat actif.' },
+        { type: 'delegation-gerance', label: 'Délégation de gérance', description: 'Notification de la gestion confiée à l’agence.' },
+        { type: 'etat-lieux', label: 'État des lieux d’entrée', description: 'Grilles contradictoires à compléter lors de l’entrée.' },
+        { type: 'fiche-renseignements', label: 'Fiche de renseignements', description: 'Synthèse des informations du locataire et du logement.' },
+        { type: 'procuration', label: 'Procuration du locataire', description: 'Procuration relative à la gestion du local loué.' },
+    ];
 
     const handleResilier = () => {
         if (!tenant.id) return;
@@ -677,10 +685,50 @@ export default function Show({ locataire = null }) {
                                     <CardHeader className="border-b border-[#e2e8f0] py-4">
                                         <CardTitle className="text-sm text-[#0f172a]">Documents Relatifs</CardTitle>
                                         <CardDescription className="text-xs text-[#5f7182]">
-                                            Liste des documents relatifs au locataire.
+                                            Documents générés avec les informations du contrat actif, de l’agence et du locataire.
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent className="mt-4 space-y-4 p-5">
+                                        {tenant.activeContract ? (
+                                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                {contractDocuments.map((document) => (
+                                                    <div
+                                                        key={document.type}
+                                                        className="flex flex-col rounded-2xl border border-[#cfe2f3] bg-[#f8fbfe] p-4"
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="rounded-xl bg-[#eaf4fb] p-2.5 text-[#00559b]">
+                                                                <FileText className="h-5 w-5" />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="text-sm font-semibold text-[#0f172a]">{document.label}</p>
+                                                                <p className="mt-1 text-xs leading-5 text-[#5f7182]">{document.description}</p>
+                                                            </div>
+                                                        </div>
+                                                        <Button asChild type="button" className={cn('mt-4 w-full', agenceButtonStyles.primary)}>
+                                                            <a href={`/agence/locataires/${tenant.id}/documents/${document.type}`}>
+                                                                <Download className="mr-2 h-4 w-4" />
+                                                                Télécharger
+                                                            </a>
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="rounded-2xl border border-dashed border-[#c8d4de] bg-[#f8fafc] px-4 py-8 text-center">
+                                                <p className="text-sm font-semibold text-[#0f172a]">Aucun contrat actif</p>
+                                                <p className="mt-1 text-sm text-[#5f7182]">
+                                                    Un contrat actif est nécessaire pour générer les documents contractuels.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="rounded-xl border border-[#f0dfb5] bg-[#fffaf0] px-4 py-3 text-sm text-[#7a5b16]">
+                                            Le logo configuré dans les paramètres de l’agence est ajouté dans l’en-tête et en filigrane sur chaque page.
+                                        </div>
+
+                                        <div className="pt-2">
+                                            <p className="mb-3 text-sm font-semibold text-[#0f172a]">Pièces enregistrées dans le dossier</p>
                                         {documents.length ? (
                                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                                 {documents.map((document) => (
@@ -731,6 +779,7 @@ export default function Show({ locataire = null }) {
                                                 </p>
                                             </div>
                                         )}
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>

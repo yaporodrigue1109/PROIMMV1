@@ -5,6 +5,7 @@ import {
     CalendarClock,
     CheckCircle2,
     FileText,
+    Download,
     Home,
     IdCard,
     Layers,
@@ -16,6 +17,7 @@ import {
     Ruler,
     Trash2,
     UserRound,
+    Wallet,
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -26,6 +28,7 @@ import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Separator } from '../../../components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { agenceButtonStyles } from '../../../lib/buttonStyles';
 import { cn } from '../../../lib/utils';
 
@@ -43,6 +46,7 @@ const buildEmptyLotForm = () => ({
 });
 
 const number = (value) => new Intl.NumberFormat('fr-FR').format(Number(value ?? 0));
+const monthKey = (year, month) => `${Number(year)}-${String(Number(month)).padStart(2, '0')}`;
 
 const formatDate = (value) => {
     if (!value) return 'Non renseigné';
@@ -231,15 +235,18 @@ function PropertyCard({ propriete }) {
     );
 }
 
-export default function Show({ proprietaire, liaison = null, lots = [], proprietes = [], regions = [], villes = [], typePiece = [], genres = [] }) {
+export default function Show({ proprietaire, liaison = null, lots = [], proprietes = [], paiements = [], locatairesActifs = [], reversementRows = [], regions = [], villes = [], typePiece = [], genres = [] }) {
     const lotsList = asArray(lots);
     const proprietesList = asArray(proprietes);
     const [isLotModalOpen, setIsLotModalOpen] = useState(false);
     const [isSavingLot, setIsSavingLot] = useState(false);
     const [editingLot, setEditingLot] = useState(null);
     const [lotForm, setLotForm] = useState(buildEmptyLotForm());
-    const [activeSection, setActiveSection] = useState('informations');
+    const [activeTab, setActiveTab] = useState('informations');
     const [showBackButton, setShowBackButton] = useState(false);
+    const todayValue = new Date().toISOString().slice(0, 10);
+    const [consolidationStart, setConsolidationStart] = useState(`${todayValue.slice(0, 8)}01`);
+    const [consolidationEnd, setConsolidationEnd] = useState(todayValue);
 
     const regionOptions = useMemo(
         () => asArray(regions).map((region) => ({ value: String(region.id ?? ''), label: region.name })),
@@ -277,45 +284,88 @@ export default function Show({ proprietaire, liaison = null, lots = [], propriet
         [lotForm.region_id, villes]
     );
 
-    useEffect(() => {
-        const sections = NAV_ITEMS.map((item) => document.getElementById(item.id)).filter(Boolean);
-        if (!sections.length) return undefined;
-        const scrollContainer = document.querySelector('main > div.flex-1.overflow-y-auto');
-        const getScrollTop = () => (scrollContainer ? scrollContainer.scrollTop : window.scrollY);
-
-        const updateActiveSection = () => {
-            const currentY = getScrollTop() + 140;
-            const candidates = sections
-                .map((section) => ({ id: section.id, top: section.offsetTop }))
-                .filter((section) => section.top <= currentY)
-                .sort((a, b) => a.top - b.top);
-
-            const nextActive = candidates.at(-1)?.id ?? sections[0].id;
-            setActiveSection((current) => (current === nextActive ? current : nextActive));
-        };
-
-        const fromHash = window.location.hash.replace('#', '');
-        if (NAV_ITEMS.some((item) => item.id === fromHash)) {
-            setActiveSection(fromHash);
-        } else {
-            updateActiveSection();
-        }
-
-        (scrollContainer ?? window).addEventListener('scroll', updateActiveSection, { passive: true });
-        const handleHashChange = () => {
-            const nextHash = window.location.hash.replace('#', '');
-            if (NAV_ITEMS.some((item) => item.id === nextHash)) {
-                setActiveSection(nextHash);
-            }
-        };
-
-        window.addEventListener('hashchange', handleHashChange);
-
-        return () => {
-            (scrollContainer ?? window).removeEventListener('scroll', updateActiveSection);
-            window.removeEventListener('hashchange', handleHashChange);
-        };
+    const paiementsList = asArray(paiements);
+    const paymentMonths = useMemo(() => {
+        const current = new Date();
+        return Array.from({ length: 12 }, (_, index) => {
+            const date = new Date(current.getFullYear(), current.getMonth() - index, 1);
+            return {
+                key: monthKey(date.getFullYear(), date.getMonth() + 1),
+                label: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+            };
+        });
     }, []);
+    const paymentRows = useMemo(() => {
+        const rows = new Map(asArray(locatairesActifs).map((locataire) => [
+            String(locataire.locataire_id),
+            {
+                id: String(locataire.locataire_id),
+                name: locataire.name || 'Locataire non renseigné',
+                loyerNet: Number(locataire.loyer_net ?? 0),
+                months: {},
+                total: 0,
+            },
+        ]));
+        const visibleMonths = new Set(paymentMonths.map((month) => month.key));
+        paiementsList.forEach((paiement) => {
+            const paymentDate = new Date(paiement.date_transaction);
+            if (Number.isNaN(paymentDate.getTime())) return;
+            const period = monthKey(paymentDate.getFullYear(), paymentDate.getMonth() + 1);
+            if (!visibleMonths.has(period)) return;
+            const tenantKey = String(paiement.locataire_id ?? paiement.locataire ?? 'inconnu');
+            if (!rows.has(tenantKey)) return;
+            const row = rows.get(tenantKey);
+            const amount = Number(paiement.montant_paye ?? 0);
+            row.months[period] = Number(row.months[period] ?? 0) + amount;
+            row.total += amount;
+        });
+        return Array.from(rows.values()).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+    }, [locatairesActifs, paiementsList, paymentMonths]);
+    const monthTotals = useMemo(
+        () => Object.fromEntries(paymentMonths.map((month) => [month.key, paymentRows.reduce((sum, row) => sum + Number(row.months[month.key] ?? 0), 0)])),
+        [paymentMonths, paymentRows]
+    );
+    const totalLoyersPayes = paymentRows.reduce((sum, row) => sum + row.total, 0);
+    const consolidatedProperties = useMemo(() => {
+        const properties = new Map();
+        asArray(reversementRows)
+            .filter((row) => {
+                const start = String(row.periode_debut ?? '').slice(0, 10);
+                const end = String(row.periode_fin ?? '').slice(0, 10);
+                return (!consolidationStart || end >= consolidationStart) && (!consolidationEnd || start <= consolidationEnd);
+            })
+            .forEach((row) => {
+                const key = String(row.lot_id ?? 'sans-lot');
+                const current = properties.get(key) ?? {
+                    id: key,
+                    reference: row.lot || 'Lot non renseigné',
+                    adresse: row.adresse || '',
+                    totalLoyer: 0,
+                    commission: 0,
+                    apresCommission: 0,
+                    nouvelleCaution: 0,
+                    depenses: 0,
+                    montantReverse: 0,
+                };
+                const totalLoyer = Number(row.total_loyer ?? 0);
+                current.totalLoyer += totalLoyer;
+                current.commission += Number(row.montant_commission ?? 0);
+                current.apresCommission += Number(row.montant_apres_commission ?? 0);
+                current.nouvelleCaution += Number(row.nouvelle_caution ?? 0);
+                current.depenses += Number(row.depenses_effectuees ?? 0);
+                current.montantReverse += Number(row.net_a_reverser ?? 0);
+                properties.set(key, current);
+            });
+        return Array.from(properties.values());
+    }, [consolidationEnd, consolidationStart, reversementRows]);
+    const consolidatedTotals = useMemo(() => consolidatedProperties.reduce((totals, row) => ({
+        totalLoyer: totals.totalLoyer + row.totalLoyer,
+        commission: totals.commission + row.commission,
+        apresCommission: totals.apresCommission + row.apresCommission,
+        nouvelleCaution: totals.nouvelleCaution + row.nouvelleCaution,
+        depenses: totals.depenses + row.depenses,
+        montantReverse: totals.montantReverse + row.montantReverse,
+    }), { totalLoyer: 0, commission: 0, apresCommission: 0, nouvelleCaution: 0, depenses: 0, montantReverse: 0 }), [consolidatedProperties]);
 
     useEffect(() => {
         const scrollContainer = document.querySelector('main > div.flex-1.overflow-y-auto');
@@ -530,35 +580,21 @@ export default function Show({ proprietaire, liaison = null, lots = [], propriet
                         </div>
 
            
-                        <nav className="mt-4 hidden lg:block" aria-label="Sections de la fiche">
-                            <ul className="space-y-1">
-                                {NAV_ITEMS.map((item) => (
-                                    <li key={item.id}>
-                                        <a
-                                            href={`#${item.id}`}
-                                            aria-current={activeSection === item.id ? 'page' : undefined}
-                                            className={cn(
-                                                'flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
-                                                activeSection === item.id
-                                                    ? 'bg-[#eaf4fb] font-medium text-[#00559b] shadow-sm ring-1 ring-[#cfe2f3]'
-                                                    : 'text-[#5f7182] hover:bg-[#eaf4fb] hover:text-[#00559b]'
-                                            )}
-                                        >
-                                            <item.icon className="h-4 w-4" />
-                                            {item.label}
-                                        </a>
-                                    </li>
-                                ))}
-                            </ul>
-                        </nav>
-   
-
-                        
                     </div>
                 </aside>
 
-                {/* Contenu principal empilé */}
-                <div className="flex flex-col gap-6">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0">
+                    <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1 bg-[#eef2f6] p-1">
+                        <TabsTrigger value="informations" className="data-[state=active]:bg-white data-[state=active]:text-[#00559b]">Informations</TabsTrigger>
+                        <TabsTrigger value="lots" className="data-[state=active]:bg-white data-[state=active]:text-[#00559b]">Lots</TabsTrigger>
+                        <TabsTrigger value="representant" className="data-[state=active]:bg-white data-[state=active]:text-[#00559b]">Représentant</TabsTrigger>
+                        <TabsTrigger value="proprietes" className="data-[state=active]:bg-white data-[state=active]:text-[#00559b]">Propriétés</TabsTrigger>
+                        <TabsTrigger value="documents" className="data-[state=active]:bg-white data-[state=active]:text-[#00559b]">Documents contractuels</TabsTrigger>
+                        <TabsTrigger value="paiements" className="data-[state=active]:bg-white data-[state=active]:text-[#00559b]">Tableau recapitulatif de paiements</TabsTrigger>
+                        <TabsTrigger value="consolide" className="data-[state=active]:bg-white data-[state=active]:text-[#00559b]">Consolidé des loyers payés</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="informations" className="mt-0">
                     <Section id="informations" icon={UserRound} title="Informations du propriétaire" description="Coordonnées et pièce d'identité.">
                         <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
                             <InfoRow icon={UserRound} label="Nom et prénom" value={proprietaire?.name} />
@@ -588,7 +624,9 @@ export default function Show({ proprietaire, liaison = null, lots = [], propriet
                             </div>
                         </div>
                     </Section>
+                    </TabsContent>
 
+                    <TabsContent value="representant" className="mt-0">
                     <Section id="liaison" icon={FileText} title="Représentant du propriétaire">
                         {liaison ? (
                             <div className="space-y-4">
@@ -632,7 +670,9 @@ export default function Show({ proprietaire, liaison = null, lots = [], propriet
                             <EmptyState>Aucun représentant disponible.</EmptyState>
                         )}
                     </Section>
+                    </TabsContent>
 
+                    <TabsContent value="lots" className="mt-0">
                     <Section
                         id="lots"
                         icon={Layers}
@@ -661,7 +701,9 @@ export default function Show({ proprietaire, liaison = null, lots = [], propriet
                             <EmptyState>Aucun lot enregistré pour ce propriétaire.</EmptyState>
                         )}
                     </Section>
+                    </TabsContent>
 
+                    <TabsContent value="proprietes" className="mt-0">
                     <Section
                         id="proprietes"
                         icon={Building2}
@@ -686,7 +728,241 @@ export default function Show({ proprietaire, liaison = null, lots = [], propriet
                             <EmptyState>Aucune propriété associée à ce propriétaire.</EmptyState>
                         )}
                     </Section>
-                </div>
+                    </TabsContent>
+
+                    <TabsContent value="documents" className="mt-0">
+                        <Section
+                            id="documents"
+                            icon={FileText}
+                            title="Documents du contrat propriétaire–agence"
+                            description="Les documents sont générés avec les informations actuelles de l’agence et du propriétaire."
+                        >
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="rounded-xl border border-[#cfe2f3] bg-[#f8fbfe] p-5">
+                                    <div className="flex items-start gap-3">
+                                        <div className="rounded-xl bg-[#eaf4fb] p-3 text-[#00559b]">
+                                            <FileText className="h-6 w-6" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="font-semibold text-[#0f172a]">Mandat de gestion immobilière</h3>
+                                            <p className="mt-1 text-sm text-[#5f7182]">
+                                                Mandat complet précisant les biens confiés, les obligations et la rémunération de l’agence.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button asChild type="button" className={cn('mt-5 w-full', agenceButtonStyles.primary)}>
+                                        <a href={`/agence/proprietaire/${proprietaire?.proprietaire_id}/documents/mandat`}>
+                                            <Download className="h-4 w-4" />
+                                            Télécharger le mandat
+                                        </a>
+                                    </Button>
+                                </div>
+
+                                <div className="rounded-xl border border-[#d9e7dc] bg-[#f8fcf9] p-5">
+                                    <div className="flex items-start gap-3">
+                                        <div className="rounded-xl bg-[#eaf7ed] p-3 text-[#24733f]">
+                                            <FileText className="h-6 w-6" />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="font-semibold text-[#0f172a]">Procuration</h3>
+                                            <p className="mt-1 text-sm text-[#5f7182]">
+                                                Autorisation donnée à l’agence pour représenter le propriétaire dans la gestion de ses biens.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button asChild type="button" className={cn('mt-5 w-full', agenceButtonStyles.primary)}>
+                                        <a href={`/agence/proprietaire/${proprietaire?.proprietaire_id}/documents/procuration`}>
+                                            <Download className="h-4 w-4" />
+                                            Télécharger la procuration
+                                        </a>
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 rounded-xl border border-[#f0dfb5] bg-[#fffaf0] px-4 py-3 text-sm text-[#7a5b16]">
+                                Les champs non complétés dans le dossier ou les paramètres de l’agence apparaîtront comme « Non renseigné » dans le PDF.
+                            </div>
+                        </Section>
+                    </TabsContent>
+
+                    <TabsContent value="paiements" className="mt-0">
+                        <Section
+                            id="paiements"
+                            icon={Wallet}
+                            title="Tableau récapitulatif consolidé des loyers payés"
+                            description="Tous les encaissements de loyers rattachés aux biens de ce propriétaire."
+                        >
+                            <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div className="rounded-xl border border-[#cfe2f3] bg-[#eaf4fb] p-4">
+                                    <p className="text-xs uppercase tracking-wide text-[#5f7182]">Total des loyers payés</p>
+                                    <p className="mt-1 text-xl font-bold text-[#00559b]">{number(totalLoyersPayes)} FCFA</p>
+                                </div>
+                                <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                                    <p className="text-xs uppercase tracking-wide text-[#5f7182]">Locataires concernés</p>
+                                    <p className="mt-1 text-xl font-bold text-[#0f172a]">{number(paymentRows.length)}</p>
+                                </div>
+                            </div>
+
+                            {paymentRows.length ? (
+                                <div className="overflow-x-auto rounded-xl border border-[#e2e8f0]">
+                                    <table className="w-full min-w-[1250px] border-collapse text-sm">
+                                        <thead>
+                                            <tr>
+                                                <th className="sticky left-0 z-20 min-w-[220px] border-b border-r border-[#d8d4eb] bg-[#e8e2f3] px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-[#3f3a52]">
+                                                    Locataire / loyer net
+                                                </th>
+                                                {paymentMonths.map((month, index) => (
+                                                    <th
+                                                        key={month.key}
+                                                        className={cn(
+                                                            'min-w-[100px] border-b border-r border-[#e2e8f0] px-3 py-4 text-center text-xs font-semibold text-[#475569]',
+                                                            index === 0 ? 'bg-[#f6edc9]' : 'bg-[#f8fafc]'
+                                                        )}
+                                                    >
+                                                        {month.label}
+                                                    </th>
+                                                ))}
+                                                <th className="min-w-[125px] border-b border-[#cfe2f3] bg-[#dcecf8] px-4 py-4 text-right text-xs font-semibold uppercase text-[#00559b]">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {paymentRows.map((row) => (
+                                                <tr key={row.id} className="odd:bg-white even:bg-[#fbfcfd]">
+                                                    <th className="sticky left-0 z-10 border-b border-r border-[#d8d4eb] bg-[#e8e2f3] px-4 py-4 text-left text-xs font-semibold uppercase text-[#3f3a52]">
+                                                        <span className="block">{row.name}</span>
+                                                        <span className="mt-1 block text-[11px] font-medium normal-case text-[#655f78]">
+                                                            Loyer net : {number(row.loyerNet)} FCFA
+                                                        </span>
+                                                    </th>
+                                                    {paymentMonths.map((month, index) => (
+                                                        <td
+                                                            key={`${row.id}-${month.key}`}
+                                                            className={cn(
+                                                                'border-b border-r border-[#e2e8f0] px-3 py-4 text-right tabular-nums text-[#334155]',
+                                                                index === 0 ? 'bg-[#fbf4dc]' : ''
+                                                            )}
+                                                        >
+                                                            {number(row.months[month.key] ?? 0)}
+                                                        </td>
+                                                    ))}
+                                                    <td className="border-b border-[#cfe2f3] bg-[#dcecf8] px-4 py-4 text-right font-semibold tabular-nums text-[#00559b]">
+                                                        {number(row.total)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th className="sticky left-0 z-20 border-r border-[#bfd8c4] bg-[#dcecf8] px-4 py-4 text-left text-xs font-bold uppercase text-[#0f172a]">Totaux</th>
+                                                {paymentMonths.map((month) => (
+                                                    <td key={`total-${month.key}`} className="border-r border-[#bfd8c4] bg-[#dcebd9] px-3 py-4 text-right font-bold tabular-nums text-[#244b2b]">
+                                                        {number(monthTotals[month.key] ?? 0)}
+                                                    </td>
+                                                ))}
+                                                <td className="bg-[#a9d2bd] px-4 py-4 text-right font-bold tabular-nums text-[#163b29]">{number(totalLoyersPayes)}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            ) : (
+                                <EmptyState>Aucun paiement de loyer enregistré pour ce propriétaire.</EmptyState>
+                            )}
+                        </Section>
+                    </TabsContent>
+
+                    <TabsContent value="consolide" className="mt-0 space-y-4">
+                        <Section
+                            id="consolide"
+                            icon={Wallet}
+                            title="Consolidé des loyers payés"
+                            description="Résumé des reversements effectués et restant à effectuer, regroupé par lot."
+                        >
+                            <div className="mb-5 grid grid-cols-1 gap-4 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                                <Field label="Date de début">
+                                    <Input type="date" value={consolidationStart} onChange={(event) => setConsolidationStart(event.target.value)} />
+                                </Field>
+                                <Field label="Date de fin">
+                                    <Input type="date" value={consolidationEnd} onChange={(event) => setConsolidationEnd(event.target.value)} />
+                                </Field>
+                                <Button type="button" className={agenceButtonStyles.primary} onClick={() => setActiveTab('consolide')}>
+                                    Consolider
+                                </Button>
+                            </div>
+
+                            <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="rounded-xl border border-[#cfe2f3] bg-[#eaf4fb] p-4">
+                                    <p className="text-xs uppercase tracking-wide text-[#5f7182]">Total loyers</p>
+                                    <p className="mt-1 text-xl font-bold text-[#00559b]">{number(consolidatedTotals.totalLoyer)} FCFA</p>
+                                </div>
+                                <div className="rounded-xl border border-[#d8ebb7] bg-[#f2f9e8] p-4">
+                                    <p className="text-xs uppercase tracking-wide text-[#5f7182]">Commission</p>
+                                    <p className="mt-1 text-xl font-bold text-[#4d8500]">{number(consolidatedTotals.commission)} FCFA</p>
+                                </div>
+                                <div className="rounded-xl border border-[#fde7bf] bg-[#fff8e8] p-4">
+                                    <p className="text-xs uppercase tracking-wide text-[#5f7182]">Dépenses</p>
+                                    <p className="mt-1 text-xl font-bold text-[#b45309]">{number(consolidatedTotals.depenses)} FCFA</p>
+                                </div>
+                                <div className="rounded-xl border border-[#f4c9c4] bg-[#fdecea] p-4">
+                                    <p className="text-xs uppercase tracking-wide text-[#5f7182]">Net à reverser</p>
+                                    <p className="mt-1 text-xl font-bold text-[#b42318]">
+                                        {number(consolidatedTotals.montantReverse)} FCFA
+                                    </p>
+                                </div>
+                            </div>
+
+                            {consolidatedProperties.length ? (
+                                <div className="overflow-x-auto rounded-xl border border-[#e2e8f0]">
+                                    <table className="w-full min-w-[1200px] text-sm">
+                                        <thead className="bg-[#f1f5f9] text-xs uppercase tracking-wide text-[#475569]">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left">Lot</th>
+                                                <th className="px-4 py-3 text-right">Total loyer</th>
+                                                <th className="px-4 py-3 text-right">Commission</th>
+                                                <th className="px-4 py-3 text-right">Après commission</th>
+                                                <th className="px-4 py-3 text-right">Nouvelle caution</th>
+                                                <th className="px-4 py-3 text-right">Dépenses</th>
+                                                <th className="bg-[#e8f4eb] px-4 py-3 text-right text-[#4d8500]">Net à reverser</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#e2e8f0] bg-white">
+                                            {consolidatedProperties.map((row) => {
+                                                return (
+                                                    <tr key={row.id}>
+                                                        <td className="px-4 py-4 text-left">
+                                                            <p className="font-semibold text-[#0f172a]">{row.reference}</p>
+                                                            <p className="text-xs text-[#5f7182]">{row.adresse || 'Adresse non renseignée'}</p>
+                                                        </td>
+                                                        <td className="px-4 py-4 text-right tabular-nums">{number(row.totalLoyer)} FCFA</td>
+                                                        <td className="px-4 py-4 text-right tabular-nums">{number(row.commission)} FCFA</td>
+                                                        <td className="px-4 py-4 text-right tabular-nums">{number(row.apresCommission)} FCFA</td>
+                                                        <td className="px-4 py-4 text-right tabular-nums">{number(row.nouvelleCaution)} FCFA</td>
+                                                        <td className="px-4 py-4 text-right tabular-nums text-[#b45309]">{number(row.depenses)} FCFA</td>
+                                                        <td className="bg-[#f2f9e8] px-4 py-4 text-right font-bold tabular-nums text-[#4d8500]">{number(row.montantReverse)} FCFA</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="bg-[#e2eadf] font-bold text-[#0f172a]">
+                                                <th className="px-4 py-4 text-left">Totaux</th>
+                                                <td className="px-4 py-4 text-right">{number(consolidatedTotals.totalLoyer)} FCFA</td>
+                                                <td className="px-4 py-4 text-right">{number(consolidatedTotals.commission)} FCFA</td>
+                                                <td className="px-4 py-4 text-right">{number(consolidatedTotals.apresCommission)} FCFA</td>
+                                                <td className="px-4 py-4 text-right">{number(consolidatedTotals.nouvelleCaution)} FCFA</td>
+                                                <td className="px-4 py-4 text-right">{number(consolidatedTotals.depenses)} FCFA</td>
+                                                <td className="bg-[#a9d2bd] px-4 py-4 text-right text-[#163b29]">
+                                                    {number(consolidatedTotals.montantReverse)} FCFA
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            ) : (
+                                <EmptyState>Aucun reversement trouvé pour cette période.</EmptyState>
+                            )}
+                        </Section>
+                    </TabsContent>
+                </Tabs>
             </div>
 
             {isLotModalOpen ? (

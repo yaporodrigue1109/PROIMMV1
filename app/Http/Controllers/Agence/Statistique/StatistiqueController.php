@@ -11,6 +11,7 @@ use App\Models\Porte;
 use App\Models\Propriete;
 use App\Models\ProprietaireAgence;
 use App\Models\TransactionAgence;
+use App\Models\Reversement;
 use App\Models\User;
 use App\Repositories\Agence\Interfaces\LocataireRepositoryInterface;
 use App\Repositories\Agence\Interfaces\MaintenanceRepositoryInterface;
@@ -236,6 +237,47 @@ class StatistiqueController extends Controller
             ->limit(5)
             ->get());
 
+        $reversementMonthKeys = collect(range(0, 11))
+            ->map(fn ($offset) => $selectedDate->copy()->subMonths($offset)->format('Y-m'))
+            ->values();
+        $reversementMonthLabels = $reversementMonthKeys->all();
+        $reversementPeriodStart = $selectedDate->copy()->subMonths(11)->startOfMonth();
+        $reversementPeriodEnd = $selectedDate->copy()->endOfMonth();
+        $reversementsByProprietaire = $this->safeCollection(fn () => Reversement::query()
+            ->where('agence_id', $agenceId)
+            ->where('statut', 'reverse')
+            ->whereBetween('date_reversement', [$reversementPeriodStart, $reversementPeriodEnd])
+            ->orderBy('date_reversement')
+            ->get())
+            ->groupBy('proprietaire_id');
+        $proprietairesActifsReversements = $this->safeCollection(fn () => ProprietaireAgence::query()
+            ->with('proprietaire')
+            ->where('agence_id', $agenceId)
+            ->where('is_active', true)
+            ->get());
+        $reversementsYearMatrix = $proprietairesActifsReversements
+            ->map(function ($proprietaireAgence) use ($reversementsByProprietaire, $reversementMonthKeys) {
+                $proprietaireId = $proprietaireAgence->proprietaire_id;
+                $reversements = $reversementsByProprietaire->get($proprietaireId, collect());
+                $months = array_fill(0, 12, 0.0);
+                foreach ($reversements as $reversement) {
+                    $monthKey = optional($reversement->date_reversement)->format('Y-m');
+                    $monthIndex = $reversementMonthKeys->search($monthKey);
+                    if ($monthIndex !== false) {
+                        $months[$monthIndex] += (float) $reversement->net_a_reverser;
+                    }
+                }
+
+                return [
+                    'proprietaire_id' => $proprietaireId,
+                    'proprietaire' => $proprietaireAgence->proprietaire?->name ?? 'Propriétaire non renseigné',
+                    'months' => $months,
+                    'total' => array_sum($months),
+                ];
+            })
+            ->sortBy('proprietaire')
+            ->values();
+
         $occupationRate = $portesTotal > 0 ? round(($portesOccupees / $portesTotal) * 100) : 0;
         $allocationRate = $proprietesStats['total'] > 0
             ? round((($proprietesStats['allocation'] ?? 0) / $proprietesStats['total']) * 100)
@@ -296,6 +338,8 @@ class StatistiqueController extends Controller
             'topProperties' => $topProperties,
             'recentTransactions' => $recentTransactions,
             'recentMaintenances' => $recentMaintenances,
+            'reversementsYearMatrix' => $reversementsYearMatrix->all(),
+            'reversementMonthLabels' => array_values($reversementMonthLabels),
             'year' => $year,
             'periode' => $period,
             'periodLabel' => ucfirst($selectedDate->locale('fr')->translatedFormat('F Y')),
