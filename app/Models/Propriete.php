@@ -89,6 +89,11 @@ class Propriete extends Model
         return $this->hasMany(ProprieteProximite::class, 'propriete_id', 'propriete_id');
     }
 
+    public function ventes()
+    {
+        return $this->hasMany(VenteBien::class, 'propriete_id', 'propriete_id');
+    }
+
     // ─── Accesseurs ───────────────────────────────────────────────
 
     /** Nombre total de portes toutes pièces confondues */

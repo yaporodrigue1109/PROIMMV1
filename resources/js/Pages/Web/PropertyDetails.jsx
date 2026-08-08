@@ -19,6 +19,8 @@ export default function PropertyDetails({ property }) {
         .filter(Boolean);
     const images = propertyImages.length ? propertyImages : property.image ? [property.image] : fallbackImages;
     const [activeImage, setActiveImage] = useState(0);
+    const isLot = property.entity_type === 'lot';
+    const isDoor = property.entity_type === 'porte';
 
     useEffect(() => {
         setActiveImage(0);
@@ -68,9 +70,9 @@ export default function PropertyDetails({ property }) {
                 <section className="mx-auto grid max-w-7xl gap-8 px-5 pb-20 lg:grid-cols-[minmax(0,1fr)_350px]">
                     <div className="space-y-8">
                         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                            <Stat icon={Building2} value={property.buildings_count} label="Bâtiment(s)" />
-                                    <Stat icon={DoorOpen} value={property.available_units_count} label="Lot(s) libre(s)" />
-                            <Stat icon={CheckCircle2} value={property.available_units_count} label="Disponible(s)" />
+                            <Stat icon={Building2} value={isLot ? 'Terrain' : property.buildings_count} label={isLot ? 'Type de bien' : 'Bâtiment(s)'} />
+                            <Stat icon={DoorOpen} value={isDoor ? 'Porte' : property.units_count} label={isDoor ? 'Type d’offre' : 'Porte(s)'} />
+                            <Stat icon={CheckCircle2} value="Oui" label="Disponible" />
                             <Stat icon={Maximize2} value={property.surface ? `${property.surface} m²` : '—'} label="Superficie" />
                         </div>
 
@@ -78,9 +80,9 @@ export default function PropertyDetails({ property }) {
                             <p className="leading-8 text-slate-600">{property.description || 'Ce bien est proposé par une agence partenaire de Pros Immobilier. Contactez l’agence pour recevoir davantage d’informations et organiser une visite.'}</p>
                         </ContentCard>
 
-                        <ContentCard title="Lots et disponibilités">
-                            {units.length ? <div className="grid gap-4 sm:grid-cols-2">{units.map((unit) => <article key={unit.id} className="rounded-2xl border border-slate-200 p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wide text-[#76c206]">{unit.type}</p><h3 className="mt-1 font-extrabold text-[#111f3d]">{unit.number ? `Lot ${unit.number}` : 'Lot disponible'}</h3></div><span className={`rounded-full px-3 py-1 text-[11px] font-bold ${unit.available ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{unit.available ? 'Disponible' : 'Occupé'}</span></div><div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500">{unit.surface ? <span>{unit.surface} m²</span> : null}{unit.floor !== null && unit.floor !== undefined ? <span>Étage {unit.floor}</span> : null}</div>{unit.description ? <p className="mt-3 text-sm leading-6 text-slate-500">{unit.description}</p> : null}<p className="mt-4 border-t border-slate-100 pt-4 font-extrabold text-[#00559b]">{formatMoney(unit.price)}{property.mode === 'location' ? <span className="text-xs font-medium text-slate-400"> / mois</span> : null}</p></article>)}</div> : <p className="text-sm text-slate-500">Les informations détaillées sur les lots sont disponibles auprès de l’agence.</p>}
-                        </ContentCard>
+                        {!isLot ? <ContentCard title={isDoor ? 'Détail de la porte' : 'Composition de la propriété'}>
+                            {units.length ? <div className="grid gap-4 sm:grid-cols-2">{units.map((unit) => <article key={unit.id} className="rounded-2xl border border-slate-200 p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wide text-[#76c206]">{unit.type}</p><h3 className="mt-1 font-extrabold text-[#111f3d]">Porte disponible</h3></div><span className={`rounded-full px-3 py-1 text-[11px] font-bold ${unit.available ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{unit.available ? 'Disponible' : 'Occupée'}</span></div><div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500">{unit.surface ? <span>{unit.surface} m²</span> : null}{unit.floor !== null && unit.floor !== undefined ? <span>Étage {unit.floor}</span> : null}</div>{unit.description ? <p className="mt-3 text-sm leading-6 text-slate-500">{unit.description}</p> : null}{isDoor ? <p className="mt-4 border-t border-slate-100 pt-4 font-extrabold text-[#00559b]">{formatMoney(unit.price)}{unit.mode === 'location' ? <span className="text-xs font-medium text-slate-400"> / mois</span> : null}</p> : null}</article>)}</div> : <p className="text-sm text-slate-500">Les informations détaillées sont disponibles auprès de l’agence.</p>}
+                        </ContentCard> : null}
 
                         {property.nearby?.length ? <ContentCard title="À proximité"><div className="flex flex-wrap gap-3">{property.nearby.map((item, index) => <span key={`${item.name}-${index}`} className="rounded-full bg-[#eef7fd] px-4 py-2 text-sm font-semibold text-[#00559b]">{item.name}{item.distance ? ` · ${item.distance} ${item.unit ?? ''}` : ''}</span>)}</div></ContentCard> : null}
                         {property.videos?.length ? <ContentCard title="Vidéos du bien"><div className="space-y-3">{property.videos.map((video) => <a key={video} href={video} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-2xl border border-slate-200 p-4 text-sm font-bold text-[#00559b] hover:bg-[#f4f9fd]"><span className="flex items-center gap-3"><PlayCircle className="h-5 w-5" /> Voir la vidéo</span><ExternalLink className="h-4 w-4" /></a>)}</div></ContentCard> : null}
