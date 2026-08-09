@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class User extends Authenticatable
@@ -58,6 +59,10 @@ class User extends Authenticatable
      */
     public function hasPermission($permissions, $requireAll = false): bool
     {
+        if ($this->role?->grantsAllPermissions()) {
+            return true;
+        }
+
         if (is_string($permissions)) {
             $permissions = [$permissions];
         }
@@ -98,6 +103,12 @@ class User extends Authenticatable
      */
     protected function getRolePermissions(): array
     {
+        $storedPermissions = $this->getStoredRolePermissions();
+
+        if ($storedPermissions !== null) {
+            return $storedPermissions;
+        }
+
         $roleKey = $this->role?->role_id ?? null;
         $roleSlug = Str::slug((string) ($this->role?->name ?? ''), '-');
 
@@ -189,6 +200,61 @@ class User extends Authenticatable
         ];
 
         return $permissions[$roleKey] ?? $permissions[$roleSlug] ?? [];
+    }
+
+    /**
+     * Charger les permissions du rôle depuis la nouvelle matrice modules/actions.
+     * Retourne null tant que le script SQL n'a pas été installé afin de conserver
+     * temporairement les permissions historiques définies ci-dessus.
+     */
+    protected function getStoredRolePermissions(): ?array
+    {
+        static $permissionTablesExist = null;
+
+        $permissionTablesExist ??= Schema::hasTable('modules')
+            && Schema::hasTable('module_actions')
+            && Schema::hasTable('role_permissions');
+
+        if (!$permissionTablesExist) {
+            return null;
+        }
+
+        $role = $this->role;
+
+        if ($role?->grantsAllPermissions()) {
+            return ModuleAction::query()
+                ->active()
+                ->whereHas('module', fn ($query) => $query->active())
+                ->with('module')
+                ->get()
+                ->map(fn (ModuleAction $action): string => "{$action->slug}_{$action->module->slug}")
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        if (!$role || !$role->is_active) {
+            return [];
+        }
+
+        return $role->allowedPermissions()
+            ->with(['module', 'moduleAction'])
+            ->get()
+            ->filter(function (RolePermission $permission): bool {
+                return (bool) $permission->module?->is_active
+                    && (bool) $permission->moduleAction?->is_active;
+            })
+            ->map(function (RolePermission $permission): string {
+                return "{$permission->moduleAction->slug}_{$permission->module->slug}";
+            })
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function canPerform(string $moduleSlug, string $actionSlug): bool
+    {
+        return $this->role?->hasPermission($moduleSlug, $actionSlug) ?? false;
     }
 
     /**

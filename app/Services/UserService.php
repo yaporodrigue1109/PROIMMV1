@@ -148,7 +148,7 @@ class UserService
     /**
      * Récupérer les utilisateurs d'une agence
      */
-    public function getUsersByAgence(int $agenceId, array $filters = []): array
+    public function getUsersByAgence(string $agenceId, array $filters = []): array
     {
         return $this->repository->getByAgence($agenceId, $filters);
     }
@@ -156,7 +156,7 @@ class UserService
     /**
      * Récupérer les utilisateurs d'un rôle
      */
-    public function getUsersByRole(int $roleId, array $filters = []): array
+    public function getUsersByRole(string $roleId, array $filters = []): array
     {
         return $this->repository->getByRole($roleId, $filters);
     }
@@ -180,7 +180,7 @@ class UserService
     /**
      * Valider les données d'un utilisateur
      */
-    public function validateUserData(array $data, ?int $userId = null): array
+    public function validateUserData(array $data, ?string $userId = null): array
     {
         $errors = [];
 

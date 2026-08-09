@@ -101,12 +101,14 @@ export default function Consultation({ consultation = {} }) {
                             <CardDescription>Informations principales de votre formule.</CardDescription>
                         </div>
 
-                        <Button asChild className="h-11 rounded-xl bg-[#00559b] font-semibold text-white hover:bg-[#00457c]">
-                            <Link href={primaryAction.href ?? consultation.renew_url ?? '/agence/abonnement?renew=1'}>
-                                <RefreshCcw className="mr-2 h-4 w-4" />
-                                {primaryAction.button_label ?? 'Renouveler'}
-                            </Link>
-                        </Button>
+                        {!consultation.renewal_alert ? (
+                            <Button asChild className="h-11 rounded-xl bg-[#00559b] font-semibold text-white hover:bg-[#00457c]">
+                                <Link href={primaryAction.href ?? consultation.renew_url ?? '/agence/abonnement?renew=1'}>
+                                    <RefreshCcw className="mr-2 h-4 w-4" />
+                                    {primaryAction.button_label ?? 'Renouveler'}
+                                </Link>
+                            </Button>
+                        ) : null}
                     </CardHeader>
                     <CardContent className="mt-4 space-y-5 p-6">
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -263,26 +265,17 @@ export default function Consultation({ consultation = {} }) {
                     </CardContent>
                 </Card>
 
-                {consultation.support?.phone || consultation.support?.email ? (
-                    <Card className="rounded-[1.5rem] border-[#d7e3ee] shadow-sm">
-                        <CardHeader className="border-b border-slate-200">
-                            <CardTitle className="text-lg text-[#0f172a]">Support</CardTitle>
-                            <CardDescription>En cas de litige ou de question sur un paiement.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="mt-4 grid gap-3 p-6 md:grid-cols-2">
-                            {consultation.support?.phone ? (
-                                <Button asChild variant="outline" className="h-11 rounded-xl border-[#c8d4de]">
-                                    <a href={`tel:${consultation.support.phone}`}>Contacter par téléphone</a>
-                                </Button>
-                            ) : null}
-                            {consultation.support?.email ? (
-                                <Button asChild variant="outline" className="h-11 rounded-xl border-[#c8d4de]">
-                                    <a href={`mailto:${consultation.support.email}`}>Contacter par email</a>
-                                </Button>
-                            ) : null}
-                        </CardContent>
-                    </Card>
-                ) : null}
+                <Card className="rounded-[1.5rem] border-[#d7e3ee] shadow-sm">
+                    <CardHeader className="border-b border-slate-200">
+                        <CardTitle className="text-lg text-[#0f172a]">Support</CardTitle>
+                        <CardDescription>En cas de litige ou de question sur un paiement.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="mt-4 p-6">
+                        <Button asChild className="h-11 rounded-xl bg-[#00559b] font-semibold text-white hover:bg-[#00457c]">
+                            <Link href="/agence/support">Accéder au support</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         </AgenceLayout>
     );

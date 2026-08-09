@@ -141,7 +141,22 @@ class PersonnelController extends Controller
     private function rolesForAgence()
     {
         if (Schema::hasTable('roles')) {
-            return Role::query()
+            $query = Role::query();
+            $agenceId = getInfoAgent()->users->agence_id ?? null;
+
+            if (Schema::hasColumn('roles', 'agence_id')) {
+                $query->where(function ($roleQuery) use ($agenceId): void {
+                    $roleQuery->where('agence_id', $agenceId)
+                        ->orWhereNull('agence_id')
+                        ->orWhere('agence_id', '');
+                });
+            }
+
+            if (Schema::hasColumn('roles', 'is_active')) {
+                $query->where('is_active', true);
+            }
+
+            return $query
                 ->orderBy('name')
                 ->get(['role_id', 'name']);
         }

@@ -1,5 +1,6 @@
 ﻿import { useMemo, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
+import { useEffect } from 'react';
 import {
     Bar,
     BarChart,
@@ -33,6 +34,7 @@ import {
     Wrench,
 } from 'lucide-react';
 import AgenceLayout from '../../../Layouts/AgenceLayout';
+import { DateRangePicker } from '../../../components/date-range-picker';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { cn } from '../../../lib/utils';
@@ -53,6 +55,21 @@ const PALETTE = [BRAND, '#22a6f2', '#5b6cff', '#94a3b8', '#f59e0b', '#ef4444'];
 
 function fmtF(n) {
     return new Intl.NumberFormat('fr-FR').format(n) + ' F';
+}
+
+function parseLocalDate(value) {
+    if (!value) return undefined;
+
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+}
+
+function toDateParameter(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 }
 
 function fmtShort(n) {
@@ -499,7 +516,7 @@ function PeopleOverviewTab({ title, subtitle, icon, metrics, evolution, evolutio
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.9fr)]">
                 <Card className="min-w-0 rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
                     <CardContent className="mt-4 p-5">
-                        <SectionTitle icon={icon} title={`Évolution des ${title.toLowerCase()}`} subtitle={`Nouvelles inscriptions par mois — ${subtitle}`} />
+                        <SectionTitle icon={icon} title={`Évolution des ${title.toLowerCase()}`} subtitle={`Nouvelles inscriptions sur la période — ${subtitle}`} />
                         <PeopleEvolutionChart data={evolution} label={evolutionLabel} />
                     </CardContent>
                 </Card>
@@ -532,8 +549,8 @@ function FinancesTab({ d, tauxRecouvrement }) {
                 <CardContent className="mt-4 flex h-full flex-col p-5">
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Revenus Mensuels & Commissions</p>
-                            <p className="text-xs text-slate-500">Encaissements et tendance du mois</p>
+                            <p className="text-sm font-semibold text-slate-900">Revenus & Commissions</p>
+                            <p className="text-xs text-slate-500">Encaissements sur la période sélectionnée</p>
                         </div>
                         <Button variant="ghost" className="h-8 rounded-lg px-3 text-xs text-slate-500 hover:bg-slate-50">
                             CSV
@@ -562,7 +579,7 @@ function FinancesTab({ d, tauxRecouvrement }) {
                                 <span className="font-semibold text-[#4d8500]">{fmtF(d.finances.ventesMontant)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">Impayés du mois</span>
+                                <span className="text-slate-600">Impayés de la période</span>
                                 <span className="font-semibold text-[#b42318]">{fmtF(d.finances.impayes)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
@@ -714,12 +731,47 @@ export default function Statistiques({
     recentTransactions = [],
     recentMaintenances = [],
     year = new Date().getFullYear(),
-    periode = new Date().toISOString().slice(0, 7),
+    dateStart,
+    dateEnd,
     periodLabel = '',
 }) {
     const [activeTab, setActiveTab] = useState('overview');
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('recent');
+    const serverPeriod = useMemo(() => ({
+        from: parseLocalDate(dateStart),
+        to: parseLocalDate(dateEnd),
+    }), [dateEnd, dateStart]);
+    const [selectedPeriod, setSelectedPeriod] = useState(serverPeriod);
+
+    useEffect(() => {
+        setSelectedPeriod(serverPeriod);
+    }, [serverPeriod]);
+
+    const handlePeriodChange = (range) => {
+        setSelectedPeriod(range);
+
+        if (range?.from && range.to) {
+            router.get('/agence/statistiques', {
+                date_debut: toDateParameter(range.from),
+                date_fin: toDateParameter(range.to),
+            }, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            });
+        } else if (!range) {
+            router.get('/agence/statistiques', {}, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+                onSuccess: (page) => setSelectedPeriod({
+                    from: parseLocalDate(page.props.dateStart),
+                    to: parseLocalDate(page.props.dateEnd),
+                }),
+            });
+        }
+    };
 
     const d = useMemo(() => ({
         patrimoine: {
@@ -880,7 +932,7 @@ export default function Statistiques({
             icon: PiggyBank,
             label: 'Recouvrement',
             value: `${tauxRecouvrement}%`,
-            sub: `Encaissements du mois ${fmtF(d.finances.loyersEncaisses)}`,
+            sub: `Encaissements de la période ${fmtF(d.finances.loyersEncaisses)}`,
             tone: 'green',
         },
         {
@@ -917,7 +969,7 @@ export default function Statistiques({
         { icon: UserCheck, label: 'À jour de loyer', value: String(stats.locataires_a_jour ?? 0), sub: 'Aucune échéance arrivée à terme', tone: 'green' },
         { icon: AlertTriangle, label: 'En retard de loyer', value: String(stats.locataires_en_retard ?? 0), sub: 'Au moins une échéance impayée', tone: 'red' },
         { icon: UserMinus, label: 'Contrats résiliés', value: String(stats.locataires_resilies ?? 0), sub: 'Historique des contrats', tone: 'red' },
-        { icon: TrendingUp, label: 'Nouveaux ce mois', value: String(stats.locataires_ce_mois ?? 0), sub: 'Nouvelles entrées', tone: 'violet' },
+        { icon: TrendingUp, label: 'Nouveaux sur la période', value: String(stats.locataires_ce_mois ?? 0), sub: 'Nouvelles entrées', tone: 'violet' },
     ];
 
     const personnelMetrics = [
@@ -937,15 +989,11 @@ export default function Statistiques({
                     </div>
 
                     <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                        <label className="flex h-10 items-center gap-2 rounded-xl border border-[#d8e1ea] bg-white px-3 text-sm text-slate-600 shadow-sm">
-                            <CalendarClock className="h-4 w-4 text-[#00559b]" />
-                            <input
-                                type="month"
-                                value={periode}
-                                onChange={(event) => router.get('/agence/statistiques', { periode: event.target.value }, { preserveState: true, preserveScroll: true })}
-                                className="bg-transparent text-sm text-slate-700 outline-none"
-                            />
-                        </label>
+                        <DateRangePicker
+                            value={selectedPeriod}
+                            onChange={handlePeriodChange}
+                            className="sm:min-w-[310px]"
+                        />
 
                         {/* <div className="flex items-center gap-2">
                             <Button variant="outline" className="h-10 rounded-xl border-[#d8e1ea] bg-white px-3 text-sm text-slate-700 shadow-sm">
@@ -1042,7 +1090,7 @@ export default function Statistiques({
                             <CardContent className="mt-4 p-5">
                                 <SectionTitle
                                     icon={Banknote}
-                                    title="Impayés mensuels"
+                                    title="Impayés sur la période"
                                     subtitle={`Montants restant à régler par échéance — ${year}`}
                                 />
                                 <div className="overflow-x-auto">

@@ -5,6 +5,7 @@ import {
     BarChart3,
     Building2,
     ChevronDown,
+    ChevronRight,
     CircleGauge,
     Layers3,
     LogOut,
@@ -48,10 +49,46 @@ const navigation = [
     },
 ];
 
+const breadcrumbLabels = {
+    dashboard: 'Tableau de bord',
+    agences: 'Agences',
+    abonnements: 'Abonnements',
+    modules: 'Modules',
+    settings: 'Configuration',
+    statistiques: 'Statistiques',
+    tickets: 'Tickets',
+    profile: 'Profil',
+};
+
+function buildBreadcrumbs(currentPath, title) {
+    const segments = currentPath.split('/').filter(Boolean);
+    const adminIndex = segments.indexOf('admin');
+    const pageSegments = adminIndex >= 0 ? segments.slice(adminIndex + 1) : segments;
+    const section = pageSegments[0] ?? 'dashboard';
+    const sectionLabel = breadcrumbLabels[section] ?? section;
+    const sectionHref = section === 'dashboard' ? null : `/admin/${section}`;
+
+    if (section === 'dashboard') {
+        return [{ label: title ?? sectionLabel, href: null }];
+    }
+
+    const breadcrumbs = [
+        { label: 'Tableau de bord', href: '/admin/dashboard' },
+        { label: sectionLabel, href: pageSegments.length > 1 ? sectionHref : null },
+    ];
+
+    if (pageSegments.length > 1) {
+        breadcrumbs.push({ label: title ?? sectionLabel, href: null });
+    }
+
+    return breadcrumbs;
+}
+
 export default function AdminLayout({ title, children }) {
     const page = usePage();
     const { auth, appName, admin, flash } = page.props;
     const currentPath = page.url.split('?')[0];
+    const breadcrumbs = buildBreadcrumbs(currentPath, title);
     const currentAdmin = admin ?? auth?.admin;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -210,12 +247,42 @@ export default function AdminLayout({ title, children }) {
                                 <Menu className="h-4 w-4" />
                             </Button>
 
-                            <div className="min-w-0">
-                             
-                                <h1 className="truncate text-lg font-semibold text-[#0f172a]">
-                                    {title ?? 'Dashboard'}
-                                </h1>
-                            </div>
+                            <nav aria-label="Fil d’Ariane" className="min-w-0 overflow-hidden">
+                                <ol className="flex min-w-0 items-center gap-1.5 text-sm">
+                                    {breadcrumbs.map((breadcrumb, index) => {
+                                        const isCurrent = index === breadcrumbs.length - 1;
+
+                                        return (
+                                            <li key={`${breadcrumb.label}-${index}`} className="flex min-w-0 items-center gap-1.5">
+                                                {index > 0 ? (
+                                                    <ChevronRight className="h-4 w-4 shrink-0 text-[#94a3b8]" />
+                                                ) : null}
+
+                                                {breadcrumb.href && !isCurrent ? (
+                                                    <Link
+                                                        href={breadcrumb.href}
+                                                        className="truncate font-medium text-[#5f7182] transition-colors hover:text-[#00559b]"
+                                                    >
+                                                        {breadcrumb.label}
+                                                    </Link>
+                                                ) : (
+                                                    <span
+                                                        aria-current={isCurrent ? 'page' : undefined}
+                                                        className={cn(
+                                                            'truncate',
+                                                            isCurrent
+                                                                ? 'font-semibold text-[#0f172a]'
+                                                                : 'font-medium text-[#5f7182]',
+                                                        )}
+                                                    >
+                                                        {breadcrumb.label}
+                                                    </span>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
+                                </ol>
+                            </nav>
                         </div>
 
                         <DropdownMenu>

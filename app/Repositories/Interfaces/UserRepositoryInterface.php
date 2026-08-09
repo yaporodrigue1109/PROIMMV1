@@ -18,7 +18,7 @@ interface UserRepositoryInterface
     public function restore(string $id): bool;               // UUID string
     public function forceDelete(string $id): bool;           // UUID string
     public function getByAgence(string $agenceId, array $filters = []): Collection;
-    public function getByRole(int $roleId, array $filters = []): Collection;
+    public function getByRole(string $roleId, array $filters = []): Collection;
     public function getResponsables(): Collection;
     public function search(string $term, array $filters = []): Collection;
     public function emailExists(string $email, ?string $excludeId = null): bool;  // UUID string

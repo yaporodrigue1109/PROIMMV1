@@ -35,14 +35,25 @@ class StatistiqueController extends Controller
     public function index(Request $request): Response
     {
         $agenceId = $this->agenceId();
-        $period = $request->validate([
+        $filters = $request->validate([
             'periode' => ['nullable', 'date_format:Y-m'],
-        ])['periode'] ?? now()->format('Y-m');
-        $selectedDate = Carbon::createFromFormat('Y-m', $period)->startOfMonth();
-        $periodStart = $selectedDate->copy()->startOfMonth();
-        $periodEnd = $selectedDate->copy()->endOfMonth();
-        $year = $selectedDate->year;
-        $month = $selectedDate->month;
+            'date_debut' => ['nullable', 'required_with:date_fin', 'date_format:Y-m-d'],
+            'date_fin' => ['nullable', 'required_with:date_debut', 'date_format:Y-m-d', 'after_or_equal:date_debut'],
+        ]);
+
+        if (! empty($filters['date_debut']) && ! empty($filters['date_fin'])) {
+            $periodStart = Carbon::createFromFormat('Y-m-d', $filters['date_debut'])->startOfDay();
+            $periodEnd = Carbon::createFromFormat('Y-m-d', $filters['date_fin'])->endOfDay();
+        } else {
+            $selectedMonth = Carbon::createFromFormat('Y-m', $filters['periode'] ?? now()->format('Y-m'));
+            $periodStart = $selectedMonth->copy()->startOfMonth();
+            $periodEnd = $selectedMonth->copy()->endOfMonth();
+        }
+
+        $period = $periodStart->format('Y-m');
+        $year = $periodStart->year === $periodEnd->year
+            ? (string) $periodStart->year
+            : $periodStart->year.' – '.$periodEnd->year;
 
         $proprietesQuery   = Propriete::query()->where('agence_id', $agenceId);
         $batimentsQuery    = Batiment::query()->where('agence_id', $agenceId);
@@ -94,10 +105,7 @@ class StatistiqueController extends Controller
         $maintenancesTerminees = $this->safeCount(fn () => (clone $maintenancesQuery)->where('statut', Maintenance::STATUT_TERMINE)->count());
         $maintenancesEnAttente = $this->safeCount(fn () => (clone $maintenancesQuery)->where('statut', Maintenance::STATUT_EN_ATTENTE)->count());
         $maintenancesAnnulees = $this->safeCount(fn () => (clone $maintenancesQuery)->where('statut', Maintenance::STATUT_ANNULE)->count());
-        $coutMaintenanceMois = $this->safeFloat(fn () => (clone $maintenancesQuery)
-            ->whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->sum('montant_global'));
+        $coutMaintenanceMois = $this->safeFloat(fn () => (clone $maintenancesQuery)->sum('montant_global'));
 
         $transactionsValidees = $this->safeCount(fn () => (clone $transactionsQuery)->count());
         $transactionsEnAttente = 0;
@@ -173,8 +181,7 @@ class StatistiqueController extends Controller
         $personnelMonthSeries = [];
         $loyersMonthSeries = [];
 
-        foreach (range(1, $selectedDate->daysInMonth) as $day) {
-            $date = $selectedDate->copy()->day($day);
+        for ($date = $periodStart->copy()->startOfDay(); $date->lte($periodEnd); $date->addDay()) {
             $dateKey = $date->toDateString();
             $monthlyLabels[] = $date->format('d/m');
             $revenueSeries[] = (float) ($revenueByDay[$dateKey] ?? 0);
@@ -298,7 +305,11 @@ class StatistiqueController extends Controller
             'recentMaintenances' => $recentMaintenances,
             'year' => $year,
             'periode' => $period,
-            'periodLabel' => ucfirst($selectedDate->locale('fr')->translatedFormat('F Y')),
+            'dateStart' => $periodStart->toDateString(),
+            'dateEnd' => $periodEnd->toDateString(),
+            'periodLabel' => $periodStart->locale('fr')->translatedFormat('d F Y')
+                .' – '
+                .$periodEnd->locale('fr')->translatedFormat('d F Y'),
         ]);
     }
 

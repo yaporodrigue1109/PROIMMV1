@@ -32,7 +32,7 @@ import {
 import { agenceButtonStyles } from '../lib/buttonStyles';
 import { cn } from '../lib/utils';
 
-const navigation = [
+const fallbackNavigation = [
     {
         label: 'Tableau de bord',
         href: '/agence/dashboard',
@@ -100,6 +100,21 @@ const navigation = [
         activeMatch: '/agence/parametrage',
     },
 ];
+
+const navigationIcons = {
+    dashboard: House,
+    proprietes: Building2,
+    proprietaire: KeyRound,
+    proprietaires: KeyRound,
+    locataires: UserRound,
+    personnel: UsersRound,
+    maintenance: HardHat,
+    caisse: WalletCards,
+    reversement: WalletCards,
+    statistiques: BarChart3,
+    support: MessageSquareMore,
+    parametrage: Settings2,
+};
 
 const subscriptionRoute = '/agence/abonnement';
 
@@ -204,7 +219,7 @@ function AccountFooter({ currentUser, onLogout }) {
 
 export default function AgenceLayout({ title, children }) {
     const page = usePage();
-    const { appName, auth, flash } = page.props;
+    const { appName, auth, flash, navigationModules } = page.props;
     const currentPath = page.url.split('?')[0];
     const currentUser = auth?.user;
     const currentAgency = currentUser?.agence;
@@ -212,6 +227,12 @@ export default function AgenceLayout({ title, children }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
     const [toast, setToast] = useState(null);
+    const navigation = Array.isArray(navigationModules)
+        ? navigationModules.map((item) => ({
+            ...item,
+            icon: navigationIcons[item.slug] ?? Menu,
+        }))
+        : fallbackNavigation;
 
     useEffect(() => {
         const fromFlash = flash?.success
