@@ -15,6 +15,9 @@ export default function PropertyCards({ properties = [] }) {
                     <div className="relative h-60 overflow-hidden bg-slate-100">
                         <img src={property.image || fallbackImages[index % fallbackImages.length]} alt={property.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
                         <span className={`absolute left-4 top-4 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white ${property.mode === 'location' ? 'bg-[#00559b]' : 'bg-[#76c206]'}`}>{property.mode === 'location' ? 'À louer' : 'À vendre'}</span>
+                        <span className="absolute bottom-4 left-4 rounded-full bg-[#111f3d]/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white backdrop-blur">
+                            {property.entity_type === 'porte' ? 'Porte' : property.entity_type === 'lot' ? 'Lot' : 'Propriété'}
+                        </span>
                         <span className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-[#111f3d] backdrop-blur"><ArrowUpRight className="h-4 w-4" /></span>
                     </div>
                     <div className="p-6">

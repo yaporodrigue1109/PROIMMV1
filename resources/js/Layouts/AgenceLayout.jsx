@@ -18,7 +18,7 @@ import {
     WalletCards,
 } from 'lucide-react';
 
-import logo from '../../../admin/logo/playstore-icon-revised.png';
+import appLogo from '../../../admin/logo/playstore-icon-revised.png';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import {
@@ -118,6 +118,25 @@ const navigationIcons = {
 
 const subscriptionRoute = '/agence/abonnement';
 
+const agencyLogoUrl = (value) => {
+    if (!value) return '';
+    const path = String(value).trim();
+    if (!path) return '';
+
+    if (/^https?:\/\//i.test(path)) {
+        try {
+            const url = new URL(path);
+            return ['localhost', '127.0.0.1'].includes(url.hostname) ? `${url.pathname}${url.search}` : path;
+        } catch {
+            return path;
+        }
+    }
+
+    if (path.startsWith('/')) return path;
+    if (path.startsWith('storage/') || path.startsWith('admin/') || path.startsWith('assets/')) return `/${path}`;
+    return `/storage/${path.replace(/^public\//, '')}`;
+};
+
 const isActiveSubscription = (agence) => {
     if (!agence?.abonnement_id || !agence?.abonnement_end) {
         return false;
@@ -165,7 +184,7 @@ function SubscriptionPromoCard() {
     );
 }
 
-function AccountFooter({ currentUser, onLogout }) {
+function AccountFooter({ currentUser, onLogout, showAppLogo = false }) {
     const initials = (name) =>
         String(name ?? 'Agence')
             .split(/\s+/)
@@ -177,9 +196,13 @@ function AccountFooter({ currentUser, onLogout }) {
     return (
         <div className="mt-4 rounded-[1.5rem] border border-[#d3dce5] bg-[#f8fbfe] p-4">
             <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#00559b] text-sm font-semibold text-white">
-                    {initials(currentUser?.name)}
-                </div>
+                {showAppLogo ? (
+                    <img src={appLogo} alt="Pros Immobilier" className="h-11 w-11 rounded-xl object-contain shadow-sm ring-1 ring-[#c8d4de]" />
+                ) : (
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#00559b] text-sm font-semibold text-white">
+                        {initials(currentUser?.name)}
+                    </div>
+                )}
 
                 <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[#0f172a]">
@@ -223,6 +246,10 @@ export default function AgenceLayout({ title, children }) {
     const currentPath = page.url.split('?')[0];
     const currentUser = auth?.user;
     const currentAgency = currentUser?.agence;
+    const currentAgencyLogo = agencyLogoUrl(currentAgency?.logo);
+    const hasAgencyLogo = Boolean(currentAgencyLogo);
+    const brandLogo = hasAgencyLogo ? currentAgencyLogo : appLogo;
+    const brandName = hasAgencyLogo ? currentAgency?.name : 'Pros Immobilier';
     const hasActiveSubscription = isActiveSubscription(currentAgency);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -289,16 +316,18 @@ export default function AgenceLayout({ title, children }) {
                     <div className="flex h-[73px] items-center border-b border-[#c8d4de] px-5">
                         <div className="flex items-center gap-3">
                             <img
-                                src={logo}
-                                alt="Pros Immobilier"
+                                src={brandLogo}
+                                alt={brandName}
                                 className="h-11 w-11 rounded-2xl object-contain shadow-sm ring-1 ring-[#c8d4de]"
                             />
 
                             <div className="min-w-0">
                                 <h2 className="truncate text-base font-semibold text-[#0f172a]">
-                                    Pros Immobilier
+                                    {brandName}
                                 </h2>
-                                <p className="truncate text-xs text-[#5f7182]">Espace agence</p>
+                                <p className="truncate text-xs text-[#5f7182]">
+                                    {hasAgencyLogo ? 'Agence connectée' : (currentAgency?.name ?? 'Espace agence')}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -351,13 +380,15 @@ export default function AgenceLayout({ title, children }) {
                             <div className="flex items-center justify-between border-b border-[#c8d4de] px-5 py-4">
                                 <div className="flex items-center gap-3">
                                     <img
-                                        src={logo}
-                                        alt="Pros Immobilier"
+                                        src={brandLogo}
+                                        alt={brandName}
                                         className="h-10 w-10 rounded-xl object-contain shadow-sm ring-1 ring-[#c8d4de]"
                                     />
-                                    <div>
-                                        <p className="text-sm font-semibold text-[#0f172a]">Pros Immobilier</p>
-                                        <p className="text-xs text-[#5f7182]">Espace agence</p>
+                                    <div className="min-w-0">
+                                        <p className="max-w-52 truncate text-sm font-semibold text-[#0f172a]">{brandName}</p>
+                                        <p className="max-w-52 truncate text-xs text-[#5f7182]">
+                                            {hasAgencyLogo ? 'Agence connectée' : (currentAgency?.name ?? 'Espace agence')}
+                                        </p>
                                     </div>
                                 </div>
 
@@ -400,7 +431,7 @@ export default function AgenceLayout({ title, children }) {
                                     </div>
                                 ) : null}
 
-                                <AccountFooter currentUser={currentUser} onLogout={handleLogout} />
+                                <AccountFooter currentUser={currentUser} onLogout={handleLogout} showAppLogo={hasAgencyLogo} />
                             </div>
                         </aside>
                     </div>
@@ -426,14 +457,22 @@ export default function AgenceLayout({ title, children }) {
                                     variant="outline"
                                     className="h-11 rounded-xl border-[#c8d4de] bg-white px-3 text-[#0f172a]"
                                 >
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#00559b] text-sm font-semibold text-white">
-                                        {String(currentUser?.name ?? 'Agence')
-                                            .split(/\s+/)
-                                            .filter(Boolean)
-                                            .slice(0, 2)
-                                            .map((part) => part.slice(0, 1).toUpperCase())
-                                            .join('') || 'AG'}
-                                    </span>
+                                    {hasAgencyLogo ? (
+                                        <img
+                                            src={appLogo}
+                                            alt="Pros Immobilier"
+                                            className="h-8 w-8 rounded-lg object-contain ring-1 ring-[#c8d4de]"
+                                        />
+                                    ) : (
+                                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#00559b] text-sm font-semibold text-white">
+                                            {String(currentUser?.name ?? 'Agence')
+                                                .split(/\s+/)
+                                                .filter(Boolean)
+                                                .slice(0, 2)
+                                                .map((part) => part.slice(0, 1).toUpperCase())
+                                                .join('') || 'AG'}
+                                        </span>
+                                    )}
 
                                     <span className="hidden max-w-36 flex-col items-start leading-tight sm:flex">
                                         <span className="truncate text-sm font-medium">
@@ -448,14 +487,22 @@ export default function AgenceLayout({ title, children }) {
                             <DropdownMenuContent className="w-64">
                                 <DropdownMenuLabel>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#00559b] text-sm font-semibold text-white">
-                                            {String(currentUser?.name ?? 'Agence')
-                                                .split(/\s+/)
-                                                .filter(Boolean)
-                                                .slice(0, 2)
-                                                .map((part) => part.slice(0, 1).toUpperCase())
-                                                .join('') || 'AG'}
-                                        </div>
+                                        {hasAgencyLogo ? (
+                                            <img
+                                                src={appLogo}
+                                                alt="Pros Immobilier"
+                                                className="h-9 w-9 rounded-lg object-contain ring-1 ring-[#c8d4de]"
+                                            />
+                                        ) : (
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#00559b] text-sm font-semibold text-white">
+                                                {String(currentUser?.name ?? 'Agence')
+                                                    .split(/\s+/)
+                                                    .filter(Boolean)
+                                                    .slice(0, 2)
+                                                    .map((part) => part.slice(0, 1).toUpperCase())
+                                                    .join('') || 'AG'}
+                                            </div>
+                                        )}
 
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-medium text-[#0f172a]">

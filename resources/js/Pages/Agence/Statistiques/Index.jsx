@@ -1,6 +1,7 @@
 ﻿import { useMemo, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { useEffect } from 'react';
+import { Component } from 'react';
 import {
     Bar,
     BarChart,
@@ -36,7 +37,7 @@ import {
 import AgenceLayout from '../../../Layouts/AgenceLayout';
 import { DateRangePicker } from '../../../components/date-range-picker';
 import { Button } from '../../../components/ui/button';
-import { Card, CardContent } from '../../../components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { cn } from '../../../lib/utils';
 
 const BRAND = '#00559b';
@@ -47,6 +48,7 @@ const TABS = [
     { key: 'locataires', label: 'Locataires', icon: Users },
     { key: 'personnel', label: 'Personnel', icon: BriefcaseBusiness },
     { key: 'finances', label: 'Finances & Recouvrement', icon: Banknote },
+    { key: 'reversements', label: 'Tableau des reversements', icon: Wallet },
     { key: 'maintenance', label: 'Gestion & Maintenance', icon: Wrench },
 ];
 
@@ -337,7 +339,7 @@ function AlertCard({ alertes }) {
 function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, sortBy, setSortBy, filteredTopProperties }) {
     return (
         <div className="flex flex-col gap-6">
-            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            {/* <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="flex flex-1 items-center gap-2 rounded-xl border border-[#dbe3ea] bg-white px-3 py-2 shadow-sm">
                     <FileText className="h-4 w-4 text-slate-400" />
                     <input
@@ -360,7 +362,7 @@ function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, so
                         <option value="name">Nom</option>
                     </select>
                 </div>
-            </div>
+            </div> */}
 
             {/* Indicateurs principaux */}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -542,8 +544,93 @@ function PeopleOverviewTab({ title, subtitle, icon, metrics, evolution, evolutio
     );
 }
 
+function ReversementsYearTable({ rows = [], months = [] }) {
+    const safeRows = (Array.isArray(rows) ? rows : Object.values(rows ?? {})).filter((row) => row && typeof row === 'object');
+    const safeMonths = (Array.isArray(months) ? months : Object.values(months ?? {})).map((month) => String(month ?? ''));
+    const rowMonths = (row) => Array.isArray(row?.months) ? row.months : Object.values(row?.months ?? {});
+    const monthTotals = safeMonths.map((_, index) => safeRows.reduce((sum, row) => sum + Number(rowMonths(row)[index] ?? 0), 0));
+    const grandTotal = safeRows.reduce((sum, row) => sum + Number(row?.total ?? 0), 0);
+
+    return (
+        <Card className="rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
+            <CardHeader className="border-b border-[#e2e8f0] py-4">
+                <CardTitle className="text-sm text-[#0f172a]">Tableau récapitulatif des reversements par propriétaire</CardTitle>
+                <CardDescription className="text-xs text-[#5f7182]">Montants reversés sur les 12 derniers mois, du plus récent au plus ancien.</CardDescription>
+            </CardHeader>
+            <CardContent className="mt-4 p-5">
+                <div className="overflow-x-auto rounded-xl border border-[#e2e8f0]">
+                        <table className="w-full min-w-[1300px] border-collapse text-sm">
+                            <thead>
+                                <tr>
+                                    <th className="sticky left-0 z-20 min-w-[230px] border-b border-r border-[#d8d4eb] bg-[#e8e2f3] px-4 py-4 text-left text-xs font-semibold uppercase text-[#3f3a52]">Propriétaire</th>
+                                    {safeMonths.map((month, index) => (
+                                        <th key={month} className={cn('min-w-[88px] border-b border-r border-[#e2e8f0] px-3 py-4 text-right text-xs font-semibold text-[#475569]', index === 0 ? 'bg-[#f6edc9]' : 'bg-[#f8fafc]')}>{month}</th>
+                                    ))}
+                                    <th className="min-w-[125px] border-b border-[#cfe2f3] bg-[#dcecf8] px-4 py-4 text-right text-xs font-semibold uppercase text-[#00559b]">Total annuel</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {safeRows.length ? safeRows.map((row) => (
+                                    <tr key={row.proprietaire_id} className="odd:bg-white even:bg-[#fbfcfd]">
+                                        <th className="sticky left-0 z-10 border-b border-r border-[#d8d4eb] bg-[#e8e2f3] px-4 py-4 text-left text-xs font-semibold uppercase text-[#3f3a52]">{row.proprietaire}</th>
+                                        {safeMonths.map((month, index) => (
+                                            <td key={`${row.proprietaire_id}-${month}`} className={cn('border-b border-r border-[#e2e8f0] px-3 py-4 text-right tabular-nums text-[#334155]', index === 0 ? 'bg-[#fbf4dc]' : '')}>{fmtF(rowMonths(row)[index] ?? 0)}</td>
+                                        ))}
+                                        <td className="border-b border-[#cfe2f3] bg-[#dcecf8] px-4 py-4 text-right font-semibold tabular-nums text-[#00559b]">{fmtF(row.total)}</td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan={14} className="bg-white px-4 py-10 text-center text-sm text-[#5f7182]">
+                                            Aucun reversement effectué sur les 12 mois affichés pour cette agence.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th className="sticky left-0 z-20 border-r border-[#bfd8c4] bg-[#dcecf8] px-4 py-4 text-left text-xs font-bold uppercase text-[#0f172a]">Totaux</th>
+                                    {monthTotals.map((total, index) => (
+                                        <td key={`reversement-total-${index}`} className="border-r border-[#bfd8c4] bg-[#dcebd9] px-3 py-4 text-right font-bold tabular-nums text-[#244b2b]">{fmtF(total)}</td>
+                                    ))}
+                                    <td className="bg-[#a9d2bd] px-4 py-4 text-right font-bold tabular-nums text-[#163b29]">{fmtF(grandTotal)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+class StatisticsTabBoundary extends Component {
+    state = { hasError: false };
+
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error) {
+        console.error('Erreur du tableau des reversements', error);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <Card className="rounded-2xl border-rose-200 bg-rose-50 shadow-sm">
+                    <CardContent className="mt-4 p-6 text-sm text-rose-800">
+                        Le tableau des reversements n’a pas pu être affiché. Actualisez la page puis réessayez.
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
 function FinancesTab({ d, tauxRecouvrement }) {
     return (
+        <div className="space-y-6">
         <div className="grid items-stretch gap-6 lg:grid-cols-2">
             <Card className="h-full min-w-0 rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
                 <CardContent className="mt-4 flex h-full flex-col p-5">
@@ -600,6 +687,7 @@ function FinancesTab({ d, tauxRecouvrement }) {
                     legendFormatter={(value) => fmtShort(value) + ' F'}
                 />
             </aside>
+        </div>
         </div>
     );
 }
@@ -730,6 +818,8 @@ export default function Statistiques({
     topProperties = [],
     recentTransactions = [],
     recentMaintenances = [],
+    reversementsYearMatrix = [],
+    reversementMonthLabels = [],
     year = new Date().getFullYear(),
     dateStart,
     dateEnd,
@@ -1126,6 +1216,12 @@ export default function Statistiques({
                 ) : null}
 
                 {activeTab === 'finances' ? <FinancesTab d={d} tauxRecouvrement={tauxRecouvrement} /> : null}
+
+                {activeTab === 'reversements' ? (
+                    <StatisticsTabBoundary>
+                        <ReversementsYearTable rows={reversementsYearMatrix} months={reversementMonthLabels} />
+                    </StatisticsTabBoundary>
+                ) : null}
 
                 {activeTab === 'maintenance' ? <MaintenanceTab d={d} /> : null}
             </div>

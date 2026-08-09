@@ -90,6 +90,11 @@ class ProprietaireLot extends Model
         return $this->hasMany(Propriete::class, 'lot_id', 'propreietaire_lot_id');
     }
 
+    public function ventes()
+    {
+        return $this->hasMany(VenteBien::class, 'lot_id', 'propreietaire_lot_id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by', 'id_users');

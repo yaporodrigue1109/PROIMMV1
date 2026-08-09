@@ -79,6 +79,11 @@ class Porte extends Model
     {
         return $this->hasMany(Loyer::class, 'porte_id');
     }
+
+    public function ventes()
+    {
+        return $this->hasMany(VenteBien::class, 'porte_id', 'porte_id');
+    }
          public function locatairesAgence()
     {
         return $this->hasMany(LocataireAgence::class, 'porte_id', 'porte_id');
