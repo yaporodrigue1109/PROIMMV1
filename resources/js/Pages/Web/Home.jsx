@@ -61,7 +61,7 @@ const dashboardRows = [
     ['FB', 'Fatou Bamba', 'Studio Marcory', '280 000 F'],
 ];
 
-export default function Home({ tarifs = {} }) {
+export default function Home({ tarifs = {}, appLinks = {} }) {
     const [activeHeroTab, setActiveHeroTab] = useState(0);
     const plan = tarifs.plan ?? {};
     const complementaryModules = Array.isArray(tarifs.modules) ? tarifs.modules : [];
@@ -196,7 +196,7 @@ export default function Home({ tarifs = {} }) {
                                 <div>
                                     <p className="text-sm font-semibold text-[#00559b]">Abonnement principal</p>
                                     <h3 className="mt-2 text-2xl font-semibold text-[#111f3d]">{plan.nom || 'Abonnement de base'}</h3>
-                                    {plan.description ? <p className="mt-2 max-w-lg text-sm leading-6 text-slate-500">{plan.description}</p> : null}
+                                    {plan.description ? <div className="mt-2 max-w-lg text-sm leading-6 text-slate-500" dangerouslySetInnerHTML={{ __html: plan.description }} /> : null}
                                 </div>
                                 <div className="shrink-0 sm:text-right">
                                     <p className="font-sans text-4xl font-medium tracking-tight text-[#00559b]">{formatMoney(plan.prix_mensuel)} FCFA</p>
@@ -310,7 +310,7 @@ export default function Home({ tarifs = {} }) {
                                 </li>
                             ))}
                         </ul>
-                        <StoreDownloadButtons />
+                        <StoreDownloadButtons links={appLinks.owner} />
 
                     </div>
                 </div>
@@ -341,7 +341,7 @@ export default function Home({ tarifs = {} }) {
                                 </li>
                             ))}
                         </ul>
-                        <StoreDownloadButtons />
+                        <StoreDownloadButtons links={appLinks.tenant} />
 
                     </div>
 
@@ -431,18 +431,18 @@ export default function Home({ tarifs = {} }) {
     );
 }
 
-function StoreDownloadButtons() {
+function StoreDownloadButtons({ links = {} }) {
     const stores = [
         {
             label: 'Google Play',
             eyebrow: 'Disponible sur',
-            href: 'https://play.google.com/store/search?q=Pros%20Immobilier&c=apps',
+            href: links.android || 'https://play.google.com/store/search?q=Pros%20Immobilier&c=apps',
             icon: GooglePlayLogo,
         },
         {
             label: 'App Store',
             eyebrow: 'Télécharger dans',
-            href: 'https://apps.apple.com/fr/search?term=Pros%20Immobilier',
+            href: links.ios || 'https://apps.apple.com/fr/search?term=Pros%20Immobilier',
             icon: AppleLogo,
         },
     ];

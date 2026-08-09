@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import {
     ArrowLeft,
+    LockKeyhole,
     MessageSquare,
     Send,
 } from 'lucide-react';
@@ -10,7 +11,7 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Separator } from '../../../components/ui/separator';
-import { Textarea } from '../../../components/ui/textarea';
+import RichTextEditor from '../../../components/rich-text-editor';
 import { cn } from '../../../lib/utils';
 
 const STATUS = {
@@ -29,11 +30,12 @@ function StatusBadge({ status }) {
     );
 }
 
-export default function Show({ ticket = {} }) {
+export default function Show({ ticket = {}, abilities = {} }) {
     const [messages, setMessages] = useState(() => ticket.messages ?? []);
     const [draft, setDraft] = useState('');
     const endRef = useRef(null);
-    const isLocked = ticket.status === 'resolved';
+    const isLocked = ticket.status === 'resolved' || ticket.status === 'closed';
+    const canCloseTicket = Boolean(abilities.closeTicket) && ticket.status !== 'closed';
 
     useEffect(() => {
         endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -78,12 +80,22 @@ export default function Show({ ticket = {} }) {
         }
     };
 
+    const handleClose = () => {
+        if (!canCloseTicket || !window.confirm('Voulez-vous vraiment fermer ce ticket ?')) {
+            return;
+        }
+
+        router.patch(`/agence/support/${ticket.uuid ?? ticket.id}/fermer`, {}, {
+            preserveScroll: true,
+        });
+    };
+
     return (
         <AgenceLayout title={`Demande ${ticket.id ?? ''}`.trim()}>
             <Head title={`Demande ${ticket.id ?? ''}`.trim()} />
 
             <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col justify-center gap-6">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <Button asChild type="button" variant="outline" size="icon" className="rounded-xl border-[#c8d4de]">
                         <Link href="/agence/support">
                             <ArrowLeft className="h-4 w-4" />
@@ -100,6 +112,17 @@ export default function Show({ ticket = {} }) {
                             {ticket.subject ?? 'Détail de la demande'}
                         </h1>
                     </div>
+                    {canCloseTicket ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="ml-auto rounded-xl border-slate-300 text-slate-700 hover:bg-slate-100"
+                            onClick={handleClose}
+                        >
+                            <LockKeyhole className="h-4 w-4" />
+                            Fermer le ticket
+                        </Button>
+                    ) : null}
                 </div>
 
                 <div className="flex justify-center">
@@ -120,9 +143,7 @@ export default function Show({ ticket = {} }) {
                             <div className="flex-1 space-y-4 overflow-y-auto p-5">
                                 <div className="rounded-2xl border border-[#e2eaf1] bg-[#f9fbfd] p-4">
                                     <p className="text-sm font-semibold text-[#0f172a]">Résumé de la demande</p>
-                                    <p className="mt-1 text-sm leading-6 text-[#334155]">
-                                        {ticket.description ?? 'Aucune description disponible.'}
-                                    </p>
+                                    <div className="mt-1 text-sm leading-6 text-[#334155]" dangerouslySetInnerHTML={{ __html: ticket.description ?? 'Aucune description disponible.' }} />
                                 </div>
 
                                 {messages.map((message, index) => {
@@ -148,7 +169,7 @@ export default function Show({ ticket = {} }) {
                                                     <p className="text-sm font-semibold text-[#0f172a]">{message.author}</p>
                                                     <span className="text-[11px] text-[#94a3b8]">{message.time}</span>
                                                 </div>
-                                                <p className="text-sm leading-6 text-[#334155]">{message.body}</p>
+                                                <div className="text-sm leading-6 text-[#334155]" dangerouslySetInnerHTML={{ __html: message.body }} />
                                             </div>
                                         </div>
                                     );
@@ -161,18 +182,17 @@ export default function Show({ ticket = {} }) {
 
                             {isLocked ? (
                                 <div className="p-5">
-                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-700">
-                                        Ce ticket est résolu. Il n&apos;est plus possible d&apos;ajouter une réponse.
+                                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm text-slate-700">
+                                        Ce ticket est {ticket.status === 'closed' ? 'fermé' : 'résolu'}. Il n&apos;est plus possible d&apos;ajouter une réponse.
                                     </div>
                                 </div>
                             ) : (
                                 <form onSubmit={handleSend} className="space-y-3 p-5">
-                                    <Textarea
+                                    <RichTextEditor
                                         value={draft}
-                                        onChange={(event) => setDraft(event.target.value)}
-                                        onKeyDown={handleKeyDown}
-                                        placeholder="Écrire une réponse... (Entrée pour envoyer, Shift+Entrée pour une nouvelle ligne)"
-                                        className="min-h-[120px] resize-none rounded-xl border-[#c8d4de] bg-white"
+                                        onChange={setDraft}
+                                        height={220}
+                                        placeholder="Écrire une réponse..."
                                     />
                                     <div className="flex flex-col gap-3 sm:flex-end">
                                         <Button

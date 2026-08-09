@@ -30,7 +30,7 @@ class TicketController extends Controller
         return Inertia::render('Admin/Tickets/Index', ['tickets' => $tickets, 'stats' => $this->tickets->globalStatistics()]);
     }
 
-    public function reply(Request $request, string $ticket) { $model = $this->tickets->find($ticket); abort_unless($model, 404); $data = $request->validate(['message' => 'required|string|max:2000']); $model->messages()->create(['auteur_id' => auth('admin')->id(), 'auteur_type' => 'support', 'contenu' => $data['message']]); $this->tickets->updateStatus($model, 'pending'); $model->update(['admin_read_at' => now(), 'agence_read_at' => null]); return back(); }
+    public function reply(Request $request, string $ticket) { $model = $this->tickets->find($ticket); abort_unless($model, 404); $data = $request->validate(['message' => 'required|string|max:10000']); $model->messages()->create(['auteur_id' => auth('admin')->id(), 'auteur_type' => 'support', 'contenu' => $data['message']]); $this->tickets->updateStatus($model, 'pending'); $model->update(['admin_read_at' => now(), 'agence_read_at' => null]); return back(); }
     public function markRead(string $ticket) { $model = $this->tickets->find($ticket); abort_unless($model, 404); $model->update(['admin_read_at' => now()]); return back(); }
     public function updateStatus(Request $request, string $ticket) { $model = $this->tickets->find($ticket); abort_unless($model, 404); $data = $request->validate(['status' => 'required|in:open,pending,resolved,closed']); $this->tickets->updateStatus($model, $data['status']); return back(); }
 }

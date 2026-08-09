@@ -21,6 +21,7 @@ class Configuration extends Model
         'politique_confidentialite',
         'condition_generale',
         'cgu',
+        'mention_legale',
         'email1',
         'email2',
         'logo',
@@ -34,11 +35,22 @@ class Configuration extends Model
         'linkedin',
         'google',
         'twitter',
+        'website_story',
+        'website_mission_title',
+        'website_mission_text',
+        'website_commitments',
+        'website_faqs',
+        'owner_android_url',
+        'owner_ios_url',
+        'tenant_android_url',
+        'tenant_ios_url',
     ];
 
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'website_commitments' => 'array',
+        'website_faqs' => 'array',
     ];
 
     /**

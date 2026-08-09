@@ -14,6 +14,7 @@ import {
     Settings,
     Ticket,
     LifeBuoy,
+    MessagesSquare,
     UserRound,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -45,6 +46,7 @@ const navigation = [
             { label: 'Configuration', href: '/admin/settings', icon: Settings, activeMatch: '/admin/settings' },
             { label: 'Statistiques', href: '/admin/statistiques', icon: CircleGauge, activeMatch: '/admin/statistiques' },
             { label: 'Tickets', href: '/admin/tickets', icon: LifeBuoy, activeMatch: '/admin/tickets' },
+            { label: 'Contacts', href: '/admin/contacts', icon: MessagesSquare, activeMatch: '/admin/contacts' },
         ],
     },
 ];
@@ -57,6 +59,7 @@ const breadcrumbLabels = {
     settings: 'Configuration',
     statistiques: 'Statistiques',
     tickets: 'Tickets',
+    contacts: 'Contacts',
     profile: 'Profil',
 };
 

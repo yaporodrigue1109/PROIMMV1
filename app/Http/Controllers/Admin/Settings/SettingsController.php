@@ -59,6 +59,35 @@ class SettingsController extends Controller
         }
     }
 
+    public function updateWebsite(Request $request)
+    {
+        $validated = $request->validate([
+            'website_story' => ['nullable', 'string'],
+            'website_mission_title' => ['nullable', 'string', 'max:255'],
+            'website_mission_text' => ['nullable', 'string'],
+            'website_commitments' => ['nullable', 'array', 'max:10'],
+            'website_commitments.*' => ['nullable', 'string', 'max:255'],
+            'website_faqs' => ['nullable', 'array', 'max:20'],
+            'website_faqs.*.question' => ['nullable', 'string', 'max:255'],
+            'website_faqs.*.answer' => ['nullable', 'string'],
+            'owner_android_url' => ['nullable', 'url', 'max:2048'],
+            'owner_ios_url' => ['nullable', 'url', 'max:2048'],
+            'tenant_android_url' => ['nullable', 'url', 'max:2048'],
+            'tenant_ios_url' => ['nullable', 'url', 'max:2048'],
+        ]);
+
+        $validated['website_commitments'] = collect($validated['website_commitments'] ?? [])
+            ->filter()->values()->all();
+        $validated['website_faqs'] = collect($validated['website_faqs'] ?? [])
+            ->filter(fn (array $faq) => filled($faq['question'] ?? null) && filled($faq['answer'] ?? null))
+            ->values()->all();
+
+        $this->settingService->updateSetting($validated);
+
+        return redirect()->route('admin.settings.index')
+            ->with('success', 'Contenu du site mis à jour avec succès.');
+    }
+
     public function updateTarification(Request $request)
     {
         try {

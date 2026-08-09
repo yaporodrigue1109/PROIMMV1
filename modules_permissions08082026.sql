@@ -158,6 +158,7 @@ INNER JOIN (
     UNION ALL SELECT 'proprietaires', 'Créer', 'create', 2
     UNION ALL SELECT 'proprietaires', 'Modifier', 'edit', 3
     UNION ALL SELECT 'proprietaires', 'Supprimer', 'delete', 4
+    UNION ALL SELECT 'proprietaires', 'Activer / Désactiver', 'activate', 5
     UNION ALL SELECT 'locataires', 'Voir', 'view', 1
     UNION ALL SELECT 'locataires', 'Créer', 'create', 2
     UNION ALL SELECT 'locataires', 'Modifier', 'edit', 3
@@ -211,7 +212,7 @@ ON DUPLICATE KEY UPDATE
 
 UPDATE `module_actions`
 SET `is_critical` = 1
-WHERE `slug` IN ('delete', 'validate', 'cancel', 'manage');
+WHERE `slug` IN ('delete', 'validate', 'cancel', 'manage', 'activate');
 
 -- Super administrateurs et administrateurs : toutes les actions actives.
 INSERT INTO `role_permissions`
@@ -265,7 +266,8 @@ WHERE r.`slug` IN ('role-agent', 'agent')
       'view_proprietes', 'create_proprietes', 'edit_proprietes',
       'view_contrats', 'create_contrats',
       'view_locataires', 'create_locataires',
-      'view_proprietaires', 'view_rapports', 'view_caisse', 'view_loyer'
+      'view_proprietaires', 'view_rapports', 'view_caisse', 'view_loyer',
+      'view_support', 'create_support', 'edit_support', 'close_support'
   )
 ON DUPLICATE KEY UPDATE `is_allowed` = 1, `updated_at` = NOW();
 

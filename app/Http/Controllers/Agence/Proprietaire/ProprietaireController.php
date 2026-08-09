@@ -101,6 +101,9 @@ class ProprietaireController extends Controller
                 'search' => $filters['search'] ?? '',
                 'status' => $filters['status'] ?? 'all',
             ],
+            'abilities' => [
+                'activate' => Auth::guard('user')->user()?->canPerform('proprietaires', 'activate') ?? false,
+            ],
         ]);
     }
 

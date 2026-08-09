@@ -94,6 +94,10 @@ class CheckAgencyRoutePermission
             return 'edit';
         }
 
+        if ($module === 'support' && preg_match('/(^|\.)close$/', $routeAction)) {
+            return 'close';
+        }
+
         if ($module === 'reversement' && str_ends_with($routeAction, 'marquer-reverse')) {
             return 'validate';
         }
@@ -115,7 +119,11 @@ class CheckAgencyRoutePermission
         }
 
         if (preg_match('/(^|\.)(activate|deactivate)$/', $routeAction)) {
-            return $module === 'personnel' ? 'manage' : 'edit';
+            return match ($module) {
+                'personnel' => 'manage',
+                'proprietaires' => 'activate',
+                default => 'edit',
+            };
         }
 
         if (preg_match('/(^|\.)(create|store)$/', $routeAction) || $method === 'POST') {

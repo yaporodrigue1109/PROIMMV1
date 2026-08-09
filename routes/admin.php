@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\Module\ModuleController;
 use App\Http\Controllers\Admin\Ticket\TicketController;
 use App\Http\Controllers\Admin\Settings\SettingsController;
 use App\Http\Controllers\Admin\Statistique\StatistiqueController;
+use App\Http\Controllers\Admin\Contact\ContactMessageController;
 
 
 Route::prefix('list')->controller(preferenceController::class)->group(function () {
@@ -189,6 +190,12 @@ Route::middleware(['admin'])->group(function () {
         Route::patch('/{ticket}/lu', [TicketController::class, 'markRead'])->name('read');
     });
 
+    Route::prefix('contacts')->name('contacts.')->group(function () {
+        Route::get('/', [ContactMessageController::class, 'index'])->name('index');
+        Route::post('/{contact}/reponses', [ContactMessageController::class, 'reply'])->name('reply');
+        Route::patch('/{contact}/statut', [ContactMessageController::class, 'updateStatus'])->name('status');
+    });
+
     /*
     |--------------------------------------------------------------------------
     | Settings
@@ -200,7 +207,9 @@ Route::middleware(['admin'])->group(function () {
              ->name('index');
         Route::put('/', [SettingsController::class, 'update'])
           //  ->middleware('permission:edit-settings')
-             ->name('update');
+           ->name('update');
+        Route::put('/site-web', [SettingsController::class, 'updateWebsite'])
+            ->name('website.update');
         Route::put('/tarification', [SettingsController::class, 'updateTarification'])
           //  ->middleware('permission:edit-settings')
              ->name('updateTarification');

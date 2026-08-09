@@ -245,6 +245,7 @@ Route::middleware(['user', 'agency.permission', BlockDemoAgenceMutations::class]
         Route::post('/', 'store')->name('store');
         Route::get('/{ticket}', 'show')->name('show');
         Route::post('/{ticket}/reponses', 'reply')->name('reply');
+        Route::patch('/{ticket}/fermer', 'close')->name('close');
     });
 
     Route::prefix('dashboard')->group(function () {

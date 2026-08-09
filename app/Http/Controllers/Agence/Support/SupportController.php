@@ -1,18 +1,23 @@
 <?php
 namespace App\Http\Controllers\Agence\Support;
-use App\Http\Controllers\Controller; use App\Models\SupportAttachment; use App\Repositories\Agence\Interfaces\SupportTicketRepositoryInterface; use Illuminate\Http\Request; use Illuminate\Support\Facades\Storage; use Inertia\Inertia;
+use App\Http\Controllers\Controller; use App\Models\SupportAttachment; use App\Repositories\Agence\Interfaces\SupportTicketRepositoryInterface; use Illuminate\Http\Request; use Illuminate\Support\Facades\Auth; use Illuminate\Support\Facades\Storage; use Inertia\Inertia;
 class SupportController extends Controller {
  public function __construct(private SupportTicketRepositoryInterface $tickets) {}
  public function index(Request $request) { $agenceId=$this->agenceId(); return Inertia::render('Agence/Support/Index',['tickets'=>$this->tickets->paginate($agenceId,$request->only('status','search')),'stats'=>$this->tickets->statistics($agenceId)]); }
  public function create(){ return Inertia::render('Agence/Support/Form'); }
- public function store(Request $request){ $data=$request->validate(['category'=>'required|in:technique,abonnement,facturation,compte,autre','subject'=>'required|string|max:160','message'=>'required|string|max:2000','files'=>'nullable|array|max:5','files.*'=>'file|mimes:jpg,jpeg,png,pdf|max:10240']); $ticket=$this->tickets->create(['agence_id'=>$this->agenceId(),'demandeur_id'=>$this->userId(),'categorie'=>$data['category'],'sujet'=>$data['subject'],'description'=>$data['message'],'priorite'=>'medium','agence_read_at'=>now(),'admin_read_at'=>null]); foreach($request->file('files',[]) as $file){ $path=$file->store('support/'.$ticket->support_ticket_id,'public'); SupportAttachment::create(['support_ticket_id'=>$ticket->support_ticket_id,'nom_original'=>$file->getClientOriginalName(),'chemin'=>$path,'mime_type'=>$file->getMimeType(),'taille'=>$file->getSize()]); } return redirect()->route('agence.support.show',$ticket->support_ticket_id)->with('success','Votre demande a été envoyée.'); }
+ public function store(Request $request){ $data=$request->validate(['category'=>'required|in:technique,abonnement,facturation,compte,autre','subject'=>'required|string|max:160','message'=>'required|string|max:10000','files'=>'nullable|array|max:5','files.*'=>'file|mimes:jpg,jpeg,png,pdf|max:10240']); $ticket=$this->tickets->create(['agence_id'=>$this->agenceId(),'demandeur_id'=>$this->userId(),'categorie'=>$data['category'],'sujet'=>$data['subject'],'description'=>$data['message'],'priorite'=>'medium','agence_read_at'=>now(),'admin_read_at'=>null]); foreach($request->file('files',[]) as $file){ $path=$file->store('support/'.$ticket->support_ticket_id,'public'); SupportAttachment::create(['support_ticket_id'=>$ticket->support_ticket_id,'nom_original'=>$file->getClientOriginalName(),'chemin'=>$path,'mime_type'=>$file->getMimeType(),'taille'=>$file->getSize()]); } return redirect()->route('agence.support.show',$ticket->support_ticket_id)->with('success','Votre demande a été envoyée.'); }
  public function show(string $ticket)
  {
     $t=$this->tickets->findForAgence($ticket,$this->agenceId());
    // dd($t);
      abort_unless($t,404);
      $t->update(['agence_read_at'=>now()]);
-     return Inertia::render('Agence/Support/Show',['ticket'=>$this->serialize($t)]);
+     return Inertia::render('Agence/Support/Show',[
+         'ticket'=>$this->serialize($t),
+         'abilities'=>[
+             'closeTicket'=>Auth::guard('user')->user()?->canPerform('support', 'close') ?? false,
+         ],
+     ]);
  }
  public function reply(Request $request,string $ticket)
  {
@@ -22,11 +27,25 @@ class SupportController extends Controller {
      if($t->statut === 'resolved' || $t->statut === 'closed')
         { return back()->with('error','Ce ticket est résolu et ne peut plus recevoir de réponse.');
       }
-      $data=$request->validate(['message'=>'required|string|max:2000']);
+      $data=$request->validate(['message'=>'required|string|max:10000']);
       $this->tickets->addMessage($t,['auteur_id'=>$this->userId(),'auteur_type'=>'agence','contenu'=>$data['message']]);
       $t->update(['agence_read_at'=>now(),'admin_read_at'=>null]);
       return back();
        }
+ public function close(string $ticket)
+ {
+     $t=$this->tickets->findForAgence($ticket,$this->agenceId());
+
+     abort_unless($t,404);
+
+     if($t->statut === 'closed') {
+         return back()->with('success','Ce ticket est déjà fermé.');
+     }
+
+     $this->tickets->updateStatus($t,'closed');
+
+     return back()->with('success','Le ticket a été fermé avec succès.');
+ }
  private function agenceId(): string { return getInfoAgent()->users->agence_id; } private function userId(): ?string { return getInfoAgent()->users->id_users ?? null; }
  private function serialize($ticket): array { return ['id'=>$ticket->reference,'uuid'=>$ticket->support_ticket_id,'subject'=>$ticket->sujet,'category'=>$ticket->categorie,'status'=>$ticket->statut,'priority'=>$ticket->priorite,'description'=>$ticket->description,'createdAt'=>$ticket->created_at?->translatedFormat('d M Y'),'updatedAt'=>$ticket->updated_at?->diffForHumans(),'messages'=>$ticket->messages->map(fn($m)=>['author'=>$m->auteur_type==='agence'?'Agence':'Support','time'=>$m->created_at?->format('H:i'),'body'=>$m->contenu])->values()]; }
 }

@@ -20,5 +20,5 @@ Route::controller(WebController::class)->group(function () {
     Route::get('/inscription-agence', 'registration')->name('web.registration');
     Route::post('/inscription-agence', 'registerAgency')->middleware('throttle:5,1')->name('web.registration.store');
     Route::get('/contact', 'contact')->name('web.contact');
-    Route::post('/contact', 'sendContact')->name('web.contact.send');
+    Route::post('/contact', 'sendContact')->middleware('throttle:5,1')->name('web.contact.send');
 });

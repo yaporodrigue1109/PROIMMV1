@@ -18,6 +18,7 @@ import AgenceLayout from '../../../Layouts/AgenceLayout';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Separator } from '../../../components/ui/separator';
+import RichTextEditor from '../../../components/rich-text-editor';
 import { cn } from '../../../lib/utils';
 
 const CATEGORIES = [
@@ -81,8 +82,9 @@ export default function NouvelleDemande({ support }) {
     const [files, setFiles] = useState([]);
     const [submitted, setSubmitted] = useState(null);
 
-    const canSubmit = subject.trim().length > 2 && message.trim().length > 5;
-    const remaining = 2000 - message.length;
+    const plainMessage = message.replace(/<[^>]*>/g, '').trim();
+    const canSubmit = subject.trim().length > 2 && plainMessage.length > 5;
+    const remaining = 5000 - plainMessage.length;
 
     const selectedCategory = useMemo(
         () => CATEGORIES.find((c) => c.key === category) ?? CATEGORIES[0],
@@ -216,13 +218,11 @@ export default function NouvelleDemande({ support }) {
                                             {remaining} caractères restants
                                         </span>
                                     </div>
-                                    <textarea
-                                        id="message"
+                                    <RichTextEditor
                                         value={message}
-                                        onChange={(event) => setMessage(event.target.value.slice(0, 2000))}
-                                        rows={7}
+                                        onChange={setMessage}
+                                        height={300}
                                         placeholder="Décrivez votre problème ou votre demande le plus précisément possible : contexte, étapes, message d'erreur éventuel..."
-                                        className="w-full resize-none rounded-xl border border-[#c8d4de] bg-white px-4 py-3 text-sm leading-relaxed text-[#0f172a] placeholder:text-[#94a7b8] focus:border-[#00559b] focus:outline-none focus:ring-2 focus:ring-[#00559b]/20"
                                     />
                                 </div>
 

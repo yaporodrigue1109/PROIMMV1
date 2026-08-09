@@ -21,6 +21,7 @@ import AdminLayout from '../../../Layouts/AdminLayout';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Separator } from '../../../components/ui/separator';
+import RichTextEditor from '../../../components/rich-text-editor';
 import { cn } from '../../../lib/utils';
 
 const STATUS = {
@@ -371,7 +372,7 @@ function Conversation({ ticket, onBack, onSend, onStatusChange }) {
                                             : 'border border-[#e2eaf1] bg-white text-[#0f172a]'
                                     )}
                                 >
-                                    {message.body}
+                                    <div dangerouslySetInnerHTML={{ __html: message.body }} />
                                 </div>
                             </div>
                         </div>
@@ -380,24 +381,12 @@ function Conversation({ ticket, onBack, onSend, onStatusChange }) {
             </div>
 
             <div className="shrink-0 border-t border-[#eef3f8] bg-white p-4">
-                <div className="rounded-xl border border-[#c8d4de] bg-white focus-within:ring-2 focus-within:ring-[#00559b]/30">
-                    <textarea
+                <div>
+                    <RichTextEditor
                         value={reply}
-                        onChange={(event) => setReply(event.target.value)}
-                        onKeyDown={(event) => {
-                            if (
-                                event.key === 'Enter' &&
-                                (event.metaKey || event.ctrlKey) &&
-                                !event.nativeEvent.isComposing &&
-                                event.keyCode !== 229
-                            ) {
-                                event.preventDefault();
-                                handleSend();
-                            }
-                        }}
-                        rows={3}
+                        onChange={setReply}
+                        height={220}
                         placeholder="Rédigez votre réponse..."
-                        className="w-full resize-none rounded-xl bg-transparent px-4 py-3 text-sm text-[#0f172a] placeholder:text-[#94a7b8] focus:outline-none"
                     />
                     <div className="flex items-center justify-between border-t border-[#eef3f8] px-3 py-2">
                         <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[#5f7182]">

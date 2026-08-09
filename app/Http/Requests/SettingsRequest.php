@@ -48,6 +48,7 @@ class SettingsRequest extends FormRequest
             'politique_confidentialite' => 'nullable|string',
             'condition_generale' => 'nullable|string',
             'cgu' => 'nullable|string',
+            'mention_legale' => 'nullable|string',
 
             // Réseaux sociaux
             'facebook' => 'nullable|url|max:255',

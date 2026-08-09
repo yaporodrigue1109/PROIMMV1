@@ -32,6 +32,8 @@ class CheckAgencyRoutePermissionTest extends TestCase
             'property creation' => ['agence.proprietes.store', 'POST', 'proprietes', 'create'],
             'property update' => ['agence.proprietes.update', 'PUT', 'proprietes', 'edit'],
             'property deletion' => ['agence.proprietes.destroy', 'DELETE', 'proprietes', 'delete'],
+            'owner activation' => ['agence.proprietaire.activate', 'PATCH', 'proprietaires', 'activate'],
+            'owner deactivation' => ['agence.proprietaire.deactivate', 'PATCH', 'proprietaires', 'activate'],
             'staff management' => ['agence.personnel.deactivate', 'PATCH', 'personnel', 'manage'],
             'maintenance validation' => ['agence.maintenance.statut', 'PATCH', 'maintenance', 'edit'],
             'rent list' => ['agence.caisse.loyer', 'GET', 'loyer', 'view'],
@@ -40,6 +42,7 @@ class CheckAgencyRoutePermissionTest extends TestCase
             'remittance cancellation' => ['agence.reversements.annuler', 'POST', 'reversement', 'cancel'],
             'remittance export' => ['agence.reversements.historique.pdf', 'GET', 'reversement', 'export'],
             'support reply' => ['agence.support.reply', 'POST', 'support', 'edit'],
+            'support closure' => ['agence.support.close', 'PATCH', 'support', 'close'],
             'settings update' => ['agence.parametrage.general.update', 'PUT', 'parametrage', 'edit'],
             'settings catalog deletion' => ['agence.types-propriete.destroy', 'DELETE', 'parametrage', 'edit'],
         ];

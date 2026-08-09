@@ -93,7 +93,8 @@ function EmptyState({ title, desc, onReset, compact = false }) {
     );
 }
 
-export default function Index({ proprietaires = null, stats = {}, filters = {} }) {
+export default function Index({ proprietaires = null, stats = {}, filters = {}, abilities = {} }) {
+    const canActivate = Boolean(abilities.activate);
     const [search, setSearch] = useState(filters.search ?? '');
     const [status, setStatus] = useState(filters.status ?? 'all');
     const didMountRef = useRef(false);
@@ -354,7 +355,7 @@ export default function Index({ proprietaires = null, stats = {}, filters = {} }
                                 </Link>
                             </Button>
 
-                            {liaison ? (
+                            {liaison && canActivate ? (
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -387,7 +388,7 @@ export default function Index({ proprietaires = null, stats = {}, filters = {} }
                 meta: { cellClassName: 'text-right whitespace-nowrap' },
             },
         ],
-        [handleDelete, handleToggleStatus]
+        [canActivate, handleDelete, handleToggleStatus]
     );
 
     const pageLinks = Array.isArray(proprietaires?.links) && proprietaires.links.length > 3 ? proprietaires : null;

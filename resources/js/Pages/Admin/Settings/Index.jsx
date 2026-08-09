@@ -13,6 +13,7 @@ import {
 } from '../../../components/ui/card';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Input } from '../../../components/ui/input';
+import RichTextEditor from '../../../components/rich-text-editor';
 import { Label } from '../../../components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 
@@ -27,8 +28,23 @@ const formatMoney = (value) =>
 
 const durationChoices = [1, 3, 6, 12, 24, 36];
 
+const defaultWebsiteFaqs = [
+    { question: 'Pourquoi choisir Pros Immobilier ?', answer: 'La plateforme rassemble la gestion des biens, des locataires, des loyers, des reversements et des interventions dans un espace unique, clair et sécurisé.' },
+    { question: 'À qui s’adresse la plateforme ?', answer: 'Pros Immobilier s’adresse aux agences immobilières de toutes tailles qui souhaitent structurer leurs opérations et offrir un meilleur suivi à leurs clients.' },
+    { question: 'Mes données sont-elles sécurisées ?', answer: 'Oui. Chaque agence dispose de son propre espace isolé et les accès peuvent être organisés selon les responsabilités de chaque collaborateur.' },
+    { question: 'Puis-je essayer la solution avant de m’abonner ?', answer: 'Oui. Vous pouvez demander une démonstration afin de découvrir les fonctionnalités et vérifier qu’elles correspondent aux besoins de votre agence.' },
+    { question: 'L’équipe accompagne-t-elle la prise en main ?', answer: 'Oui. Notre équipe vous guide dans la configuration initiale et reste disponible pour vous aider à adopter la plateforme sereinement.' },
+    { question: 'Puis-je accéder à Pros Immobilier en déplacement ?', answer: 'Oui. La plateforme est accessible depuis un navigateur sur ordinateur, tablette ou téléphone, partout où vous disposez d’une connexion internet.' },
+];
+
 export default function Index({ setting = {}, tarifs = {} }) {
     const [tab, setTab] = useState('entreprise');
+    const commitmentRows = setting.website_commitments?.length
+        ? setting.website_commitments
+        : ['', '', ''];
+    const faqRows = setting.website_faqs?.length
+        ? setting.website_faqs
+        : defaultWebsiteFaqs;
 
     const activeModules = useMemo(
         () => (tarifs.modules ?? []).filter((module) => module.actif),
@@ -71,12 +87,15 @@ export default function Index({ setting = {}, tarifs = {} }) {
                 <Card className="rounded-3xl border-slate-200 shadow-sm">
                     <CardContent className="p-4">
                         <Tabs value={tab} onValueChange={setTab} className="w-full">
-                            <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl bg-slate-100 p-1">
+                            <TabsList className="grid h-auto w-full grid-cols-3 rounded-2xl bg-slate-100 p-1">
                                 <TabsTrigger value="entreprise" className="rounded-xl">
                                     Configuration de l&apos;entreprise
                                 </TabsTrigger>
                                 <TabsTrigger value="tarifaire" className="rounded-xl">
                                     Configuration tarifaire
+                                </TabsTrigger>
+                                <TabsTrigger value="site" className="rounded-xl">
+                                    Contenu du site
                                 </TabsTrigger>
                             </TabsList>
                         </Tabs>
@@ -154,21 +173,16 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                 <Section title="Politiques et conditions" step="04" icon={ShieldCheck}>
                                     <div className="grid gap-4">
                                         <Field label="Politique de confidentialite">
-                                            <textarea
-                                                name="politique_confidentialite"
-                                                defaultValue={setting.politique_confidentialite ?? ''}
-                                                className={textareaClassName}
-                                            />
+                                            <RichTextEditor name="politique_confidentialite" defaultValue={setting.politique_confidentialite ?? ''} />
                                         </Field>
                                         <Field label="Conditions generales">
-                                            <textarea
-                                                name="condition_generale"
-                                                defaultValue={setting.condition_generale ?? ''}
-                                                className={textareaClassName}
-                                            />
+                                            <RichTextEditor name="condition_generale" defaultValue={setting.condition_generale ?? ''} />
                                         </Field>
                                         <Field label="CGU">
-                                            <textarea name="cgu" defaultValue={setting.cgu ?? ''} className={textareaClassName} />
+                                            <RichTextEditor name="cgu" defaultValue={setting.cgu ?? ''} />
+                                        </Field>
+                                        <Field label="Mentions légales">
+                                            <RichTextEditor name="mention_legale" defaultValue={setting.mention_legale ?? ''} />
                                         </Field>
                                     </div>
                                 </Section>
@@ -235,7 +249,7 @@ export default function Index({ setting = {}, tarifs = {} }) {
                             </Card>
                         </aside>
                     </div>
-                ) : (
+                ) : tab === 'tarifaire' ? (
                     <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
                         <form id="tarification-form" action="/admin/settings/tarification" method="POST" className="space-y-6">
                             <input type="hidden" name="_method" value="PUT" />
@@ -273,11 +287,7 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                             </select>
                                         </Field>
                                         <Field label="Description du plan" className="md:col-span-2">
-                                            <textarea
-                                                name="plan_description"
-                                                defaultValue={tarifs.plan_description ?? ''}
-                                                className={textareaClassName}
-                                            />
+                                            <RichTextEditor name="plan_description" defaultValue={tarifs.plan_description ?? ''} />
                                         </Field>
                                     </div>
                                 </Section>
@@ -367,6 +377,71 @@ export default function Index({ setting = {}, tarifs = {} }) {
                             </Card>
                         </aside>
                     </div>
+                ) : (
+                    <form id="website-form" action="/admin/settings/site-web" method="POST" className="space-y-6">
+                        <input type="hidden" name="_method" value="PUT" />
+
+                        <Section title="Page À propos" step="01" icon={Globe}>
+                            <div className="grid gap-5">
+                                <Field label="Notre histoire">
+                                    <RichTextEditor name="website_story" defaultValue={setting.website_story ?? ''} height={320} />
+                                </Field>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <Field label="Titre de la mission">
+                                        <Input name="website_mission_title" defaultValue={setting.website_mission_title ?? ''} placeholder="Simplifier pour mieux gérer." className={inputClassName} />
+                                    </Field>
+                                    <Field label="Texte de la mission">
+                                        <RichTextEditor name="website_mission_text" defaultValue={setting.website_mission_text ?? ''} />
+                                    </Field>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-medium text-slate-700">Engagements</Label>
+                                    <div className="mt-2 grid gap-3">
+                                        {commitmentRows.map((commitment, index) => (
+                                            <Input key={index} name={`website_commitments[${index}]`} defaultValue={commitment} placeholder={`Engagement ${index + 1}`} className={inputClassName} />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </Section>
+
+                        <Section title="Questions fréquentes" step="02" icon={Layers3}>
+                            <div className="space-y-4">
+                                {faqRows.map((faq, index) => (
+                                    <div key={index} className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2">
+                                        <Field label={`Question ${index + 1}`}>
+                                            <Input name={`website_faqs[${index}][question]`} defaultValue={faq.question ?? ''} className={inputClassName} />
+                                        </Field>
+                                        <Field label="Réponse">
+                                            <RichTextEditor name={`website_faqs[${index}][answer]`} defaultValue={faq.answer ?? ''} height={220} />
+                                        </Field>
+                                    </div>
+                                ))}
+                            </div>
+                        </Section>
+
+                        <Section title="Liens des applications mobiles" step="03" icon={Globe}>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <Field label="Propriétaire — Google Play">
+                                    <Input type="url" name="owner_android_url" defaultValue={setting.owner_android_url ?? ''} className={inputClassName} />
+                                </Field>
+                                <Field label="Propriétaire — App Store">
+                                    <Input type="url" name="owner_ios_url" defaultValue={setting.owner_ios_url ?? ''} className={inputClassName} />
+                                </Field>
+                                <Field label="Locataire — Google Play">
+                                    <Input type="url" name="tenant_android_url" defaultValue={setting.tenant_android_url ?? ''} className={inputClassName} />
+                                </Field>
+                                <Field label="Locataire — App Store">
+                                    <Input type="url" name="tenant_ios_url" defaultValue={setting.tenant_ios_url ?? ''} className={inputClassName} />
+                                </Field>
+                            </div>
+                        </Section>
+
+                        <Button type="submit" className="h-11 rounded-xl bg-[#00559b] px-6 text-white hover:bg-[#004980]">
+                            <Save className="h-4 w-4" />
+                            Enregistrer le contenu du site
+                        </Button>
+                    </form>
                 )}
             </div>
         </AdminLayout>

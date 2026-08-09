@@ -8,14 +8,17 @@ use App\Models\Porte;
 use App\Models\VenteBien;
 use App\Models\LocataireAgence;
 use App\Models\Agence;
+use App\Models\ContactMessage;
 use App\Models\Region;
 use App\Models\Ville;
 use App\Services\AgenceService;
 use App\Services\ConfigurationTarifService;
+use App\Services\SettingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -27,7 +30,8 @@ class WebController extends Controller
 
     public function __construct(
         protected ConfigurationTarifService $tarifService,
-        protected AgenceService $agenceService
+        protected AgenceService $agenceService,
+        protected SettingService $settingService
     ) {
     }
 
@@ -35,6 +39,7 @@ class WebController extends Controller
     {
         return Inertia::render('Web/Home', [
             'tarifs' => $this->tarifService->getTarifsPublics(),
+            'appLinks' => $this->appLinks(),
         ]);
     }
     public function properties(Request $request): Response { return Inertia::render('Web/Properties', ['properties' => $this->listProperties(24), 'mode' => $request->string('mode')->toString()]); }
@@ -63,7 +68,37 @@ class WebController extends Controller
             'tarifs' => $this->tarifService->getTarifsPublics(),
         ]);
     }
-    public function about(): Response { return Inertia::render('Web/About'); }
+    public function about(): Response
+    {
+        $setting = $this->websiteSetting();
+
+        return Inertia::render('Web/About', [
+            'websiteContent' => [
+                'story' => $setting?->website_story,
+                'missionTitle' => $setting?->website_mission_title,
+                'missionText' => $setting?->website_mission_text,
+                'commitments' => $setting?->website_commitments,
+                'faqs' => $setting?->website_faqs,
+            ],
+        ]);
+    }
+
+    private function appLinks(): array
+    {
+        $setting = $this->websiteSetting();
+
+        return [
+            'owner' => ['android' => $setting?->owner_android_url, 'ios' => $setting?->owner_ios_url],
+            'tenant' => ['android' => $setting?->tenant_android_url, 'ios' => $setting?->tenant_ios_url],
+        ];
+    }
+
+    private function websiteSetting(): ?\App\Models\Configuration
+    {
+        return Schema::hasTable('configurations')
+            ? $this->settingService->getSetting()
+            : null;
+    }
     public function registration(): Response
     {
         return Inertia::render('Web/Registration', [
@@ -141,7 +176,7 @@ class WebController extends Controller
     public function contact(): Response { return Inertia::render('Web/Contact'); }
     public function sendContact(Request $request): RedirectResponse
     {
-        $request->validate([
+        $data = $request->validate([
             'request_type' => ['required', 'in:demo,inscription,support,partenariat,autre'],
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:150'],
@@ -157,6 +192,12 @@ class WebController extends Controller
             'message.required' => 'Votre message est obligatoire.',
             'message.min' => 'Votre message doit contenir au moins 10 caractères.',
         ]);
+
+        ContactMessage::query()->create(array_merge($data, [
+            'status' => 'new',
+            'ip_address' => $request->ip(),
+            'user_agent' => str($request->userAgent())->limit(500)->toString(),
+        ]));
 
         return back()->with('success', 'Votre message a bien été envoyé. Notre équipe vous répondra rapidement.');
     }
