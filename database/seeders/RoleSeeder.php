@@ -24,16 +24,26 @@ class RoleSeeder extends Seeder
         ];
 
         foreach ($roles as $id => $name) {
+            $values = [
+                'name' => $name,
+                'agence_id' => null,
+                'created_by' => null,
+                'updated_by' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            if (Schema::hasColumn('roles', 'slug')) {
+                $values['slug'] = $id;
+            }
+
+            if (Schema::hasColumn('roles', 'is_active')) {
+                $values['is_active'] = true;
+            }
+
             DB::table('roles')->updateOrInsert(
                 ['role_id' => $id],
-                [
-                    'name' => $name,
-                    'agence_id' => null,
-                    'created_by' => null,
-                    'updated_by' => null,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]
+                $values
             );
         }
     }

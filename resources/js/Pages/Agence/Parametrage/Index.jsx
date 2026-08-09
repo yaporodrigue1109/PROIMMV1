@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     Bell,
     Brush,
@@ -17,6 +17,7 @@ import {
     KeyRound,
     LockKeyhole,
     Mail,
+    Pencil,
     Save,
     ShieldCheck,
     Sparkles,
@@ -24,6 +25,7 @@ import {
     UsersRound,
     Search,
     Trash2,
+    TriangleAlert,
 } from 'lucide-react';
 import AgenceLayout from '../../../Layouts/AgenceLayout';
 import CreateRolePage from './Roles/Create';
@@ -31,6 +33,7 @@ import RolePermissionsPage from './Roles/Permissions';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { Switch } from '../../../components/ui/switch';
 import { Input } from '../../../components/ui/input';
@@ -231,10 +234,6 @@ const INITIAL_ROLE_PERMISSIONS = Object.fromEntries(
 );
 
 
-
-const ALL_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap((group) =>
-    group.permissions.map((permission) => permission.key)
-);
 
 const SENSITIVE_PERMISSION_KEYS = new Set([
     'properties.delete',
@@ -468,12 +467,46 @@ function UploadBox({ label, help, name, preview, onChange, onClear, icon: Icon }
     );
 }
 
-export default function Index({ parametrage, agence, regions = [], villes = [], modePaiement = [] }) {
+export default function Index({
+    parametrage,
+    agence,
+    regions = [],
+    villes = [],
+    modePaiement = [],
+    agencyRoles = null,
+    permissionGroups = null,
+    rolePermissions: initialRolePermissions = null,
+}) {
+    const permissionGroupsCatalog = Array.isArray(permissionGroups) ? permissionGroups : PERMISSION_GROUPS;
+    const initialRoles = Array.isArray(agencyRoles) ? agencyRoles : STATIC_ROLES;
+    const initialPermissions = initialRolePermissions && typeof initialRolePermissions === 'object'
+        ? initialRolePermissions
+        : INITIAL_ROLE_PERMISSIONS;
+    const allPermissionKeys = permissionGroupsCatalog.flatMap((group) =>
+        group.permissions.map((permission) => permission.key)
+    );
+    const sensitivePermissionKeys = Array.isArray(permissionGroups)
+        ? new Set(
+            permissionGroupsCatalog.flatMap((group) =>
+                group.permissions
+                    .filter((permission) => permission.is_critical)
+                    .map((permission) => permission.key)
+            )
+        )
+        : SENSITIVE_PERMISSION_KEYS;
     const initialRolePage = typeof window !== 'undefined'
         ? new URLSearchParams(window.location.search).get('role-page')
         : null;
-    const [rolePermissions, setRolePermissions] = useState(INITIAL_ROLE_PERMISSIONS);
-    const [customRoles, setCustomRoles] = useState([]);
+    const requestedTab = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('tab')
+        : null;
+    const initialTab = initialRolePage
+        ? 'permission-form'
+        : NAV_ITEMS.some((item) => item.value === requestedTab)
+            ? requestedTab
+            : 'agence';
+    const [rolePermissions, setRolePermissions] = useState(initialPermissions);
+    const [roleCatalog, setRoleCatalog] = useState(initialRoles);
     const [selectedPermissionRole, setSelectedPermissionRole] = useState('');
     const [permissionDraft, setPermissionDraft] = useState([]);
     const [permissionSearch, setPermissionSearch] = useState('');
@@ -481,12 +514,14 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
     const [newRole, setNewRole] = useState({ name: '', description: '' });
     const [roleTemplate, setRoleTemplate] = useState('empty');
     const [roleFormErrors, setRoleFormErrors] = useState({});
-    const roles = [...STATIC_ROLES, ...customRoles].map((role) => ({
+    const [responsableConfirmOpen, setResponsableConfirmOpen] = useState(false);
+    const responsableConfirmationAccepted = useRef(false);
+    const roles = roleCatalog.map((role) => ({
         ...role,
         permissions: rolePermissions[role.role_id] ?? [],
     }));
-    const [tab, setTab] = useState(initialRolePage ? 'permission-form' : 'agence');
-    const [matrixRoleIds, setMatrixRoleIds] = useState(STATIC_ROLES.map((role) => role.role_id));
+    const [tab, setTab] = useState(initialTab);
+    const [matrixRoleIds, setMatrixRoleIds] = useState(initialRoles.slice(0, 5).map((role) => role.role_id));
     const [matrixPermissionSearch, setMatrixPermissionSearch] = useState('');
     const [matrixFilter, setMatrixFilter] = useState('all');
     const [collapsedPermissionGroups, setCollapsedPermissionGroups] = useState([]);
@@ -522,6 +557,13 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
 
     const changeTab = (value) => {
         setTab(value);
+
+        if (typeof window !== 'undefined' && value !== 'permission-form') {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', value);
+            window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+        }
+
         scrollToTop();
     };
     const [visuals, setVisuals] = useState({
@@ -570,10 +612,14 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
         changeTab('roles');
     };
 
-    const openPermissionForm = () => {
+    const openPermissionForm = (role = null) => {
         setRoleFormMode('edit');
-        setSelectedPermissionRole('');
-        setPermissionDraft([]);
+        setSelectedPermissionRole(role?.role_id ?? '');
+        setPermissionDraft(role ? [...(rolePermissions[role.role_id] ?? [])] : []);
+        setNewRole(role ? {
+            name: role.name ?? '',
+            description: role.description ?? '',
+        } : { name: '', description: '' });
         setPermissionSearch('');
         setRoleFormErrors({});
         updateRolePageUrl('permissions');
@@ -591,8 +637,14 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
         changeTab('permission-form');
     };
     const changePermissionRole = (roleId) => {
+        const role = roles.find((item) => item.role_id === roleId);
         setSelectedPermissionRole(roleId);
         setPermissionDraft([...(rolePermissions[roleId] ?? [])]);
+        setNewRole({
+            name: role?.name ?? '',
+            description: role?.description ?? '',
+        });
+        setRoleFormErrors({});
     };
 
     const changeRoleTemplate = (templateId) => {
@@ -600,8 +652,18 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
         setPermissionDraft(templateId === 'empty' ? [] : [...(rolePermissions[templateId] ?? [])]);
     };
 
+    const selectedRoleData = roles.find((role) => role.role_id === selectedPermissionRole);
+    const editingResponsable = Boolean(selectedRoleData?.is_responsable);
+    const lockedPermissionKeys = editingResponsable
+        ? permissionGroupsCatalog.flatMap((group) =>
+            group.permissions
+                .filter((permission) => permission.module_slug === 'parametrage')
+                .map((permission) => permission.key)
+        )
+        : [];
+
     const deleteRole = (role) => {
-        if (!role.is_custom) return;
+        if (!role.is_deletable) return;
 
         const userCount = Number(role.user_count ?? 0);
         if (userCount > 0) {
@@ -611,16 +673,19 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
 
         if (!window.confirm(`Supprimer le rôle « ${role.name} » ?`)) return;
 
-        setCustomRoles((current) => current.filter((item) => item.role_id !== role.role_id));
-        setRolePermissions((current) => {
-            const next = { ...current };
-            delete next[role.role_id];
-            return next;
+        router.delete(`/agence/parametrage/roles/${role.role_id}`, {
+            preserveScroll: true,
+            preserveState: false,
+            onSuccess: () => {
+                setRoleCatalog((current) => current.filter((item) => item.role_id !== role.role_id));
+                setMatrixRoleIds((current) => current.filter((roleId) => roleId !== role.role_id));
+            },
         });
-        setMatrixRoleIds((current) => current.filter((roleId) => roleId !== role.role_id));
     };
 
     const togglePermission = (permissionKey) => {
+        if (lockedPermissionKeys.includes(permissionKey)) return;
+
         setPermissionDraft((current) =>
             current.includes(permissionKey)
                 ? current.filter((key) => key !== permissionKey)
@@ -629,7 +694,10 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
     };
 
     const togglePermissionGroup = (group) => {
-        const groupKeys = group.permissions.map((permission) => permission.key);
+        const groupKeys = group.permissions
+            .map((permission) => permission.key)
+            .filter((key) => !lockedPermissionKeys.includes(key));
+        if (groupKeys.length === 0) return;
         const groupIsSelected = groupKeys.every((key) => permissionDraft.includes(key));
 
         setPermissionDraft((current) =>
@@ -639,21 +707,37 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
         );
     };
 
-    const filteredPermissionGroups = PERMISSION_GROUPS.map((group) => ({
+    const filteredPermissionGroups = permissionGroupsCatalog.map((group) => ({
         ...group,
-        permissions: group.permissions.filter((permission) =>
-            `${group.label} ${permission.label}`.toLowerCase().includes(permissionSearch.trim().toLowerCase())
-        ),
+        permissions: group.permissions
+            .filter((permission) =>
+                `${group.label} ${permission.label}`.toLowerCase().includes(permissionSearch.trim().toLowerCase())
+            )
+            .map((permission) => ({
+                ...permission,
+                is_locked: lockedPermissionKeys.includes(permission.key),
+            })),
     })).filter((group) => group.permissions.length > 0);
+
+    const setPermissionSelection = (permissions) => {
+        setPermissionDraft(Array.from(new Set([...permissions, ...lockedPermissionKeys])));
+    };
 
     const saveRolePermissions = (event) => {
         event.preventDefault();
+
+        if (roleFormMode === 'edit' && editingResponsable && !responsableConfirmationAccepted.current) {
+            setResponsableConfirmOpen(true);
+            return;
+        }
+
+        responsableConfirmationAccepted.current = false;
 
         const previousPermissions = roleFormMode === 'create'
             ? []
             : (rolePermissions[selectedPermissionRole] ?? []);
         const newSensitivePermissions = permissionDraft.filter(
-            (permission) => SENSITIVE_PERMISSION_KEYS.has(permission) && !previousPermissions.includes(permission)
+            (permission) => sensitivePermissionKeys.has(permission) && !previousPermissions.includes(permission)
         );
 
         if (newSensitivePermissions.length > 0 && !window.confirm(
@@ -671,19 +755,16 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                 return;
             }
 
-            const roleId = `role-custom-${Date.now()}`;
-            setCustomRoles((current) => [
-                ...current,
-                {
-                    role_id: roleId,
-                    name: newRole.name.trim(),
-                    description: newRole.description.trim() || 'Rôle personnalisé de l’agence.',
-                    is_custom: true,
-                    user_count: 0,
-                },
-            ]);
-            setRolePermissions((current) => ({ ...current, [roleId]: [...permissionDraft] }));
-            returnToRoles();
+            router.post('/agence/parametrage/roles', {
+                name: newRole.name.trim(),
+                description: newRole.description.trim(),
+                permissions: permissionDraft,
+            }, {
+                preserveScroll: true,
+                preserveState: false,
+                onSuccess: returnToRoles,
+                onError: setRoleFormErrors,
+            });
             return;
         }
 
@@ -691,11 +772,33 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
             return;
         }
 
-        setRolePermissions((current) => ({
-            ...current,
-            [selectedPermissionRole]: [...permissionDraft],
-        }));
-        returnToRoles();
+        if (!newRole.name.trim()) {
+            setRoleFormErrors({ name: 'Le nom du rôle est obligatoire.' });
+            return;
+        }
+
+        const selectedRole = roles.find((role) => role.role_id === selectedPermissionRole);
+        if (!selectedRole?.is_editable) return;
+
+        const duplicate = roles.some((role) =>
+            role.role_id !== selectedPermissionRole
+            && role.name.trim().toLowerCase() === newRole.name.trim().toLowerCase()
+        );
+        if (duplicate) {
+            setRoleFormErrors({ name: 'Un rôle portant ce nom existe déjà.' });
+            return;
+        }
+
+        router.put(`/agence/parametrage/roles/${selectedPermissionRole}`, {
+            name: newRole.name.trim(),
+            description: newRole.description.trim(),
+            permissions: permissionDraft,
+        }, {
+            preserveScroll: true,
+            preserveState: false,
+            onSuccess: returnToRoles,
+            onError: setRoleFormErrors,
+        });
     };
 
     const permissionEditorVisible = roleFormMode === 'create' || Boolean(selectedPermissionRole);
@@ -717,7 +820,7 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
     };
 
     const matrixRoles = roles.filter((role) => matrixRoleIds.includes(role.role_id));
-    const visibleMatrixGroups = PERMISSION_GROUPS.map((group) => ({
+    const visibleMatrixGroups = permissionGroupsCatalog.map((group) => ({
         ...group,
         permissions: group.permissions.filter((permission) => {
             const matchesSearch = `${group.label} ${permission.label}`
@@ -740,7 +843,7 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
         return (
             <AgenceLayout title={roleFormMode === 'create' ? 'Créer un rôle' : 'Configurer les permissions'}>
                 <RolePage
-                    roles={roles}
+                    roles={roleFormMode === 'create' ? roles : roles.filter((role) => role.is_editable)}
                     newRole={newRole}
                     setNewRole={setNewRole}
                     roleTemplate={roleTemplate}
@@ -752,14 +855,44 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                     permissionSearch={permissionSearch}
                     setPermissionSearch={setPermissionSearch}
                     filteredPermissionGroups={filteredPermissionGroups}
-                    allPermissionKeys={ALL_PERMISSION_KEYS}
-                    sensitivePermissionKeys={SENSITIVE_PERMISSION_KEYS}
-                    onSetPermissions={setPermissionDraft}
+                    allPermissionKeys={allPermissionKeys}
+                    sensitivePermissionKeys={sensitivePermissionKeys}
+                    isProtectedRole={editingResponsable}
+                    onSetPermissions={setPermissionSelection}
                     onTogglePermission={togglePermission}
                     onToggleGroup={togglePermissionGroup}
                     onSubmit={saveRolePermissions}
                     onBack={returnToRoles}
                 />
+                <Dialog open={responsableConfirmOpen} onOpenChange={setResponsableConfirmOpen}>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                                <TriangleAlert className="h-5 w-5" />
+                            </div>
+                            <DialogTitle>Modifier le rôle Responsable ?</DialogTitle>
+                            <DialogDescription>
+                                Vous modifiez votre rôle Responsable. Vos accès pourront être réduits immédiatement.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="mt-5">
+                            <Button type="button" variant="outline" onClick={() => setResponsableConfirmOpen(false)}>
+                                Annuler
+                            </Button>
+                            <Button
+                                type="button"
+                                className="bg-amber-600 text-white hover:bg-amber-700"
+                                onClick={() => {
+                                    responsableConfirmationAccepted.current = true;
+                                    setResponsableConfirmOpen(false);
+                                    saveRolePermissions({ preventDefault: () => {} });
+                                }}
+                            >
+                                Continuer
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </AgenceLayout>
         );
     }
@@ -1375,7 +1508,7 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                         step="12"
                                         action={(
                                             <div className="flex flex-wrap gap-2">
-                                                <Button type="button" variant="outline" onClick={openPermissionForm} className="rounded-xl border-[#c8d4de] bg-white text-[#00559b] hover:border-[#00559b]">
+                                                <Button type="button" variant="outline" onClick={() => openPermissionForm()} className="rounded-xl border-[#c8d4de] bg-white text-[#00559b] hover:border-[#00559b]">
                                                     <KeyRound className="h-4 w-4" />
                                                     Modifier les permissions
                                                 </Button>
@@ -1420,10 +1553,17 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                                         <span className="mr-auto text-xs text-[#5f7182]">
                                                             {Number(role.user_count ?? 0)} utilisateur{Number(role.user_count ?? 0) > 1 ? 's' : ''}
                                                         </span>
-                                                        {role.is_custom ? (
-                                                            <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-[#f1b8b5] text-xs text-[#b42318] hover:bg-[#fef2f2]" onClick={() => deleteRole(role)}>
-                                                                <Trash2 className="h-3.5 w-3.5" />Supprimer
-                                                            </Button>
+                                                        {role.is_editable ? (
+                                                            <>
+                                                                <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-[#8dbddd] text-xs text-[#00559b] hover:bg-[#eaf4fb]" onClick={() => openPermissionForm(role)}>
+                                                                    <Pencil className="h-3.5 w-3.5" />Modifier
+                                                                </Button>
+                                                                {role.is_deletable ? (
+                                                                    <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-[#f1b8b5] text-xs text-[#b42318] hover:bg-[#fef2f2] disabled:cursor-not-allowed disabled:opacity-50" disabled={Number(role.user_count ?? 0) > 0} title={Number(role.user_count ?? 0) > 0 ? 'Ce rôle est attribué à un utilisateur.' : 'Supprimer ce rôle'} onClick={() => deleteRole(role)}>
+                                                                        <Trash2 className="h-3.5 w-3.5" />Supprimer
+                                                                    </Button>
+                                                                ) : null}
+                                                            </>
                                                         ) : null}
                                                     </div>
                                                 </div>
@@ -1492,7 +1632,7 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                                                         <td className="sticky left-0 z-10 border-b border-r border-[#edf2f6] bg-inherit px-4 py-3 font-medium text-[#0f172a]">
                                                                             <div className="flex items-center gap-2">
                                                                                 <span>{permission.label}</span>
-                                                                                {SENSITIVE_PERMISSION_KEYS.has(permission.key) ? <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-[#9a6700]" aria-label="Permission sensible" /> : null}
+                                                                                {sensitivePermissionKeys.has(permission.key) ? <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-[#9a6700]" aria-label="Permission sensible" /> : null}
                                                                             </div>
                                                                         </td>
                                                                         {matrixRoles.map((role) => {
@@ -1566,7 +1706,7 @@ export default function Index({ parametrage, agence, regions = [], villes = [], 
                                                     <Badge variant="outline" className="mr-auto rounded-full border-[#8dbddd] bg-white text-[#00559b]">
                                                         {permissionDraft.length} accès sélectionnés
                                                     </Badge>
-                                                    <Button type="button" variant="outline" className="h-9 rounded-xl border-[#c8d4de] bg-white text-xs" onClick={() => setPermissionDraft([...ALL_PERMISSION_KEYS])}>
+                                                    <Button type="button" variant="outline" className="h-9 rounded-xl border-[#c8d4de] bg-white text-xs" onClick={() => setPermissionDraft([...allPermissionKeys])}>
                                                         Tout autoriser
                                                     </Button>
                                                     <Button type="button" variant="outline" className="h-9 rounded-xl border-[#c8d4de] bg-white text-xs" onClick={() => setPermissionDraft([])}>

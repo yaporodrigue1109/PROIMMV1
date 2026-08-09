@@ -34,6 +34,7 @@ export default function RoleEditor({
     filteredPermissionGroups,
     allPermissionKeys,
     sensitivePermissionKeys,
+    isProtectedRole = false,
     onSetPermissions,
     onTogglePermission,
     onToggleGroup,
@@ -73,6 +74,14 @@ export default function RoleEditor({
                         </div>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
+                        {isProtectedRole ? (
+                            <div className="mb-4 flex gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0" />
+                                <p>
+                                    Vous modifiez votre rôle Responsable. Vous pouvez changer ses accès, mais les permissions du module Paramétrage restent obligatoires afin de conserver la gestion de l’agence.
+                                </p>
+                            </div>
+                        ) : null}
                         <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
                             {isCreate ? (
                                 <div className="space-y-4">
@@ -96,14 +105,28 @@ export default function RoleEditor({
                                     </div>
                                 </div>
                             ) : (
-                                <Field label="Rôle à modifier" required>
-                                    <Select value={selectedRole} onValueChange={onRoleChange}>
-                                        <SelectTrigger className={inputClassName}><SelectValue placeholder="Sélectionner un rôle" /></SelectTrigger>
-                                        <SelectContent>
-                                            {roles.map((role) => <SelectItem key={role.role_id} value={String(role.role_id)}>{role.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </Field>
+                                <div className="space-y-4">
+                                    <Field label="Rôle à modifier" required>
+                                        <Select value={selectedRole} onValueChange={onRoleChange}>
+                                            <SelectTrigger className={inputClassName}><SelectValue placeholder="Sélectionner un rôle personnalisé" /></SelectTrigger>
+                                            <SelectContent>
+                                                {roles.map((role) => <SelectItem key={role.role_id} value={String(role.role_id)}>{role.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </Field>
+                                    {selectedRole ? (
+                                        <div className="grid gap-4 lg:grid-cols-2">
+                                            <Field label="Nom du rôle" required>
+                                                <Input value={newRole.name} onChange={(event) => setNewRole((current) => ({ ...current, name: event.target.value }))} placeholder="Ex. Gestionnaire locatif" className={inputClassName} />
+                                                {errors.name ? <span className="block text-xs text-[#b42318]">{errors.name}</span> : null}
+                                            </Field>
+                                            <Field label="Description">
+                                                <Input value={newRole.description} onChange={(event) => setNewRole((current) => ({ ...current, description: event.target.value }))} placeholder="Mission principale de ce rôle" className={inputClassName} />
+                                                {errors.description ? <span className="block text-xs text-[#b42318]">{errors.description}</span> : null}
+                                            </Field>
+                                        </div>
+                                    ) : null}
+                                </div>
                             )}
 
                             {editorVisible ? (
@@ -143,7 +166,7 @@ export default function RoleEditor({
                                                             <td colSpan={2} className="border-b border-[#d7e6f0] px-4 py-3">
                                                                 <div className="flex items-center justify-between gap-4">
                                                                     <div className="flex items-center gap-3"><Layers3 className="h-4 w-4 text-[#00559b]" /><div><p className="font-semibold text-[#00559b]">{group.label}</p><p className="text-xs text-[#5f7182]">{selectedCount} sur {group.permissions.length} sélectionnés</p></div></div>
-                                                                    <button type="button" onClick={() => onToggleGroup(group)} className="text-xs font-semibold text-[#00559b] hover:underline">{groupSelected ? 'Tout décocher' : 'Tout cocher'}</button>
+                                                                    <button type="button" onClick={() => onToggleGroup(group)} disabled={group.permissions.every((permission) => permission.is_locked)} className="text-xs font-semibold text-[#00559b] hover:underline disabled:cursor-not-allowed disabled:text-[#94a3b8] disabled:no-underline">{group.permissions.every((permission) => permission.is_locked) ? 'Verrouillé' : groupSelected ? 'Tout décocher' : 'Tout cocher'}</button>
                                                                 </div>
                                                             </td>
                                                         </tr>,
@@ -159,10 +182,15 @@ export default function RoleEditor({
                                                                                     <LockKeyhole className="mr-1 h-3 w-3" />Sensible
                                                                                 </Badge>
                                                                             ) : null}
+                                                                            {permission.is_locked ? (
+                                                                                <Badge variant="outline" className="rounded-full border-amber-300 bg-amber-50 px-2 py-0 text-[10px] text-amber-800">
+                                                                                    <LockKeyhole className="mr-1 h-3 w-3" />Obligatoire
+                                                                                </Badge>
+                                                                            ) : null}
                                                                         </div>
                                                                     </td>
                                                                     <td className="px-4 py-3 text-center">
-                                                                        <button type="button" onClick={() => onTogglePermission(permission.key)} className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg border', checked ? 'border-[#00559b] bg-[#00559b] text-white' : 'border-[#c8d4de] bg-white text-transparent')} aria-label={`${checked ? 'Retirer' : 'Accorder'} ${permission.label}`}><Check className="h-4 w-4" /></button>
+                                                                        <button type="button" disabled={permission.is_locked} onClick={() => onTogglePermission(permission.key)} className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg border', checked ? 'border-[#00559b] bg-[#00559b] text-white' : 'border-[#c8d4de] bg-white text-transparent', permission.is_locked && 'cursor-not-allowed opacity-70')} aria-label={`${permission.is_locked ? 'Permission obligatoire' : checked ? 'Retirer' : 'Accorder'} ${permission.label}`}><Check className="h-4 w-4" /></button>
                                                                     </td>
                                                                 </tr>
                                                             );

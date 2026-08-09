@@ -92,7 +92,7 @@ class UserRepository implements UserRepositoryInterface
             ->get();
     }
 
-    public function getByRole(int $roleId, array $filters = []): Collection
+    public function getByRole(string $roleId, array $filters = []): Collection
     {
         return $this->model->where('role_id', $roleId)->get();
     }

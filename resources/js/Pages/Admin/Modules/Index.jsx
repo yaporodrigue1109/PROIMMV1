@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import {
     ChevronDown,
     ChevronRight,
@@ -7,6 +7,7 @@ import {
     Plus,
     Power,
     PowerOff,
+    Trash2,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
@@ -26,19 +27,77 @@ const statusMeta = {
     Désactivé: { variant: 'danger', label: 'Désactivé' },
 };
 
+const moduleActionsByCode = {
+    dashboard: ['Voir'],
+    proprietes: ['Voir', 'Créer', 'Modifier', 'Supprimer'],
+    proprietaire: ['Voir', 'Créer', 'Modifier', 'Supprimer'],
+    locataires: ['Voir', 'Créer', 'Modifier', 'Supprimer'],
+    personnel: ['Voir', 'Créer', 'Modifier', 'Supprimer'],
+    maintenance: ['Voir', 'Créer', 'Modifier', 'Valider', 'Annuler'],
+    caisse: ['Voir', 'Créer', 'Valider', 'Annuler'],
+    reversement: ['Voir', 'Créer', 'Valider', 'Exporter'],
+    statistiques: ['Voir', 'Exporter'],
+    support: ['Voir', 'Créer', 'Modifier', 'Clôturer'],
+    parametrage: ['Voir', 'Modifier'],
+};
+
+const actionSlugs = {
+    Voir: 'view',
+    Créer: 'create',
+    Modifier: 'edit',
+    Supprimer: 'delete',
+    Valider: 'validate',
+    Annuler: 'cancel',
+    Exporter: 'export',
+    Clôturer: 'close',
+};
+
+const getModuleActions = (module) => {
+    const source = Array.isArray(module.actions) && module.actions.length > 0
+        ? module.actions
+        : (moduleActionsByCode[module.code ?? module.slug] ?? ['Voir']);
+
+    return source.map((action, index) => {
+        if (typeof action === 'string') {
+            return {
+                name: action,
+                slug: actionSlugs[action] ?? action.toLowerCase(),
+                order_index: index + 1,
+                is_active: true,
+            };
+        }
+
+        return {
+            ...action,
+            name: action.name ?? action.label ?? action.slug,
+            order_index: action.order_index ?? action.order ?? index + 1,
+            is_active: action.is_active ?? true,
+        };
+    });
+};
+
 export default function Index({ menus = [] }) {
     const [dragEnabled, setDragEnabled] = useState(false);
     const [openedParents, setOpenedParents] = useState(() => new Set());
     const [draggedRow, setDraggedRow] = useState(null);
     const [dropIndicator, setDropIndicator] = useState(null);
+    const [processingCode, setProcessingCode] = useState(null);
 
     const [items, setItems] = useState(() =>
         (menus ?? []).map((menu, index) => ({
             ...menu,
-            order: menu.order ?? index + 1,
+            label: menu.label ?? menu.name,
+            code: menu.code ?? menu.slug,
+            order: menu.order ?? menu.order_index ?? index + 1,
+            active: menu.active ?? menu.is_active ?? true,
+            actions: getModuleActions(menu),
             submenus: (menu.submenus ?? []).map((submenu, subIndex) => ({
                 ...submenu,
-                order: submenu.order ?? `${index + 1}.${subIndex + 1}`,
+                label: submenu.label ?? submenu.name,
+                code: submenu.code ?? submenu.slug,
+                order: submenu.order ?? submenu.order_index ?? `${index + 1}.${subIndex + 1}`,
+                active: submenu.active ?? submenu.is_active ?? true,
+                actions: getModuleActions(submenu),
             })),
         })),
     );
@@ -81,39 +140,47 @@ export default function Index({ menus = [] }) {
     };
 
     const toggleActive = (row) => {
-        setItems((current) =>
-            current.map((menu) => {
-                const menuId = menu.parent_id ?? menu.id ?? menu.code;
+        setProcessingCode(row.code);
+        router.patch(`/admin/modules/${row.code}/toggle`, {}, {
+            preserveScroll: true,
+            preserveState: false,
+            onFinish: () => setProcessingCode(null),
+        });
+    };
 
-                if (row.rowType === 'parent' && menuId === (row.parent_id ?? row.id ?? row.code)) {
-                    return {
-                        ...menu,
-                        active: !menu.active,
-                    };
-                }
+    const deleteModule = (row) => {
+        if (!window.confirm(`Supprimer le module « ${row.label} » ?`)) return;
 
-                if (row.rowType === 'submenu' && menuId === row.parentId) {
-                    return {
-                        ...menu,
-                        submenus: (menu.submenus ?? []).map((submenu) => {
-                            const submenuId = submenu.submenu_id ?? submenu.id ?? submenu.code;
-                            const rowSubmenuId = row.submenu_id ?? row.id ?? row.code;
+        setProcessingCode(row.code);
+        router.delete(`/admin/modules/${row.code}`, {
+            preserveScroll: true,
+            preserveState: false,
+            onFinish: () => setProcessingCode(null),
+        });
+    };
 
-                            if (submenuId === rowSubmenuId) {
-                                return {
-                                    ...submenu,
-                                    active: !submenu.active,
-                                };
-                            }
+    const persistOrder = (nextItems) => {
+        const orderItems = nextItems.flatMap((menu, parentIndex) => {
+            const moduleId = menu.id ?? menu.module_id;
+            const parentItem = {
+                module_id: moduleId,
+                parent_id: null,
+                order_index: parentIndex + 1,
+            };
 
-                            return submenu;
-                        }),
-                    };
-                }
+            const children = (menu.submenus ?? []).map((submenu, subIndex) => ({
+                module_id: submenu.id ?? submenu.module_id,
+                parent_id: moduleId,
+                order_index: subIndex + 1,
+            }));
 
-                return menu;
-            }),
-        );
+            return [parentItem, ...children];
+        });
+
+        router.post('/admin/modules/reorder', { items: orderItems }, {
+            preserveScroll: true,
+            preserveState: true,
+        });
     };
 
     const handleDragStart = (event, row) => {
@@ -177,74 +244,76 @@ export default function Index({ menus = [] }) {
     };
 
     const reorderParents = (sourceRow, targetRow) => {
-        setItems((current) => {
-            const next = [...current];
+        const next = [...items];
 
-            const sourceId = sourceRow.parent_id ?? sourceRow.id ?? sourceRow.code;
-            const targetId = targetRow.parent_id ?? targetRow.id ?? targetRow.code;
+        const sourceId = sourceRow.parent_id ?? sourceRow.id ?? sourceRow.code;
+        const targetId = targetRow.parent_id ?? targetRow.id ?? targetRow.code;
 
-            const sourceIndex = next.findIndex(
-                (menu) => (menu.parent_id ?? menu.id ?? menu.code) === sourceId,
-            );
+        const sourceIndex = next.findIndex(
+            (menu) => (menu.parent_id ?? menu.id ?? menu.code) === sourceId,
+        );
 
-            const targetIndex = next.findIndex(
-                (menu) => (menu.parent_id ?? menu.id ?? menu.code) === targetId,
-            );
+        const targetIndex = next.findIndex(
+            (menu) => (menu.parent_id ?? menu.id ?? menu.code) === targetId,
+        );
 
-            if (sourceIndex === -1 || targetIndex === -1) return current;
+        if (sourceIndex === -1 || targetIndex === -1) return;
 
-            const [moved] = next.splice(sourceIndex, 1);
-            next.splice(targetIndex, 0, moved);
+        const [moved] = next.splice(sourceIndex, 1);
+        next.splice(targetIndex, 0, moved);
 
-            return next.map((menu, index) => ({
-                ...menu,
-                order: index + 1,
-                submenus: (menu.submenus ?? []).map((submenu, subIndex) => ({
-                    ...submenu,
-                    order: `${index + 1}.${subIndex + 1}`,
-                })),
-            }));
-        });
+        const reordered = next.map((menu, index) => ({
+            ...menu,
+            order: index + 1,
+            submenus: (menu.submenus ?? []).map((submenu, subIndex) => ({
+                ...submenu,
+                order: `${index + 1}.${subIndex + 1}`,
+            })),
+        }));
+
+        setItems(reordered);
+        persistOrder(reordered);
     };
 
     const reorderSubmenus = (sourceRow, targetRow) => {
-        setItems((current) =>
-            current.map((menu) => {
-                const menuId = menu.parent_id ?? menu.id ?? menu.code;
+        const reordered = items.map((menu) => {
+            const menuId = menu.parent_id ?? menu.id ?? menu.code;
 
-                if (menuId !== sourceRow.parentId) {
-                    return menu;
-                }
+            if (menuId !== sourceRow.parentId) {
+                return menu;
+            }
 
-                const submenus = [...(menu.submenus ?? [])];
+            const submenus = [...(menu.submenus ?? [])];
 
-                const sourceId = sourceRow.submenu_id ?? sourceRow.id ?? sourceRow.code;
-                const targetId = targetRow.submenu_id ?? targetRow.id ?? targetRow.code;
+            const sourceId = sourceRow.submenu_id ?? sourceRow.id ?? sourceRow.code;
+            const targetId = targetRow.submenu_id ?? targetRow.id ?? targetRow.code;
 
-                const sourceIndex = submenus.findIndex(
-                    (submenu) => (submenu.submenu_id ?? submenu.id ?? submenu.code) === sourceId,
-                );
+            const sourceIndex = submenus.findIndex(
+                (submenu) => (submenu.submenu_id ?? submenu.id ?? submenu.code) === sourceId,
+            );
 
-                const targetIndex = submenus.findIndex(
-                    (submenu) => (submenu.submenu_id ?? submenu.id ?? submenu.code) === targetId,
-                );
+            const targetIndex = submenus.findIndex(
+                (submenu) => (submenu.submenu_id ?? submenu.id ?? submenu.code) === targetId,
+            );
 
-                if (sourceIndex === -1 || targetIndex === -1) {
-                    return menu;
-                }
+            if (sourceIndex === -1 || targetIndex === -1) {
+                return menu;
+            }
 
-                const [moved] = submenus.splice(sourceIndex, 1);
-                submenus.splice(targetIndex, 0, moved);
+            const [moved] = submenus.splice(sourceIndex, 1);
+            submenus.splice(targetIndex, 0, moved);
 
-                return {
-                    ...menu,
-                    submenus: submenus.map((submenu, index) => ({
-                        ...submenu,
-                        order: `${menu.order}.${index + 1}`,
-                    })),
-                };
-            }),
-        );
+            return {
+                ...menu,
+                submenus: submenus.map((submenu, index) => ({
+                    ...submenu,
+                    order: `${menu.order}.${index + 1}`,
+                })),
+            };
+        });
+
+        setItems(reordered);
+        persistOrder(reordered);
     };
 
     return (
@@ -292,8 +361,8 @@ export default function Index({ menus = [] }) {
                     </CardHeader>
 
                     <CardContent className="p-0">
-                        <div className="overflow-hidden rounded-b-3xl">
-                            <table className="w-full text-sm">
+                        <div className="overflow-x-auto rounded-b-3xl">
+                            <table className="min-w-[1180px] w-full text-sm">
                                 <thead className="text-left text-xs uppercase tracking-[0.2em] text-slate-500">
                                     <tr className="border-b border-slate-200">
                                         <th className="w-12 bg-slate-50 px-6 py-4 font-medium"></th>
@@ -301,7 +370,8 @@ export default function Index({ menus = [] }) {
                                         <th className="bg-slate-50 px-6 py-4 font-medium">Sous-menus</th>
                                         <th className="bg-slate-50 px-6 py-4 font-medium">Ordre</th>
                                         <th className="bg-slate-50 px-6 py-4 font-medium">État</th>
-                                        <th className="bg-slate-50 px-6 py-4 font-medium">Action</th>
+                                        <th className="bg-slate-50 px-6 py-4 font-medium">Actions du module</th>
+                                        <th className="bg-slate-50 px-6 py-4 font-medium">Gestion</th>
                                     </tr>
                                 </thead>
 
@@ -410,6 +480,28 @@ export default function Index({ menus = [] }) {
                                                 </td>
 
                                                 <td className="px-6 py-4">
+                                                    <div className="flex max-w-md flex-wrap gap-1.5">
+                                                        {(row.actions ?? []).map((action) => (
+                                                            <span
+                                                                key={`${row.rowKey}-${action.slug}`}
+                                                                title={action.slug}
+                                                                className={[
+                                                                    'inline-flex rounded-full border px-2.5 py-1 text-xs font-medium',
+                                                                    action.is_active
+                                                                        ? 'border-[#b9d7eb] bg-[#eaf4fb] text-[#00559b]'
+                                                                        : 'border-slate-200 bg-slate-100 text-slate-400',
+                                                                ].join(' ')}
+                                                            >
+                                                                {action.name}
+                                                            </span>
+                                                        ))}
+                                                        {(row.actions ?? []).length === 0 ? (
+                                                            <span className="text-sm text-slate-400">Aucune action</span>
+                                                        ) : null}
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-6 py-4">
                                                     <div className="flex flex-wrap gap-2">
                                                         <Button
                                                             type="button"
@@ -417,28 +509,39 @@ export default function Index({ menus = [] }) {
                                                             size="sm"
                                                             className="rounded-full border-slate-200"
                                                             onClick={() => toggleActive(row)}
+                                                            disabled={processingCode === row.code}
                                                         >
                                                             {row.active ? (
                                                                 <PowerOff className="h-4 w-4" />
                                                             ) : (
                                                                 <Power className="h-4 w-4" />
                                                             )}
-                                                            {row.active ? 'Désactiver' : 'Activer'}
+                                                            
                                                         </Button>
 
-                                                        {row.rowType === 'parent' && (
-                                                            <Button
-                                                                asChild
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="rounded-full border-slate-200"
-                                                            >
-                                                                <Link href={`/admin/modules/${row.code}/edit`}>
-                                                                    <PencilLine className="h-4 w-4" />
-                                                                    Modifier
-                                                                </Link>
-                                                            </Button>
-                                                        )}
+                                                        <Button
+                                                            asChild
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="rounded-full border-slate-200"
+                                                        >
+                                                            <Link href={`/admin/modules/${row.code}/edit`}>
+                                                                <PencilLine className="h-4 w-4" />
+                                                                
+                                                            </Link>
+                                                        </Button>
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="rounded-full border-red-200 text-[#b42318] hover:border-[#b42318] hover:bg-red-50 hover:text-[#991b12]"
+                                                            onClick={() => deleteModule(row)}
+                                                            disabled={processingCode === row.code}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                           
+                                                        </Button>
                                                     </div>
                                                 </td>
                                             </tr>

@@ -157,12 +157,22 @@ Route::middleware(['admin'])->group(function () {
         Route::get('/create', [ModuleController::class, 'create'])
            // ->middleware('permission:create-modules')
             ->name('create');
+        Route::post('/', [ModuleController::class, 'store'])
+            ->name('store');
+        Route::post('/reorder', [ModuleController::class, 'reorder'])
+            ->name('reorder');
         Route::get('/{code}', [ModuleController::class, 'show'])
           //  ->middleware('permission:view-modules')
             ->name('show');
         Route::get('/{code}/edit', [ModuleController::class, 'edit'])
           //  ->middleware('permission:edit-modules')
             ->name('edit');
+        Route::put('/{code}', [ModuleController::class, 'update'])
+            ->name('update');
+        Route::patch('/{code}/toggle', [ModuleController::class, 'toggle'])
+            ->name('toggle');
+        Route::delete('/{code}', [ModuleController::class, 'destroy'])
+            ->name('destroy');
     });
 
     /*

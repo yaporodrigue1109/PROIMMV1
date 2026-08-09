@@ -433,6 +433,9 @@ Route::middleware(['user', BlockDemoAgenceMutations::class])->group(function () 
         Route::put('logos',       'updateLogos')->name('logos.update');
         Route::put('signatures',   'updateSignatures')->name('signatures.update');
         Route::put('notifications', 'updateNotifications')->name('notifications.update');
+        Route::post('roles', 'storeRole')->name('roles.store');
+        Route::put('roles/{role}', 'updateRole')->name('roles.update');
+        Route::delete('roles/{role}', 'destroyRole')->name('roles.destroy');
 
     });
 
