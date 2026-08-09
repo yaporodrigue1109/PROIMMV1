@@ -20,6 +20,10 @@ class DashboardController extends Controller
         $user = Auth::guard('user')->user();
         $agenceId = $user?->agence_id;
         $agence = $user?->agence;
+        $canViewCaisse = $user?->canPerform('caisse', 'view') ?? false;
+        $canViewFinancials = $canViewCaisse
+            || ($user?->canPerform('loyer', 'view') ?? false)
+            || ($user?->canPerform('reversement', 'view') ?? false);
 
         $now = now();
         $monthStart = $now->copy()->startOfMonth();
@@ -54,45 +58,53 @@ class DashboardController extends Controller
             ->where('is_occupe', false)
             ->count();
 
-        $loyersCurrent = Loyer::query()
-            ->where('agence_id', $agenceId)
-            ->where('mois_paiement', $currentMonth)
-            ->where('annee_paiement', $currentYear);
+        $montantAttendu = null;
+        $montantVerse = null;
+        $pendingPayments = null;
+        $revenueTrend = null;
 
-        $loyersPrevious = Loyer::query()
-            ->where('agence_id', $agenceId)
-            ->where('mois_paiement', $previousMonth)
-            ->where('annee_paiement', $previousYear);
+        if ($canViewFinancials) {
+            $loyersCurrent = Loyer::query()
+                ->where('agence_id', $agenceId)
+                ->where('mois_paiement', $currentMonth)
+                ->where('annee_paiement', $currentYear);
 
-        $montantAttendu = (float) $loyersCurrent->sum('montant_a_payer');
-        $montantVerse = (float) $loyersCurrent->sum('montant_payer');
-        $montantAttenduMoisPrecedent = (float) $loyersPrevious->sum('montant_a_payer');
-        $montantVerseMoisPrecedent = (float) $loyersPrevious->sum('montant_payer');
+            $loyersPrevious = Loyer::query()
+                ->where('agence_id', $agenceId)
+                ->where('mois_paiement', $previousMonth)
+                ->where('annee_paiement', $previousYear);
 
-        $pendingPayments = max($montantAttendu - $montantVerse, 0);
+            $montantAttendu = (float) $loyersCurrent->sum('montant_a_payer');
+            $montantVerse = (float) $loyersCurrent->sum('montant_payer');
+            $montantVerseMoisPrecedent = (float) $loyersPrevious->sum('montant_payer');
+            $pendingPayments = max($montantAttendu - $montantVerse, 0);
+            $revenueTrend = $montantVerseMoisPrecedent > 0
+                ? round((($montantVerse - $montantVerseMoisPrecedent) / $montantVerseMoisPrecedent) * 100)
+                : 0;
+        }
+
         $occupancyRate = $portesTotal > 0 ? round(($portesOccupees / $portesTotal) * 100) : 0;
-        $revenueTrend = $montantVerseMoisPrecedent > 0
-            ? round((($montantVerse - $montantVerseMoisPrecedent) / $montantVerseMoisPrecedent) * 100)
-            : 0;
 
-        $recentPayments = Loyer::query()
-            ->with(['locataire', 'propriete'])
-            ->where('agence_id', $agenceId)
-            ->whereNotNull('date_paiement')
-            ->whereBetween('date_paiement', [$monthStart, $monthEnd])
-            ->orderByDesc('date_paiement')
-            ->limit(5)
-            ->get()
-            ->map(fn ($payment) => [
-                'id' => $payment->loyer_id,
-                'tenant' => $payment->locataire?->name ?? 'Locataire',
-                'property' => $payment->propriete?->reference ?? 'Bien',
-                'date' => $payment->date_paiement?->format('d/m/Y') ?? '—',
-                'amount' => (float) ($payment->montant_payer ?? 0),
-                'status' => $payment->statut === 'Paiement total' ? 'payé' : 'en attente',
-            ])
-            ->values()
-            ->all();
+        $recentPayments = $canViewFinancials
+            ? Loyer::query()
+                ->with(['locataire', 'propriete'])
+                ->where('agence_id', $agenceId)
+                ->whereNotNull('date_paiement')
+                ->whereBetween('date_paiement', [$monthStart, $monthEnd])
+                ->orderByDesc('date_paiement')
+                ->limit(5)
+                ->get()
+                ->map(fn ($payment) => [
+                    'id' => $payment->loyer_id,
+                    'tenant' => $payment->locataire?->name ?? 'Locataire',
+                    'property' => $payment->propriete?->reference ?? 'Bien',
+                    'date' => $payment->date_paiement?->format('d/m/Y') ?? '—',
+                    'amount' => (float) ($payment->montant_payer ?? 0),
+                    'status' => $payment->statut === 'Paiement total' ? 'payé' : 'en attente',
+                ])
+                ->values()
+                ->all()
+            : [];
 
         $upcomingLeases = LocataireAgence::query()
             ->with(['locataire', 'propriete'])
@@ -120,7 +132,9 @@ class DashboardController extends Controller
                 'id' => $property->propriete_id,
                 'name' => $property->reference ?? 'Propriété',
                 'location' => $property->adresse_complete ?? '—',
-                'rent' => (float) ($property->batiments->sum(fn ($batiment) => $batiment->portes->sum('mt_loyer')) ?? 0),
+                'rent' => $canViewFinancials
+                    ? (float) ($property->batiments->sum(fn ($batiment) => $batiment->portes->sum('mt_loyer')) ?? 0)
+                    : null,
                 'status' => $property->nbre_porte_occupe > 0 ? 'Occupé' : 'Libre',
             ])
             ->values()
@@ -157,6 +171,10 @@ class DashboardController extends Controller
             'recentPayments' => $recentPayments,
             'upcomingLeases' => $upcomingLeases,
             'recentProperties' => $recentProperties,
+            'abilities' => [
+                'viewFinancials' => $canViewFinancials,
+                'viewCaisse' => $canViewCaisse,
+            ],
             'periodLabel' => ucfirst($now->locale('fr')->translatedFormat('F Y')),
         ]);
     }

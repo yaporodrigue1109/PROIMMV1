@@ -37,6 +37,12 @@ class HandleInertiaRequests extends Middleware
                     'phone' => $user->phone,
                     'statut' => $user->statut,
                     'agence_id' => $user->agence_id,
+                    'role' => $user->role ? [
+                        'role_id' => $user->role->role_id,
+                        'name' => $user->role->name,
+                        'slug' => $user->role->slug,
+                    ] : null,
+                    'permissions' => $user->getPermissions(),
                     'agence' => $user->agence ? [
                         'agence_id' => $user->agence->agence_id,
                         'name' => $user->agence->name,

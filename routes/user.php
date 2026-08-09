@@ -37,7 +37,7 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('/login', 'login')->name('login.post');
 });
 
-Route::middleware(['user', BlockDemoAgenceMutations::class])->group(function () {
+Route::middleware(['user', 'agency.permission', BlockDemoAgenceMutations::class])->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 

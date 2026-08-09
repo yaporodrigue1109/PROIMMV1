@@ -51,6 +51,7 @@ class StatistiqueController extends Controller
             $periodEnd = $selectedMonth->copy()->endOfMonth();
         }
 
+        $selectedDate = $periodEnd->copy()->startOfMonth();
         $period = $periodStart->format('Y-m');
         $year = $periodStart->year === $periodEnd->year
             ? (string) $periodStart->year

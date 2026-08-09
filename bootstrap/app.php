@@ -83,6 +83,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'agency.permission' => \App\Http\Middleware\CheckAgencyRoutePermission::class,
             'admin' => RedirectIfNotAdmin::class,
             'admin.guest' => RedirectIfAdmin::class,
             'user' => RedirectIfNotUser::class,

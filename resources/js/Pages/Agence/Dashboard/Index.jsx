@@ -5,6 +5,7 @@ import {
     Building2,
     CalendarClock,
     DoorOpen,
+    LockKeyhole,
     Plus,
     TrendingDown,
     TrendingUp,
@@ -40,12 +41,16 @@ const statusTone = {
 
 export default function Dashboard({
     abonnement = {},
+    abilities = {},
     periodLabel = '',
     stats = {},
     recentPayments = [],
     upcomingLeases = [],
     recentProperties = [],
 }) {
+    const canViewFinancials = Boolean(abilities.viewFinancials);
+    const canViewCaisse = Boolean(abilities.viewCaisse);
+    const maskedAmount = '•••••• FCFA';
     const {
         properties = 0,
         occupiedUnits = 0,
@@ -99,18 +104,20 @@ export default function Dashboard({
         },
         {
             label: 'Montant attendu',
-            value: currency(expectedRevenue),
-            hint: `${currency(pendingPayments)} à recevoir`,
+            value: canViewFinancials ? currency(expectedRevenue) : maskedAmount,
+            hint: canViewFinancials ? `${currency(pendingPayments)} à recevoir` : 'Accès financier requis',
             icon: Banknote,
             accent: 'bg-[#eaf4fb] text-[#00559b]',
         },
         {
             label: 'Montant versé',
-            value: currency(monthlyRevenue),
-            hint: `${revenueTrend >= 0 ? '+' : ''}${revenueTrend}% vs mois dernier`,
+            value: canViewFinancials ? currency(monthlyRevenue) : maskedAmount,
+            hint: canViewFinancials
+                ? `${revenueTrend >= 0 ? '+' : ''}${revenueTrend}% vs mois dernier`
+                : 'Accès financier requis',
             icon: Banknote,
             accent: 'bg-[#eaf4fb] text-[#00559b]',
-            trend: revenueTrend,
+            trend: canViewFinancials ? revenueTrend : undefined,
         },
         {
             label: "Taux d'occupation",
@@ -246,8 +253,13 @@ export default function Dashboard({
 
                         <div className="rounded-xl border border-[#eef3f7] bg-[#f7fbfe] p-4">
                             <p className="text-xs font-semibold uppercase tracking-wide text-[#5f7182]">Finances</p>
-                            <p className="mt-2 text-lg font-semibold text-[#0f172a]">{currency(expectedRevenue)}</p>
-                            <p className="mt-1 text-sm text-[#5f7182]">Versé : {currency(monthlyRevenue)}</p>
+                            <p className="mt-2 text-lg font-semibold text-[#0f172a]">
+                                {canViewFinancials ? currency(expectedRevenue) : maskedAmount}
+                            </p>
+                            <p className="mt-1 flex items-center gap-1 text-sm text-[#5f7182]">
+                                {!canViewFinancials ? <LockKeyhole className="h-3.5 w-3.5" /> : null}
+                                {canViewFinancials ? `Versé : ${currency(monthlyRevenue)}` : 'Montants masqués'}
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -262,13 +274,20 @@ export default function Dashboard({
                                     Derniers encaissements enregistrés
                                 </CardDescription>
                             </div>
-                            <Button asChild variant="ghost" size="sm" className={agenceButtonStyles.subtle}>
-                                <Link href="/agence/caisse">Tout voir</Link>
-                            </Button>
+                            {canViewCaisse ? (
+                                <Button asChild variant="ghost" size="sm" className={agenceButtonStyles.subtle}>
+                                    <Link href="/agence/caisse">Tout voir</Link>
+                                </Button>
+                            ) : null}
                         </CardHeader>
                         <CardContent className="p-0">
                             <div className="divide-y divide-[#eef3f7]">
-                                {recentPayments.length === 0 ? (
+                                {!canViewFinancials ? (
+                                    <div className="flex flex-col items-center gap-2 px-6 py-10 text-center text-sm text-[#5f7182]">
+                                        <LockKeyhole className="h-5 w-5 text-[#00559b]" />
+                                        Les paiements sont masqués pour votre rôle.
+                                    </div>
+                                ) : recentPayments.length === 0 ? (
                                     <p className="px-6 py-8 text-center text-sm text-[#5f7182]">
                                         Aucun paiement récent.
                                     </p>
@@ -398,8 +417,10 @@ export default function Dashboard({
                                     </p>
                                     <p className="truncate text-xs text-[#5f7182]">{property.location}</p>
                                     <p className="mt-2 text-sm font-medium text-[#0f172a]">
-                                        {currency(property.rent)}
-                                        <span className="text-xs font-normal text-[#5f7182]"> /mois</span>
+                                        {canViewFinancials ? currency(property.rent) : maskedAmount}
+                                        {canViewFinancials ? (
+                                            <span className="text-xs font-normal text-[#5f7182]"> /mois</span>
+                                        ) : null}
                                     </p>
                                 </Link>
                             ))
