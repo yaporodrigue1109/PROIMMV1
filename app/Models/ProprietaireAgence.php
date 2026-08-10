@@ -3,24 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class ProprietaireAgence extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table      = 'proprietaire_agences';
+    protected $table = 'proprietaire_agences';
+
     protected $primaryKey = 'proprietaire_agence_id';
-    public $incrementing  = false;
-    protected $keyType    = 'string';
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected $fillable = [
         'proprietaire_agence_id',
         'proprietaire_id',
         'agence_id',
         'is_active',
+        'is_mobile_visible',
         'date_activation',
         'date_desactivation',
         'agent_activation_id',
@@ -40,12 +44,13 @@ class ProprietaireAgence extends Model
     ];
 
     protected $casts = [
-        'is_active'           => 'boolean',
-        'date_activation'     => 'datetime',
-        'date_desactivation'  => 'datetime',
-        'created_at'          => 'datetime',
-        'updated_at'          => 'datetime',
-        'deleted_at'          => 'datetime',
+        'is_active' => 'boolean',
+        'is_mobile_visible' => 'boolean',
+        'date_activation' => 'datetime',
+        'date_desactivation' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     protected static function boot()
@@ -56,13 +61,12 @@ class ProprietaireAgence extends Model
             if (empty($model->{$model->getKeyName()})) {
                 $model->{$model->getKeyName()} = (string) Str::uuid();
             }
-            $model->created_by = getInfoAgent()->users->id_users ?? getInfoAdmin()->admin->id_admin ;
-
+            $model->created_by = getInfoAgent()->users->id_users ?? getInfoAdmin()->admin->id_admin;
 
         });
 
         static::updating(function ($model) {
-            $model->updated_by = getInfoAgent()->users->id_users ?? getInfoAdmin()->admin->id_admin ;
+            $model->updated_by = getInfoAgent()->users->id_users ?? getInfoAdmin()->admin->id_admin;
         });
 
         static::deleting(function ($model) {
@@ -75,7 +79,7 @@ class ProprietaireAgence extends Model
     // RELATIONS
     // =============================================
 
-    public function proprietaire() 
+    public function proprietaire()
     {
         return $this->belongsTo(Proprietaire::class, 'proprietaire_id', 'proprietaire_id');
     }
@@ -146,8 +150,8 @@ class ProprietaireAgence extends Model
     public function activate(string $agentId): void
     {
         $this->update([
-            'is_active'          => true,
-            'date_activation'    => now(),
+            'is_active' => true,
+            'date_activation' => now(),
             'agent_activation_id' => $agentId,
             'date_desactivation' => null,
             'agent_desactivation_id' => null,
@@ -157,8 +161,8 @@ class ProprietaireAgence extends Model
     public function deactivate(string $agentId): void
     {
         $this->update([
-            'is_active'             => false,
-            'date_desactivation'    => now(),
+            'is_active' => false,
+            'date_desactivation' => now(),
             'agent_desactivation_id' => $agentId,
         ]);
     }
