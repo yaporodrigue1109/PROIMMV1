@@ -45,6 +45,7 @@ const navigation = [
         section: 'Administration',
         items: [
             { label: 'Administrateurs', href: '/admin/administrateurs', icon: UserRound, activeMatch: '/admin/administrateurs' },
+            { label: 'Pays, régions et villes', href: '/admin/geographie', icon: MapPinned, activeMatch: '/admin/geographie' },
             { label: 'Modules', href: '/admin/modules', icon: Layers3, activeMatch: '/admin/modules' },
             { label: 'Proximités', href: '/admin/proximites', icon: MapPinned, activeMatch: '/admin/proximites' },
             { label: 'Types de propriétés', href: '/admin/types-proprietes', icon: Building2, activeMatch: '/admin/types-proprietes' },
@@ -63,6 +64,7 @@ const breadcrumbLabels = {
     agences: 'Agences',
     abonnements: 'Abonnements',
     administrateurs: 'Administrateurs',
+    geographie: 'Pays, régions et villes',
     modules: 'Modules',
     proximites: 'Proximités',
     'types-proprietes': 'Types de propriétés',

@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\Contact\ContactMessageController;
 use App\Http\Controllers\Admin\Proximite\ProximiteController;
 use App\Http\Controllers\Admin\TypePropriete\TypeProprieteController as AdminTypeProprieteController;
 use App\Http\Controllers\Admin\EquipementPropriete\EquipementProprieteController as AdminEquipementProprieteController;
+use App\Http\Controllers\Admin\Geographie\GeographieController;
 use Inertia\Inertia;
 
 
@@ -105,6 +106,19 @@ Route::middleware(['admin'])->group(function () {
     Route::prefix('administrateurs')->name('administrateurs.')->group(function () {
         Route::get('/', [AdministrateurController::class, 'index'])->name('index');
         Route::post('/', [AdministrateurController::class, 'store'])->name('store');
+    });
+
+    Route::prefix('geographie')->name('geographie.')->controller(GeographieController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/pays', 'storePays')->name('pays.store');
+        Route::put('/pays/{pays}', 'updatePays')->name('pays.update');
+        Route::delete('/pays/{pays}', 'destroyPays')->name('pays.destroy');
+        Route::post('/regions', 'storeRegion')->name('regions.store');
+        Route::put('/regions/{region}', 'updateRegion')->name('regions.update');
+        Route::delete('/regions/{region}', 'destroyRegion')->name('regions.destroy');
+        Route::post('/villes', 'storeVille')->name('villes.store');
+        Route::put('/villes/{ville}', 'updateVille')->name('villes.update');
+        Route::delete('/villes/{ville}', 'destroyVille')->name('villes.destroy');
     });
 
     /*
