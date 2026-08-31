@@ -18,7 +18,7 @@ export default function Index({ pays = [], regions = [], villes = [] }) {
     const [editing, setEditing] = useState(null);
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const [collapsed, setCollapsed] = useState(() => new Set());
+    const [expanded, setExpanded] = useState(() => new Set());
     const form = useForm({ name: '', iso2: '', indicatif: '', actif: true, pays_id: '', region_id: '' });
     const cfg = configs[tab];
     const rows = { pays, regions, villes }[tab] ?? [];
@@ -48,7 +48,7 @@ export default function Index({ pays = [], regions = [], villes = [] }) {
     const close = () => { setOpen(false); setEditing(null); form.reset(); };
     const submit = (e) => { e.preventDefault(); const url = `/admin/geographie/${cfg.endpoint}${editing ? `/${editing.id}` : ''}`; form[editing ? 'put' : 'post'](url, { preserveScroll: true, onSuccess: close }); };
     const remove = (item) => window.confirm(`Supprimer ${cfg.singular} « ${item.name} » ?`) && router.delete(`/admin/geographie/${cfg.endpoint}/${item.id}`, { preserveScroll: true });
-    const toggleSection = (key) => setCollapsed((current) => {
+    const toggleSection = (key) => setExpanded((current) => {
         const next = new Set(current);
         if (next.has(key)) next.delete(key); else next.add(key);
         return next;
@@ -59,7 +59,7 @@ export default function Index({ pays = [], regions = [], villes = [] }) {
         <div className="flex flex-wrap gap-2">{Object.entries(configs).map(([key, item]) => <Button key={key} variant={tab === key ? 'default' : 'outline'} onClick={() => { setTab(key); setSearch(''); }} className={tab === key ? 'bg-[#00559b]' : ''}>{item.title}</Button>)}</div>
         <Card className="rounded-2xl border-[#c8d4de]"><CardHeader className="flex flex-row items-center gap-3"><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Rechercher ${cfg.singular}…`} /><Button onClick={() => showForm()} className="bg-[#00559b] text-white"><Plus className="h-4 w-4" /> Ajouter</Button></CardHeader><CardContent>
             {tab === 'regions' ? <div className="space-y-6">
-                {Object.entries(regionsByCountry).sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([country, countryRegions]) => { const key = `regions-country-${country}`; const isClosed = collapsed.has(key); return <section key={country} className="overflow-hidden rounded-2xl border border-slate-200">
+                {Object.entries(regionsByCountry).sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([country, countryRegions]) => { const key = `regions-country-${country}`; const isClosed = !expanded.has(key); return <section key={country} className="overflow-hidden rounded-2xl border border-slate-200">
                     <button type="button" onClick={() => toggleSection(key)} className="flex w-full items-center justify-between bg-[#eef6fc] px-4 py-3 text-left transition hover:bg-[#e3f0fa]"><div className="flex items-center gap-2 font-semibold text-[#00559b]">{isClosed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}<Globe2 className="h-4 w-4" />{country}</div><span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">{countryRegions.length} région(s)</span></button>
                     {!isClosed && <><div className="grid grid-cols-[minmax(0,1fr)_130px_100px] border-b bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><span>Région</span><span className="text-center">Villes</span><span className="text-right">Actions</span></div>
                     <div className="divide-y divide-slate-100">{countryRegions.sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((item) => <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_130px_100px] items-center px-4 py-3"><div className="flex min-w-0 items-center gap-3"><span className="rounded-lg bg-blue-50 p-2 text-[#00559b]"><Map className="h-4 w-4" /></span><span className="truncate font-medium text-slate-900">{item.name}</span></div><span className="text-center text-sm text-slate-600">{item.villes_count ?? 0}</span><div className="flex justify-end gap-2"><Button variant="outline" size="icon" onClick={() => showForm(item)}><Pencil className="h-4 w-4" /></Button><Button variant="outline" size="icon" className="text-red-600" onClick={() => remove(item)}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div></>}
@@ -68,10 +68,10 @@ export default function Index({ pays = [], regions = [], villes = [] }) {
             </div> : tab === 'villes' ? <div className="space-y-6">
                 {Object.entries(citiesByCountryAndRegion).sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([country, regionGroups]) => {
                     const countryTotal = Object.values(regionGroups).reduce((total, cities) => total + cities.length, 0);
-                    const countryKey = `cities-country-${country}`; const countryClosed = collapsed.has(countryKey);
+                    const countryKey = `cities-country-${country}`; const countryClosed = !expanded.has(countryKey);
                     return <section key={country} className="overflow-hidden rounded-2xl border border-slate-200">
                         <button type="button" onClick={() => toggleSection(countryKey)} className="flex w-full items-center justify-between bg-[#eef6fc] px-4 py-3 text-left transition hover:bg-[#e3f0fa]"><div className="flex items-center gap-2 font-semibold text-[#00559b]">{countryClosed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}<Globe2 className="h-4 w-4" />{country}</div><span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">{countryTotal} ville(s)</span></button>
-                        {!countryClosed && <div className="space-y-4 p-4">{Object.entries(regionGroups).sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([region, regionCities]) => { const regionKey = `cities-region-${country}-${region}`; const regionClosed = collapsed.has(regionKey); return <div key={`${country}-${region}`} className="overflow-hidden rounded-xl border border-slate-200">
+                        {!countryClosed && <div className="space-y-4 p-4">{Object.entries(regionGroups).sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([region, regionCities]) => { const regionKey = `cities-region-${country}-${region}`; const regionClosed = !expanded.has(regionKey); return <div key={`${country}-${region}`} className="overflow-hidden rounded-xl border border-slate-200">
                             <button type="button" onClick={() => toggleSection(regionKey)} className="flex w-full items-center justify-between border-b bg-slate-50 px-4 py-2.5 text-left transition hover:bg-slate-100"><span className="flex items-center gap-2 text-sm font-semibold text-slate-700">{regionClosed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}<Map className="h-4 w-4 text-[#00559b]" />{region}</span><span className="text-xs text-slate-500">{regionCities.length} ville(s)</span></button>
                             {!regionClosed && <div className="divide-y divide-slate-100">{regionCities.sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((item) => <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_100px] items-center px-4 py-3"><div className="flex min-w-0 items-center gap-3"><span className="rounded-lg bg-blue-50 p-2 text-[#00559b]"><MapPin className="h-4 w-4" /></span><span className="truncate font-medium text-slate-900">{item.name}</span></div><div className="flex justify-end gap-2"><Button variant="outline" size="icon" onClick={() => showForm(item)}><Pencil className="h-4 w-4" /></Button><Button variant="outline" size="icon" className="text-red-600" onClick={() => remove(item)}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div>}
                         </div>; })}</div>}
