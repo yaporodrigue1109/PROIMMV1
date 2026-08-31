@@ -7,6 +7,9 @@ use App\Models\User;
 use App\Models\Abonnement;
 use App\Models\AbonnementHistorique;
 use App\Models\Transaction;
+use App\Models\Role;
+use App\Models\LocataireAgence;
+use App\Models\MobileApiToken;
 use App\Repositories\Interfaces\AgenceRepositoryInterface;
 use App\Repositories\Interfaces\TransactionRepositoryInterface;
 use App\Repositories\Interfaces\UserRepositoryInterface;
@@ -14,12 +17,12 @@ use App\Repositories\Interfaces\AbonnementRepositoryInterface;
 use App\Events\AgenceCreated;
 use App\Events\AgenceUpdated;
 use App\Events\AgenceDeleted;
-use App\Events\AgenceStatutChange;
 use App\Services\ConfigurationTarifService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Exception;
 
@@ -239,6 +242,8 @@ class AgenceService
             ->where('type', 'subscription')
             ->where('agence_id', $agence->agence_id)
             ->first();
+        $subscriptionAction = $currentSnapshot ? 'renouvellement' : 'creation';
+        $operationType = $currentSnapshot ? 'renouvellement' : 'souscription';
 
         $montantBaseHt    = (float) ($data['montant_base_total'] ?? 0);
         $montantOptionsHt = (float) ($data['montant_total'] ?? 0) - $montantBaseHt;
@@ -272,7 +277,7 @@ class AgenceService
                 'nouvelle_date_fin'    => $dateFin,
                 'duree_mois'           => $dureeMois,
                 'montant_ht'           => $montantTotalHt,
-                'action'               => $isUpdate ? 'renouvellement' : 'creation',
+                'action'               => $subscriptionAction,
                 'action_par'           => getInfoAdmin()->admin->id_admin ?? 1,
                 'notes'                => $data['abonnement_notes'] ?? null,
                 'statut'               => 'actif',
@@ -300,7 +305,7 @@ class AgenceService
             'nouvelle_date_fin'    => $dateFin,
             'duree_mois'           => $dureeMois,
             'montant_ht'           => $montantTotalHt,
-            'action'               => $isUpdate ? 'renouvellement' : 'creation',
+            'action'               => $subscriptionAction,
             'action_par'           => getInfoAdmin()->admin->id_admin ?? 1,
             'notes'                => $data['abonnement_notes'] ?? null,
         ]);
@@ -320,14 +325,19 @@ class AgenceService
             'periode_debut'            => $dateDebut,
             'periode_fin'              => $dateFin,
             'options_souscrites'       => $data['options'] ?? [],
-            'type_operation'           => $isUpdate ? 'renouvellement' : 'souscription',
-            'statut'                   => 'en_attente',
+            'mode_paiement'            => 'autre',
+            'type_operation'           => $operationType,
+            'statut'                   => 'validee',
+            'date_paiement'            => now(),
+            'date_validation'          => now(),
             'created_by'               => getInfoAdmin()->admin->id_admin ?? 1,
+            'updated_by'               => getInfoAdmin()->admin->id_admin ?? 1,
         ]);
     }
 
     public function validateSubscriptionDraft(Agence $agence, array $draft, string $actorId, ?string $modePaiement = 'test'): array
     {
+        $wasDemo = $agence->statut === 'en_demo';
         $modePaiement = $this->normalizePaymentMode($modePaiement);
         $dureeMois = max(1, (int) ($draft['duree_mois'] ?? 0));
         $today = now()->startOfDay();
@@ -410,6 +420,7 @@ class AgenceService
             'abonnement_start' => $dateDebut,
             'abonnement_end'   => $dateFin,
             'duree_mois'       => $dureeMois,
+            'statut'           => 'active',
         ]);
 
         if ($existingPendingTransaction && $existingPendingTransaction->abonnementHistorique) {
@@ -489,6 +500,10 @@ class AgenceService
                 'updated_by'               => $actorId,
                 'notes'                    => $payload['abonnement_notes'],
             ]);
+        }
+
+        if ($wasDemo) {
+            $this->demoDataService->purge($agence);
         }
 
         return [
@@ -608,7 +623,22 @@ class AgenceService
             throw new Exception("L'email {$data['new_responsable_email']} est déjà utilisé.");
         }
 
-        // Créer via le repository (pas directement User::create)
+        $administratorRole = Role::query()->find('role-responsable');
+
+        if (! $administratorRole) {
+            $administratorRole = new Role([
+                'name' => "Administrateur d'agence",
+                'slug' => 'role-responsable',
+                'description' => "Rôle administrateur attribué au premier utilisateur d'une agence.",
+                'agence_id' => null,
+                'is_active' => true,
+                'is_system' => true,
+            ]);
+            $administratorRole->role_id = 'role-responsable';
+            $administratorRole->save();
+        }
+
+        // Le premier utilisateur de l'agence reçoit le rôle administrateur d'agence.
         $user = $this->userRepository->create([
             'name'           => $data['new_responsable_name'],
             'email'          => $data['new_responsable_email'],
@@ -619,14 +649,9 @@ class AgenceService
             'photo'          => upload("users_photo", 'png', 'new_responsable_photo', $data),
             'statut'         => true,
             'is_responsable' => true,
-            'role_id'        =>1,
+            'role_id'        => $administratorRole->role_id,
             'created_by'     => getInfoAdmin()->admin->id_admin ?? 1,
         ]);
-
-        // Assigner le rôle via Spatie (si utilisé)
-        if (method_exists($user, 'assignRole')) {
-            $user->assignRole('responsable');
-        }
 
         Log::info('Nouveau responsable créé', [
             'user_id' => $user->id_users,
@@ -660,16 +685,36 @@ class AgenceService
             $result = $this->repository->updateStatut($agenceId, $nouveauStatut);
 
             if ($result) {
-                DB::table('agence_statut_logs')->insert([
-                    'agence_id'      => $agenceId,
-                    'ancien_statut'  => $ancienStatut,
-                    'nouveau_statut' => $nouveauStatut,
-                    'motif'          => $motif,
-                    'changed_by'     => getInfoAdmin()->admin->id_admin ?? 1,
-                    'created_at'     => now(),
-                ]);
+                if ($nouveauStatut === 'desactive') {
+                    $tenantIds = LocataireAgence::query()
+                        ->where('agence_id', $agenceId)
+                        ->pluck('locataire_id')
+                        ->filter()
+                        ->unique();
 
-                event(new AgenceStatutChange($agence, $ancienStatut, $nouveauStatut, $motif));
+                    MobileApiToken::query()
+                        ->where('actor_type', 'locataire')
+                        ->whereIn('actor_id', $tenantIds)
+                        ->delete();
+                }
+
+                if (Schema::hasTable('agence_statut_logs')) {
+                    DB::table('agence_statut_logs')->insert([
+                        'agence_id'      => $agenceId,
+                        'ancien_statut'  => $ancienStatut,
+                        'nouveau_statut' => $nouveauStatut,
+                        'motif'          => $motif,
+                        'changed_by'     => getInfoAdmin()->admin->id_admin ?? null,
+                        'created_at'     => now(),
+                    ]);
+                } else {
+                    Log::warning('Journal de statut agence indisponible.', [
+                        'agence_id' => $agenceId,
+                        'ancien_statut' => $ancienStatut,
+                        'nouveau_statut' => $nouveauStatut,
+                    ]);
+                }
+
             }
 
             return $result;
@@ -774,9 +819,6 @@ class AgenceService
             }
         }
 
-        if ($nouveauStatut === 'desactive' && $agence->is_principale) {
-            throw new Exception("L'agence principale d'une région ne peut pas être désactivée.");
-        }
     }
 
     protected function canDeleteAgence(Agence $agence): void

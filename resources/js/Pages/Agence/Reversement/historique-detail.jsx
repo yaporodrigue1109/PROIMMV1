@@ -8,6 +8,7 @@ import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { cn } from '../../../lib/utils';
 import { agenceButtonStyles } from '../../../lib/buttonStyles';
+import { FicheVenteView } from './index';
 
 const fmtNombre = (value) => new Intl.NumberFormat('fr-FR').format(Math.round(Number(value ?? 0)));
 
@@ -70,8 +71,8 @@ const montantEnLettres = (n) => {
 };
 
    const courTotals = (c) => {
-    let attendu = 0, totalPaye = 0, restant = 0, avance = 0, montantLoyer = 0 , montantCautionSodeci = 0, montantarrierePaye = 0,
-     montantLoyerPaye = 0, montantNouvelleCaution = 0 , montantArrieresPaye = 0;
+    let attendu = 0, totalPaye = 0, restant = 0, avance = 0, montantLoyer = 0, arrieres = 0,
+        montantCautionSodeci = 0, arrierePaye = 0, montantLoyerPaye = 0, montantNouvelleCaution = 0;
 
     c.locataires?.forEach(l => {
         attendu += l.montantAttendu || 0;
@@ -79,11 +80,11 @@ const montantEnLettres = (n) => {
         restant += l.restant || 0;
         avance += l.avance || 0;
         montantLoyer += l.montantLoyer || 0;
+        arrieres += l.arrieres || 0;
         montantCautionSodeci +=  l.cautionSodeci || 0; // Ajout de la caution SODECI au montant du loyer
-        montantarrierePaye += l.arrierePaye || 0; // Ajout de l'arriéré payé au montant du loyer
+        arrierePaye += l.arrierePaye || 0; // Ajout de l'arriéré payé au montant du loyer
         montantLoyerPaye += l.loyerPaye || 0; // Ajout du loyer payé au montant du loyer
         montantNouvelleCaution += l.nouvelleCaution || 0; // Ajout de la nouvelle caution au montant du loyer
-        montantArrieresPaye += l.arrierePaye || 0; // Ajout de l'arriéré payé au montant du loyer
     });
 
     const commission = totalPaye   * (c.commissionRate || 0.10);
@@ -91,7 +92,7 @@ const montantEnLettres = (n) => {
     const net = apresCommission + (c.nouvelleCaution || 0) - (c.depenses || 0);
     const pct = attendu > 0 ? Math.round((totalPaye / attendu) * 100) : 0;
 
-    return { attendu, totalPaye, restant, avance, montantLoyer, montantCautionSodeci, montantarrierePaye, montantLoyerPaye, montantNouvelleCaution, montantArrieresPaye, commission, apresCommission, net, pct };
+    return { attendu, totalPaye, restant, avance, montantLoyer, arrieres, montantCautionSodeci, arrierePaye, montantLoyerPaye, montantNouvelleCaution, commission, apresCommission, net, pct };
 };
 
 
@@ -109,6 +110,20 @@ const montantEnLettres = (n) => {
  */
 export default function ReversementHistoriqueDetail({ cour }) {
     if (!cour) return null;
+
+    if (cour.ficheType === 'vente' && cour.vente) {
+        return (
+            <AgenceLayout title="Reversement de vente (archive)">
+                <Head title="Reversement de vente (archive)" />
+                <FicheVenteView
+                    cour={cour}
+                    readonly
+                    propNom={() => cour.proprietaire_nom}
+                    onBack={() => router.visit('/agence/reversement/historique')}
+                />
+            </AgenceLayout>
+        );
+    }
 
     const t = courTotals(cour) || {};
     const cell = 'border border-[#dbe3ea] px-2 py-1.5 text-[11px] leading-tight';
@@ -142,7 +157,14 @@ export default function ReversementHistoriqueDetail({ cour }) {
                     </PDFDownloadLink>
                     </div>
 
-                    <div className="p-6">
+                    <div className="relative isolate overflow-hidden p-6">
+                        {cour.logo_entreprise ? (
+                            <img
+                                src={cour.logo_entreprise}
+                                alt=""
+                                className="pointer-events-none absolute left-1/2 top-1/2 -z-10 max-h-[65%] w-[42%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.07]"
+                            />
+                        ) : null}
                         {/* En-tête du document */}
                         <div className="mb-4 flex items-start justify-between gap-4">
                             <div className="flex items-center gap-3">
@@ -230,13 +252,13 @@ export default function ReversementHistoriqueDetail({ cour }) {
                                     <td colSpan={5} className={cell}>TOTAUX</td>
                                     
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.montantLoyer)}</td>
-                                    <td className={cn(cell, 'text-right')}> {fmtNombre(t.montantArrieresPaye)}</td>
+                                    <td className={cn(cell, 'text-right')}>{fmtNombre(t.arrieres)}</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.attendu)}</td>
                                     <td className={cell}></td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.avance)}</td>
                                     <td className={cn(cell, 'text-right')}> {fmtNombre(t.montantNouvelleCaution)}</td>
                                     <td className={cn(cell, 'text-right')}> {fmtNombre(t.montantLoyerPaye)}</td>
-                                    <td className={cn(cell, 'text-right')}> {fmtNombre(t.montantarrierePaye)}</td>
+                                    <td className={cn(cell, 'text-right')}>{fmtNombre(t.arrierePaye)}</td>
                                     <td className={cn(cell, 'text-right')}> {fmtNombre(t.montantCautionSodeci)}</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.totalPaye)}</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.restant)}</td>
@@ -269,6 +291,18 @@ export default function ReversementHistoriqueDetail({ cour }) {
                                             <tr className="border-b border-[#0f172a]">
                                                 <td className="px-3 py-2 font-medium text-[#0f172a]">NOUVELLE CAUTION</td>
                                                 <td className="px-3 py-2 text-right font-semibold text-[#0f172a]">{fmtNombre(cour.nouvelleCaution)} FCFA</td>
+                                            </tr>
+                                              <tr className="border-b border-[#0f172a]">
+                                                <td className="px-3 py-2 font-medium text-[#0f172a]">Caution cie/ Sodeci</td>
+                                                <td className="px-3 py-2 text-right font-semibold text-[#0f172a]">{fmtNombre(cour.cautionSodeci)} FCFA</td>
+                                            </tr>
+                                            <tr className="border-b border-[#0f172a]">
+                                                <td className="px-3 py-2 font-medium text-[#0f172a]">FRAIS DE DOSSIER (NON REVERSÉS)</td>
+                                                <td className="px-3 py-2 text-right font-semibold text-[#d97706]">{fmtNombre(cour.fraisDossier)} FCFA</td>
+                                            </tr>
+                                            <tr className="border-b border-[#0f172a]">
+                                                <td className="px-3 py-2 font-medium text-[#0f172a]">MAINTENANCES — MONTANT VERSÉ SUR LA PÉRIODE</td>
+                                                <td className="px-3 py-2 text-right font-semibold text-[#b42318]">{fmtNombre(cour.montantMaintenances)} FCFA</td>
                                             </tr>
                                             <tr className="border-b border-[#0f172a]">
                                                 <td className="px-3 py-2 font-medium text-[#0f172a]">DEPENSES EFFECTUEES</td>

@@ -19,7 +19,7 @@ class MaintenancierController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['fonction_id', 'agence_id', 'statut', 'per_page']);
+        $filters = $request->only(['fonction_id', 'statut', 'per_page']);
         $maintenanciers = $this->service->getAllMaintenanciers($filters);
 
         return response()->json([
@@ -46,8 +46,9 @@ class MaintenancierController extends Controller
 
     public function store(Request $request)
     {
+        $agencyId = $this->agenceId();
         $validated = $request->validate([
-            'fonction_maintenance_id' => 'required|exists:fonction_maintenance,fonction_maintenance_id',
+            'fonction_maintenance_id' => ['required', Rule::exists('fonction_maintenance', 'fonction_maintenance_id')->where('agence_id', $agencyId)],
             'entreprise' => 'nullable|string',
             'name' => 'required|string|max:255',
             'tel1' => 'required|string|max:20',
@@ -81,8 +82,9 @@ class MaintenancierController extends Controller
 
     public function update(Request $request, $id)
     {
+        $agencyId = $this->agenceId();
         $validated = $request->validate([
-            'fonction_maintenance_id' => 'required|exists:fonction_maintenance,fonction_maintenance_id',
+            'fonction_maintenance_id' => ['required', Rule::exists('fonction_maintenance', 'fonction_maintenance_id')->where('agence_id', $agencyId)],
             'entreprise' => 'nullable|string',
             'name' => 'required|string|max:255',
             'tel1' => 'required|string|max:20',

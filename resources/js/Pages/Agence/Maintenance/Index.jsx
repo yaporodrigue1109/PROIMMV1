@@ -41,6 +41,24 @@ import 'react-phone-number-input/style.css';
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
+const createClientId = () => {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+        return globalThis.crypto.randomUUID();
+    }
+
+    if (typeof globalThis.crypto?.getRandomValues === 'function') {
+        const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16));
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+        return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0'))
+            .join('')
+            .replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
+    }
+
+    return `maintenance-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 const inputClassName =
     'flex h-10 w-full rounded-md border border-[#c8d4de] bg-white px-3 py-2 text-sm text-[#0f172a] ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-[#8798a5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00559b] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -157,7 +175,7 @@ const initials = (name, fallback = 'M') => {
 };
 
 const normalizeMaintenancier = (item) => {
-    const id = String(item?.maintenancier_id ?? item?.id ?? crypto.randomUUID());
+    const id = String(item?.maintenancier_id ?? item?.id ?? createClientId());
 
     return {
         id,
@@ -190,7 +208,7 @@ const normalizeMaintenancier = (item) => {
 };
 
 const normalizeMaintenance = (item) => {
-    const id = String(item?.maintenance_id ?? item?.id ?? crypto.randomUUID());
+    const id = String(item?.maintenance_id ?? item?.id ?? createClientId());
     const details = asArray(item?.details);
 
     return {
@@ -201,13 +219,21 @@ const normalizeMaintenance = (item) => {
         description: item?.description ?? item?.description_generale ?? '',
         proprietaire: item?.proprietaire?.name ?? item?.proprietaire?.nom ?? 'Non defini',
         proprietaire_id: String(item?.proprietaire_id ?? item?.proprietaire?.proprietaire_id ?? ''),
-        propriete: item?.propriete?.description ?? item?.propriete?.name ?? '',
+        propriete: item?.propriete?.reference ?? item?.propriete?.description ?? item?.propriete?.name ?? '',
+        lot_id: String(item?.lot_id ?? item?.lot?.propreietaire_lot_id ?? ''),
+        propriete_id: String(item?.propriete_id ?? item?.propriete?.propriete_id ?? ''),
+        batiment_id: String(item?.batiment_id ?? item?.batiment?.batiment_id ?? ''),
+        porte_id: String(item?.porte_id ?? item?.porte?.porte_id ?? ''),
         lot: item?.lot?.name ?? item?.lot?.libelle ?? item?.lot_id ?? '',
         batiment: item?.batiment?.name ?? item?.batiment?.libelle ?? item?.batiment_id ?? '',
         porte: item?.porte?.numero_porte ?? item?.porte?.name ?? item?.porte_id ?? '',
         prise_en_charge_par: item?.prise_en_charge_par ?? '',
         statut: item?.statut ?? 'en attente',
         montant_global: Number(item?.montant_global ?? 0),
+        montant_paye: Number(item?.montant_paye ?? 0),
+        reste_a_payer: Number(item?.reste_a_payer ?? item?.montant_global ?? 0),
+        statut_paiement: item?.statut_paiement ?? 'non_reglee',
+        modification_verrouillee: Boolean(item?.modification_verrouillee),
         date_debut: item?.date_debut ?? details[0]?.date_debut ?? item?.created_at ?? null,
         date_fin: item?.date_fin ?? details[0]?.date_fin ?? null,
         details,
@@ -216,17 +242,16 @@ const normalizeMaintenance = (item) => {
 };
 
 const normalizeType = (item) => {
-    const id = String(item?.type_maintenance_id ?? item?.id ?? crypto.randomUUID());
-    const category = item?.maintenance_category ?? item?.maintenanceCategory ?? null;
+    const id = String(item?.type_maintenance_id ?? item?.id ?? createClientId());
+    const categoryName = item?.categorie ?? '---';
 
     return {
         id,
         type_maintenance_id: id,
         agence_id: String(item?.agence_id ?? item?.agence?.agence_id ?? ''),
         name: item?.name ?? item?.libelle ?? 'Sans nom',
-        maintenance_category_id: String(item?.maintenance_category_id ?? category?.maintenance_category_id ?? ''),
-        categorie: category?.name ?? item?.categorie ?? '---',
-        category_name: category?.name ?? item?.categorie ?? '---',
+        categorie: categoryName,
+        category_name: categoryName,
         duree_estimee: item?.duree_estimee ?? null,
         description: item?.description ?? '',
         maintenances_count: Number(item?.maintenances_count ?? 0),
@@ -234,7 +259,7 @@ const normalizeType = (item) => {
 };
 
 const normalizeFonction = (item) => {
-    const id = String(item?.fonction_maintenance_id ?? item?.id ?? crypto.randomUUID());
+    const id = String(item?.fonction_maintenance_id ?? item?.id ?? createClientId());
 
     return {
         id,
@@ -546,11 +571,13 @@ function CountrySelect({ value, onChange, options }) {
 }
 
 function PhoneInput({ label, required = false, error = '', value, onChange, placeholder }) {
+    const defaultCountry = usePage().props.geography?.defaultCountryCode ?? 'CI';
+
     return (
         <Field label={label} required={required} error={error}>
             <PhoneInputBase
                 international
-                defaultCountry="CI"
+                defaultCountry={defaultCountry}
                 countrySelectComponent={CountrySelect}
                 value={value}
                 onChange={(val) => onChange({ target: { value: val ?? '' } })}
@@ -587,20 +614,20 @@ const blankFonctionForm = () => ({
 
 const blankTypeForm = () => ({
     name: '',
-    maintenance_category_id: '',
+    categorie: '',
     description: '',
     duree_estimee: '',
 });
 
 const typeFormFromItem = (item) => ({
     name: item?.name ?? '',
-    maintenance_category_id: item?.maintenance_category_id ?? '',
+    categorie: item?.categorie ?? item?.category_name ?? '',
     description: item?.description ?? '',
     duree_estimee: item?.duree_estimee ?? '',
 });
 
 const blankInterventionAction = () => ({
-    id: crypto.randomUUID(),
+    id: createClientId(),
     maintenance_category_id: 'all',
     type_intervention_id: '',
     maintenancier_id: '',
@@ -624,15 +651,15 @@ const blankInterventionForm = () => ({
 
 const interventionFormFromItem = (item) => ({
     titre: item?.titre ?? '',
-    proprietaire_id: item?.proprietaire_id ?? '',
-    lot_id: '',
-    propriete_id: '',
-    batiment_id: '',
-    porte_id: '',
+    proprietaire_id: String(item?.proprietaire_id ?? ''),
+    lot_id: String(item?.lot_id ?? ''),
+    propriete_id: String(item?.propriete_id ?? ''),
+    batiment_id: String(item?.batiment_id ?? ''),
+    porte_id: String(item?.porte_id ?? ''),
     prise_en_charge_par: item?.prise_en_charge_par ?? 'proprietaire',
     actions: asArray(item?.details).length
         ? asArray(item.details).map((detail) => ({
-              id: detail?.maintenance_detail_id ?? detail?.id ?? crypto.randomUUID(),
+              id: detail?.maintenance_detail_id ?? detail?.id ?? createClientId(),
               maintenance_category_id: String(
                   detail?.typeIntervention?.maintenance_category_id ??
                       detail?.type_intervention?.maintenance_category_id ??
@@ -880,6 +907,11 @@ export default function Index({
         [maintenanceCategories]
     );
 
+    const maintenanceCategoryNameById = useMemo(
+        () => new Map(maintenanceCategoryOptions.map((item) => [String(item.value), item.label])),
+        [maintenanceCategoryOptions]
+    );
+
     const maintenancierOptions = useMemo(
         () =>
             asArray(maintenancierStatiques.length ? maintenancierStatiques : maintenancierRows).map((item) => ({
@@ -971,12 +1003,18 @@ export default function Index({
 
     const typeInterventionOptions = useMemo(
         () =>
-            asArray(typesInterventionStatiques.length ? typesInterventionStatiques : typeRows).map((item) => ({
-                value: String(item?.type_maintenance_id ?? item?.id ?? ''),
-                label: item?.name ?? 'Sans nom',
-                maintenance_category_id: String(item?.maintenance_category_id ?? ''),
-            })),
-        [typeRows, typesInterventionStatiques]
+            asArray(typesInterventionStatiques.length ? typesInterventionStatiques : typeRows).map((item) => {
+                const category = maintenanceCategoryOptions.find(
+                    (option) => option.label.toLowerCase() === String(item?.categorie ?? item?.category_name ?? '').toLowerCase()
+                );
+
+                return {
+                    value: String(item?.type_maintenance_id ?? item?.id ?? ''),
+                    label: item?.name ?? 'Sans nom',
+                    maintenance_category_id: String(category?.value ?? ''),
+                };
+            }),
+        [maintenanceCategoryOptions, typeRows, typesInterventionStatiques]
     );
 
     const getTypeInterventionOptionsByCategory = (categoryId) => {
@@ -991,7 +1029,7 @@ export default function Index({
         const term = query.trim().toLowerCase();
 
         let rows = maintenancierRows.filter((item) => {
-            if (currentAgenceId && item.agence_id && item.agence_id !== currentAgenceId) return false;
+            if (currentAgenceId && item.agence_id !== currentAgenceId) return false;
 
             const matchesFonction =
                 maintenancierFonctionFilter === 'all' ||
@@ -1044,7 +1082,7 @@ export default function Index({
         const term = query.trim().toLowerCase();
 
         let rows = maintenanceRows.filter((item) => {
-            if (currentAgenceId && item.agence_id && item.agence_id !== currentAgenceId) return false;
+            if (currentAgenceId && item.agence_id !== currentAgenceId) return false;
 
             const matchesStatus =
                 maintenanceStatusFilter === 'all' ||
@@ -1096,7 +1134,7 @@ export default function Index({
         const category = typeCategoryFilter.trim();
 
         return typeRows.filter((item) => {
-            if (currentAgenceId && item.agence_id && item.agence_id !== currentAgenceId) return false;
+            if (currentAgenceId && item.agence_id !== currentAgenceId) return false;
 
             const haystack = [item.name, item.category_name, item.description]
                 .filter(Boolean)
@@ -1104,11 +1142,12 @@ export default function Index({
                 .toLowerCase();
 
             const matchesCategory =
-                category === 'all' || String(item.maintenance_category_id ?? '') === category || String(item.category_name ?? '').toLowerCase() === category;
+                category === 'all'
+                || String(item.category_name ?? '').toLowerCase() === String(maintenanceCategoryNameById.get(category) ?? category).toLowerCase();
 
             return matchesCategory && (!term || haystack.includes(term));
         });
-    }, [currentAgenceId, typeRows, query, typeCategoryFilter]);
+    }, [currentAgenceId, maintenanceCategoryNameById, typeRows, query, typeCategoryFilter]);
 
     const typePageSize = 10;
     const typePageCount = Math.max(1, Math.ceil(filteredTypeRows.length / typePageSize));
@@ -1135,7 +1174,7 @@ export default function Index({
         const term = query.trim().toLowerCase();
 
         return fonctionRows.filter((item) => {
-            if (currentAgenceId && item.agence_id && item.agence_id !== currentAgenceId) return false;
+            if (currentAgenceId && item.agence_id !== currentAgenceId) return false;
 
             if (!term) return true;
 
@@ -1735,6 +1774,20 @@ export default function Index({
         event.preventDefault();
         if (!activeForm) return;
 
+        if (activeForm === 'intervention') {
+            const incompleteActionIndex = interventionForm.actions.findIndex(
+                (action) => !action.type_intervention_id
+            );
+
+            if (incompleteActionIndex !== -1) {
+                setFormFeedback({
+                    type: 'error',
+                    message: `Veuillez sélectionner le type d’intervention de la ligne ${incompleteActionIndex + 1}.`,
+                });
+                return;
+            }
+        }
+
         setSubmitting(true);
         setFormFeedback(null);
 
@@ -1773,7 +1826,7 @@ export default function Index({
                 method: typeFormMode === 'edit' ? 'PUT' : 'POST',
                 body: {
                     name: typeForm.name,
-                    maintenance_category_id: typeForm.maintenance_category_id,
+                    categorie: typeForm.categorie || null,
                     description: typeForm.description,
                     duree_estimee: typeForm.duree_estimee || null,
                 },
@@ -1880,9 +1933,9 @@ export default function Index({
                                 </TabsList>
                             </Tabs>
 
-                <div className={section === 'types' || section === 'fonctions' ? 'grid gap-6' : 'grid gap-6 xl:grid-cols-[360px_1fr]'}>
-                    <Card className="rounded-3xl border-slate-300 shadow-sm">
-                        <CardHeader className="space-y-4 border-b border-slate-200">
+                <div className={section === 'types' || section === 'fonctions' ? 'grid gap-6' : 'grid gap-6 xl:h-[calc(100vh-8rem)] xl:min-h-0 xl:grid-cols-[360px_1fr] xl:items-stretch'}>
+                    <Card className="rounded-3xl border-slate-300 shadow-sm xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden">
+                        <CardHeader className="shrink-0 space-y-4 border-b border-slate-200">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <CardTitle className="text-base">
                                     {sectionConfig[section].label}{' '}
@@ -1992,8 +2045,8 @@ export default function Index({
                             </div>
                         </CardHeader>
 
-                        <CardContent className="p-3">
-                            <ScrollArea className={section === 'types' ? 'h-auto max-h-none' : 'h-[650px]'}>
+                        <CardContent className="p-3 xl:min-h-0 xl:flex-1 xl:overflow-hidden">
+                            <ScrollArea className={section === 'types' ? 'h-auto max-h-none' : 'h-[650px] xl:h-full'}>
                                 <div className={section === 'types' ? 'space-y-4 pr-3' : 'space-y-2 pr-3'}>
                                     {section === 'maintenanciers' &&
                                         paginatedMaintenancierRows.map((item) => {
@@ -2379,7 +2432,7 @@ export default function Index({
                                     {section === 'types' && filteredTypeRows.length > typePageSize ? (
                                         <div className="flex flex-col gap-3 border-t border-[#e2e8f0] pt-4 sm:flex-row sm:items-center sm:justify-between">
                                             <p className="text-sm text-slate-500">
-                                                Page {typePage} sur {typePageCount} Â· {filteredTypeRows.length} type(s)
+                                                Page {typePage} sur {typePageCount} · {filteredTypeRows.length} type(s)
                                             </p>
 
                                             <div className="flex items-center gap-2">
@@ -2411,7 +2464,7 @@ export default function Index({
                     </Card>
 
                     <Card
-                        className={`rounded-3xl border-slate-300 shadow-sm ${
+                        className={`rounded-3xl border-slate-300 shadow-sm xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain ${
                             section === 'types' || section === 'fonctions' ? 'hidden' : ''
                         }`}
                     >
@@ -2686,13 +2739,21 @@ export default function Index({
                                                 Propriétaire : {selectedMaintenance.proprietaire}
                                             </p>
                                             
-                                            <p className="mt-2 text-sm text-slate-500">
-                                                Propriété : {selectedMaintenance.lot || selectedMaintenance.batiment || selectedMaintenance.porte || 'Localisation non définie'}
-                                            </p>
+                                            <div className="mt-2 grid gap-1 text-sm text-slate-500 sm:grid-cols-2">
+                                                <p>Lot : {selectedMaintenance.lot || 'Non défini'}</p>
+                                                <p>Propriété : {selectedMaintenance.propriete || 'Non définie'}</p>
+                                                <p>Bâtiment : {selectedMaintenance.batiment || 'Non défini'}</p>
+                                                <p>Porte : {selectedMaintenance.porte || 'Non définie'}</p>
+                                            </div>
                                             
                                             <p className="mt-2 text-sm font-semibold text-[#00559b]">
                                                 Total : {currency(selectedMaintenance.montant_global)}
                                             </p>
+                                            {selectedMaintenance.montant_paye > 0 ? (
+                                                <p className="mt-1 text-sm text-slate-600">
+                                                    Montant payé : {currency(selectedMaintenance.montant_paye)} · Reste : {currency(selectedMaintenance.reste_a_payer)}
+                                                </p>
+                                            ) : null}
                                         </div>
 
                                         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -2702,6 +2763,13 @@ export default function Index({
                                             <Badge variant={chargeMeta(selectedMaintenance.prise_en_charge_par).variant}>
                                                 {chargeMeta(selectedMaintenance.prise_en_charge_par).label}
                                             </Badge>
+                                            <Badge variant={selectedMaintenance.statut_paiement === 'soldee' ? 'success' : selectedMaintenance.statut_paiement === 'partiellement_reglee' ? 'warning' : 'outline'}>
+                                                {selectedMaintenance.statut_paiement === 'soldee'
+                                                    ? 'Soldée'
+                                                    : selectedMaintenance.statut_paiement === 'partiellement_reglee'
+                                                        ? `Partiellement réglée · ${currency(selectedMaintenance.montant_paye)} payé`
+                                                        : 'Non réglée'}
+                                            </Badge>
                                         </div>
                                     </div>
 
@@ -2710,10 +2778,12 @@ export default function Index({
                                             type="button"
                                             variant="outline"
                                             onClick={() => openMaintenanceEdit(selectedMaintenance)}
+                                            disabled={selectedMaintenance.modification_verrouillee}
+                                            title={selectedMaintenance.modification_verrouillee ? 'Modification interdite après un paiement' : 'Modifier la maintenance'}
                                             className="h-9 rounded-xl border-[#c8d4de] text-[#334155] hover:border-[#00559b] hover:bg-[#eaf4fb] hover:text-[#00559b]"
                                         >
                                             <Pencil className="mr-2 h-4 w-4" />
-                                            Modifier
+                                            {selectedMaintenance.modification_verrouillee ? 'Modification verrouillée' : 'Modifier'}
                                         </Button>
                                         <Button
                                             type="button"
@@ -3219,8 +3289,11 @@ export default function Index({
 
                                 <Field label="Catégorie">
                                     <Select
-                                        value={typeForm.maintenance_category_id}
-                                        onValueChange={(value) => setTypeForm((current) => ({ ...current, maintenance_category_id: value }))}
+                                        value={maintenanceCategoryOptions.find((option) => option.label === typeForm.categorie)?.value ?? ''}
+                                        onValueChange={(value) => setTypeForm((current) => ({
+                                            ...current,
+                                            categorie: maintenanceCategoryNameById.get(value) ?? '',
+                                        }))}
                                     >
                                         <SelectTrigger className={inputClassName}>
                                             <SelectValue placeholder="Choisir une catégorie" />

@@ -223,9 +223,9 @@ export default function Index({
                     />
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-                    <Card className="rounded-3xl border-slate-200 shadow-sm">
-                        <CardHeader className="space-y-4 border-b border-slate-200">
+                <div className="grid gap-6 xl:h-[calc(100vh-8rem)] xl:min-h-0 xl:grid-cols-[360px_1fr] xl:items-stretch">
+                    <Card className="rounded-3xl border-slate-200 shadow-sm xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden">
+                        <CardHeader className="shrink-0 space-y-4 border-b border-slate-200">
                             <CardTitle className="text-base">
                                 Abonnements{' '}
                                 <span className="text-slate-400">
@@ -265,8 +265,8 @@ export default function Index({
                             </div>
                         </CardHeader>
 
-                        <CardContent className="p-3">
-                            <ScrollArea className="h-[650px]">
+                        <CardContent className="p-3 xl:min-h-0 xl:flex-1 xl:overflow-hidden">
+                            <ScrollArea className="h-[650px] xl:h-full">
                                 <div className="space-y-2 pr-3">
                                     {filteredItems.map((abonnement) => {
                                         const isSelected =
@@ -344,7 +344,7 @@ export default function Index({
                         </CardContent>
                     </Card>
 
-                    <Card className="min-h-[calc(100vh-260px)] rounded-3xl border-slate-200 shadow-sm">
+                    <Card className="min-h-[calc(100vh-260px)] rounded-3xl border-slate-200 shadow-sm xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain">
                         {selectedItem ? (
                             <>
                                 <CardHeader className="flex flex-col gap-4 border-b border-slate-200 lg:flex-row lg:items-start lg:justify-between">

@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
+use App\Models\Concerns\VisibleWithActiveProprietaire;
 
 class VenteBien extends Model
 {
-    use HasFactory;
+    use HasFactory, VisibleWithActiveProprietaire;
 
     protected $table = 'ventes_biens';
     protected $primaryKey = 'id_vente';
@@ -102,6 +103,11 @@ class VenteBien extends Model
     public function acheteur()
     {
         return $this->belongsTo(Acheteur::class, 'acheteur_vente_id', 'id_acheteur');
+    }
+
+    public function echeances()
+    {
+        return $this->hasMany(VenteEcheance::class, 'vente_id', 'id_vente')->orderBy('numero_echeance');
     }
 
     public function createdBy()

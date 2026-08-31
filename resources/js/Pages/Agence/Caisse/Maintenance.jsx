@@ -281,6 +281,8 @@ export default function Maintenance({
     portes = [],
     typesIntervention = [],
     maintenanciers = [],
+    modesPaiement = [],
+    caisseOuverte = false,
 }) {
     const [proprietaireFilter, setProprietaireFilter] = useState('');
     const [lotFilter, setLotFilter] = useState('');
@@ -288,6 +290,7 @@ export default function Maintenance({
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [flash, setFlash] = useState(null);
+    const [modePaiementId, setModePaiementId] = useState('');
     const [form, setForm] = useState(blankForm());
     const [ownerSearch, setOwnerSearch] = useState('');
     const [ownerSelectOpen, setOwnerSelectOpen] = useState(false);
@@ -398,6 +401,9 @@ export default function Maintenance({
     const openModal = () => {
         const source = selectedMaintenance;
 
+        if (!source || source.est_reglee) return;
+        setModePaiementId('');
+
         setForm({
             titre: source?.titre ?? '',
             description_generale: source?.description ?? '',
@@ -428,33 +434,18 @@ export default function Maintenance({
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-            const response = await fetch('/agence/maintenance', {
-                method: 'GET',
+            if (!selectedMaintenance) {
+                throw new Error('Sélectionnez une maintenance à régler.');
+            }
+
+            const response = await fetch(`/agence/caisse/maintenance/${selectedMaintenance.maintenance_id}/payer`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
                 },
-                body: JSON.stringify({
-                    titre: form.titre,
-                    description_generale: form.description_generale,
-                    proprietaire_id: form.proprietaire_id,
-                    lot_id: form.lot_id || null,
-                    batiment_id: form.batiment_id || null,
-                    porte_id: form.porte_id || null,
-                    prise_en_charge_par: form.prise_en_charge_par,
-                    details: [
-                        {
-                            type_intervention_id: form.detail.type_intervention_id,
-                            maintenancier_id: form.detail.maintenancier_id,
-                            date_debut: form.detail.date_debut,
-                            date_fin: form.detail.date_fin || null,
-                            priorite: form.detail.priorite,
-                            prix: Number(form.detail.prix || 0),
-                            description: form.detail.description,
-                        },
-                    ],
-                }),
+                body: JSON.stringify({ mode_paiement_id: modePaiementId || null }),
             });
 
             const payload = await response.json().catch(() => null);
@@ -463,8 +454,9 @@ export default function Maintenance({
                 throw new Error(payload?.message ?? 'La maintenance a échoué.');
             }
 
-            setFlash({ type: 'success', message: payload?.message ?? 'Maintenance enregistrée avec succès.' });
+            setFlash({ type: 'success', message: payload?.message ?? 'Dépense de maintenance réglée avec succès.' });
             setPaymentModalOpen(false);
+            setTimeout(() => window.location.reload(), 300);
         } catch (error) {
             setFlash({ type: 'error', message: error.message || 'Erreur lors de la maintenance.' });
         } finally {
@@ -603,8 +595,9 @@ export default function Maintenance({
                             <div className="space-y-4">
                                 {displayedRows.length ? displayedRows.map((item, index) => {
                                     const active = index === selectedIndex;
-                                    const owner = ownerOptions.find((opt) => opt.value === item.proprietaire_id)?.label ?? item.proprietaire_id ?? '—';
-                                    const propertyName = lots.find((lot) => String(lot.propreietaire_lot_id) === String(item.lot_id))?.name ?? item.lot_id ?? '—';
+                                    const owner = item.proprietaire_name || ownerOptions.find((opt) => opt.value === item.proprietaire_id)?.label || '—';
+                                    const propertyName = item.lot_name || lots.find((lot) => String(lot.propreietaire_lot_id) === String(item.lot_id))?.name || '—';
+                                    const doorName = item.porte_name || portes.find((door) => String(door.porte_id) === String(item.porte_id))?.numero_porte || '—';
                                     const status = statusLabel(item.statut);
 
                                     return (
@@ -620,7 +613,7 @@ export default function Maintenance({
                                             <div className="flex items-start justify-between gap-4">
                                                 <div className="min-w-0">
                                                     <p className="text-lg font-semibold text-[#0f172a]">{item.titre || 'Maintenance sans titre'}</p>
-                                                    <p className="mt-1 text-sm text-[#5f7182]">{propertyName}</p>
+                                                    <p className="mt-1 text-sm text-[#5f7182]">{owner} · Lot {propertyName} · Porte {doorName}</p>
                                                 </div>
                                                 <Badge variant={status.variant === 'info' ? 'secondary' : status.variant} className="rounded-full px-2.5 py-1 text-[11px] font-medium">
                                                     {status.label}
@@ -631,6 +624,14 @@ export default function Maintenance({
                                                 <div className="rounded-2xl bg-[#f8fafc] px-4 py-3">
                                                     <span className="block text-xs uppercase tracking-wide text-[#94a3b8]">Propriétaire</span>
                                                     <strong className="text-[#0f172a]">{owner}</strong>
+                                                </div>
+                                                <div className="rounded-2xl bg-[#f8fafc] px-4 py-3">
+                                                    <span className="block text-xs uppercase tracking-wide text-[#94a3b8]">Lot</span>
+                                                    <strong className="text-[#0f172a]">{propertyName}</strong>
+                                                </div>
+                                                <div className="rounded-2xl bg-[#f8fafc] px-4 py-3">
+                                                    <span className="block text-xs uppercase tracking-wide text-[#94a3b8]">Porte</span>
+                                                    <strong className="text-[#0f172a]">{doorName}</strong>
                                                 </div>
                                                 <div className="rounded-2xl bg-[#f8fafc] px-4 py-3">
                                                     <span className="block text-xs uppercase tracking-wide text-[#94a3b8]">Montant global</span>
@@ -667,9 +668,9 @@ export default function Maintenance({
                             title="Détails de la maintenance"
                             description="La maintenance sélectionnée s’affiche ici."
                             action={(
-                                <Button type="button" onClick={openModal} className={agenceButtonStyles.primary} disabled={!selectedMaintenance}>
-                                    <Plus className="h-4 w-4" />
-                                    Nouvelle maintenance
+                                <Button type="button" onClick={openModal} className={agenceButtonStyles.primary} disabled={!selectedMaintenance || selectedMaintenance.est_reglee || !caisseOuverte}>
+                                    <Banknote className="h-4 w-4" />
+                                    {selectedMaintenance?.est_reglee ? 'Déjà réglée' : 'Régler la dépense'}
                                 </Button>
                             )}
                         >
@@ -679,15 +680,16 @@ export default function Maintenance({
                                         <p className="text-sm uppercase tracking-wide text-[#94a3b8]">Titre</p>
                                         <h3 className="mt-1 text-xl font-semibold text-[#0f172a]">{selectedMaintenance.titre || 'Maintenance sans titre'}</h3>
                                         <p className="mt-2 text-sm text-[#5f7182]">
-                                            {lots.find((lot) => String(lot.propreietaire_lot_id) === String(selectedMaintenance.lot_id))?.name ?? selectedMaintenance.lot_id ?? '—'}
+                                            {selectedMaintenance.proprietaire_name || '—'} · Lot {selectedMaintenance.lot_name || '—'} · Porte {selectedMaintenance.porte_name || '—'}
                                         </p>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                        <InfoTile label="Propriétaire" value={ownerOptions.find((opt) => opt.value === selectedMaintenance.proprietaire_id)?.label ?? selectedMaintenance.proprietaire_id ?? '—'} />
+                                        <InfoTile label="Propriétaire" value={selectedMaintenance.proprietaire_name || ownerOptions.find((opt) => opt.value === selectedMaintenance.proprietaire_id)?.label || '—'} />
+                                        <InfoTile label="Lot" value={selectedMaintenance.lot_name || lots.find((lot) => String(lot.propreietaire_lot_id) === String(selectedMaintenance.lot_id))?.name || '—'} />
                                         <InfoTile label="Prise en charge" value={priseEnChargeLabel(selectedMaintenance.prise_en_charge_par)} />
                                         <InfoTile label="Bâtiment" value={batiments.find((item) => String(item.batiment_id) === String(selectedMaintenance.batiment_id))?.name ?? selectedMaintenance.batiment_id ?? '—'} />
-                                        <InfoTile label="Porte" value={portes.find((item) => String(item.porte_id) === String(selectedMaintenance.porte_id))?.numero_porte ?? selectedMaintenance.porte_id ?? '—'} />
+                                        <InfoTile label="Porte" value={selectedMaintenance.porte_name || portes.find((item) => String(item.porte_id) === String(selectedMaintenance.porte_id))?.numero_porte || '—'} />
                                         <InfoTile label="Statut" value={<BadgeStatus status={selectedMaintenance.statut} />} />
                                         <InfoTile label="Montant global" value={currency(selectedMaintenance.montant_global)} />
                                     </div>
@@ -707,9 +709,9 @@ export default function Maintenance({
                             )}
 
                             <div className="mt-5 flex justify-end">
-                                <Button type="button" onClick={openModal} className={agenceButtonStyles.primary} disabled={!selectedMaintenance}>
-                                    <Smartphone className="h-4 w-4" />
-                                    Ouvrir le formulaire
+                                <Button type="button" onClick={openModal} className={agenceButtonStyles.primary} disabled={!selectedMaintenance || selectedMaintenance.est_reglee || !caisseOuverte}>
+                                    <Banknote className="h-4 w-4" />
+                                    {selectedMaintenance?.est_reglee ? 'Déjà réglée' : 'Régler la dépense'}
                                 </Button>
                             </div>
                         </SectionCard>
@@ -953,10 +955,10 @@ export default function Maintenance({
                                         type="button"
                                         onClick={openModal}
                                         className={agenceButtonStyles.primary}
-                                        disabled={!selectedMaintenance && filteredRows.length === 0}
+                                        disabled={!selectedMaintenance || selectedMaintenance.est_reglee || !caisseOuverte}
                                     >
-                                        <Smartphone className="h-4 w-4" />
-                                        Ouvrir le formulaire
+                                        <Banknote className="h-4 w-4" />
+                                        {selectedMaintenance?.est_reglee ? 'Déjà réglée' : 'Régler la dépense'}
                                     </Button>
                                 </div>
                             </SectionCard>
@@ -967,15 +969,48 @@ export default function Maintenance({
                 <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
                     <DialogContent className="sm:max-w-4xl">
                         <DialogHeader>
-                            <DialogTitle className="text-[#0f172a]">Créer une maintenance</DialogTitle>
+                            <DialogTitle className="text-[#0f172a]">Régler la dépense de maintenance</DialogTitle>
                             <DialogDescription className="text-[#5f7182]">
                                 {selectedMaintenance
-                                    ? `Prérempli à partir de ${selectedMaintenance.titre || 'la sélection courante'}`
-                                    : 'Renseignez les informations de la maintenance puis validez.'}
+                                    ? `${selectedMaintenance.titre || 'Maintenance'} — ${currency(selectedMaintenance.montant_global)}`
+                                    : 'Sélectionnez une maintenance à régler.'}
                             </DialogDescription>
                         </DialogHeader>
 
                         <form className="space-y-5 pt-2" onSubmit={handleSubmit}>
+                            <div className="rounded-2xl border border-[#dbe7ee] bg-[#f8fafc] p-5">
+                                <p className="text-sm text-[#5f7182]">Montant à décaisser</p>
+                                <p className="mt-1 text-2xl font-semibold text-[#0f172a]">{currency(selectedMaintenance?.montant_global)}</p>
+                            </div>
+
+                            <Field label="Mode de paiement" required>
+                                <Select value={modePaiementId} onValueChange={setModePaiementId}>
+                                    <SelectTrigger className="h-11 rounded-xl border-[#c8d4de]">
+                                        <SelectValue placeholder="Sélectionner un mode" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {modesPaiement.map((mode) => (
+                                            <SelectItem key={String(mode.value)} value={String(mode.value)}>{mode.label}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+
+                            {!caisseOuverte ? (
+                                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                                    Ouvrez d’abord la caisse pour effectuer ce règlement.
+                                </p>
+                            ) : null}
+
+                            <div className="flex justify-end">
+                                <Button type="submit" className={agenceButtonStyles.primary} disabled={submitting || !caisseOuverte || !modePaiementId}>
+                                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
+                                    {submitting ? 'Règlement...' : 'Confirmer le règlement'}
+                                </Button>
+                            </div>
+                        </form>
+
+                        <form className="hidden" onSubmit={(event) => event.preventDefault()}>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <SharedComboboxField
                                     label="Propriétaire"

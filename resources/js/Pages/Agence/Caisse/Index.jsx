@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
     ArrowDownCircle,
     ArrowUpCircle,
     Banknote,
     Calendar,
     CreditCard,
+    Download,
     Eye,
     Home,
+    History,
     Plus,
     ShoppingBag,
     Smartphone,
@@ -27,12 +29,6 @@ import {
 } from '../../../components/ui/card';
 import { DataTable } from '../../../components/ui/data-table';
 import { DataTableColumnHeader } from '../../../components/ui/data-table-column-header';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '../../../components/ui/dropdown-menu';
 import { cn } from '../../../lib/utils';
 import { agenceButtonStyles } from '../../../lib/buttonStyles';
 
@@ -85,6 +81,13 @@ const MOUVEMENT_OPTIONS = [
     },
 ];
 
+const PAYMENT_ICONS = {
+    Wallet,
+    Smartphone,
+    CreditCard,
+    Banknote,
+};
+
 export default function Caisse({
     caisseOuverte: caisseOuverteProp = true,
     soldeOuverture = 0,
@@ -97,10 +100,10 @@ export default function Caisse({
         { id: 'TRX-0004', date: '11/05/2026', time: '14:20', type: 'out', label: 'Dépense — Fournitures, Ramettes de papier A4', reference: 'TRX-0004', amount: 4500 },
     ],
     loyers = [
-        { id: 1, date: '11/05/2026', time: '09:30', tenant: 'Kouamé Jean', property: 'Appt. B2 — Cocody', period: 'Mai 2026', amount: 85000, mode: 'Espèces' },
+        { id: 1, date: '11/05/2026', time: '09:30', tenant: 'Kouamé Jean', owner: 'M. Kouassi', lot: 'Lot 12', door: 'Porte B2', period: 'Mai 2026', amount: 85000, mode: 'Espèces' },
     ],
     maintenance = [
-        { id: 1, date: '11/05/2026', time: '08:00', property: 'Villa C3 — Riviera', type: 'Plomberie', provider: 'Kouassi & Fils', cost: 15000, status: 'Terminée' },
+        { id: 1, date: '11/05/2026', time: '08:00', owner: 'M. Kouassi', lot: 'Lot 12', door: 'Porte C3', type: 'Plomberie', provider: 'Kouassi & Fils', cost: 15000, status: 'Terminée' },
     ],
     depenses = [
         { id: 1, date: '11/05/2026', time: '14:20', category: 'Fournitures', label: 'Ramettes de papier A4', proof: 'Reçu', amount: 4500 },
@@ -115,7 +118,11 @@ export default function Caisse({
         { mode: 'Orange Money', total: 50000, count: 1, commission: 5000, net: 45000, icon: CreditCard, accent: 'bg-[#fff2e6] text-[#c2410c]' },
     ],
 }) {
-    const caisseOuverte = caisseOuverteProp;
+    const { currentAgency, flash = {} } = usePage().props;
+    const isDemo = Boolean(currentAgency?.is_demo);
+    const [demoCaisseOuverte, setDemoCaisseOuverte] = useState(caisseOuverteProp);
+    const [demoNotice, setDemoNotice] = useState('');
+    const caisseOuverte = isDemo ? demoCaisseOuverte : caisseOuverteProp;
     const [openCashForm, setOpenCashForm] = useState(false);
     const [closeCashForm, setCloseCashForm] = useState(false);
     const [activeTab, setActiveTab] = useState('transactions');
@@ -131,11 +138,47 @@ export default function Caisse({
     });
 
     useEffect(() => {
+        setDemoCaisseOuverte(caisseOuverteProp);
+        setDemoNotice('');
         setOpenCashForm(false);
         setCloseCashForm(false);
         ouvertureForm.clearErrors();
         fermetureForm.clearErrors();
     }, [caisseOuverteProp]);
+
+    const ouvrirCaisse = () => {
+        if (!isDemo) {
+            ouvertureForm.post('/agence/caisse/ouvrir');
+            return;
+        }
+
+        if (Number(ouvertureForm.data.solde_ouverture) < 0) {
+            ouvertureForm.setError('solde_ouverture', "Le solde d'ouverture doit être positif ou nul.");
+            return;
+        }
+
+        ouvertureForm.clearErrors();
+        setDemoCaisseOuverte(true);
+        setOpenCashForm(false);
+        setDemoNotice("Simulation réussie : la caisse est ouverte. Aucune donnée n'a été enregistrée.");
+    };
+
+    const fermerCaisse = () => {
+        if (!isDemo) {
+            fermetureForm.post('/agence/caisse/fermer');
+            return;
+        }
+
+        if (Number(fermetureForm.data.solde_fermeture) < 0) {
+            fermetureForm.setError('solde_fermeture', 'Le solde de fermeture doit être positif ou nul.');
+            return;
+        }
+
+        fermetureForm.clearErrors();
+        setDemoCaisseOuverte(false);
+        setCloseCashForm(false);
+        setDemoNotice("Simulation réussie : la caisse est fermée. Aucune donnée n'a été enregistrée.");
+    };
 
     const soldeTheorique = soldeOuverture + totalEntrees - totalSorties;
 
@@ -154,12 +197,14 @@ export default function Caisse({
 
     const summaryTotals = summary.reduce(
         (acc, row) => ({
-            total: acc.total + row.total,
+            entries: acc.entries + Number(row.entries || 0),
+            outputs: acc.outputs + Number(row.outputs || 0),
+            balance: acc.balance + Number(row.balance || 0),
             count: acc.count + row.count,
-            commission: acc.commission + row.commission,
-            net: acc.net + row.net,
+            entries_count: acc.entries_count + Number(row.entries_count || 0),
+            outputs_count: acc.outputs_count + Number(row.outputs_count || 0),
         }),
-        { total: 0, count: 0, commission: 0, net: 0 }
+        { entries: 0, outputs: 0, balance: 0, count: 0, entries_count: 0, outputs_count: 0 }
     );
 
     const transactionColumns = useMemo(
@@ -211,19 +256,6 @@ export default function Caisse({
                 ),
                 meta: { label: 'Libellé' },
                 cell: ({ row }) => row.original.label,
-            },
-            {
-                id: 'reference',
-                accessorFn: (row) => row.reference,
-                header: ({ column }) => (
-                    <DataTableColumnHeader
-                        title="Référence"
-                        sortDirection={column.getIsSorted()}
-                        onSort={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                    />
-                ),
-                meta: { label: 'Référence' },
-                cell: ({ row }) => <span className="text-[#5f7182]">{row.original.reference}</span>,
             },
             {
                 id: 'entry',
@@ -308,17 +340,43 @@ export default function Caisse({
                 cell: ({ row }) => row.original.tenant,
             },
             {
-                id: 'property',
-                accessorFn: (row) => row.property,
+                id: 'owner',
+                accessorFn: (row) => row.owner,
                 header: ({ column }) => (
                     <DataTableColumnHeader
-                        title="Bien"
+                        title="Propriétaire"
                         sortDirection={column.getIsSorted()}
                         onSort={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                     />
                 ),
-                meta: { label: 'Bien' },
-                cell: ({ row }) => row.original.property,
+                meta: { label: 'Propriétaire' },
+                cell: ({ row }) => row.original.owner,
+            },
+            {
+                id: 'lot',
+                accessorFn: (row) => row.lot,
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        title="Lot"
+                        sortDirection={column.getIsSorted()}
+                        onSort={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                    />
+                ),
+                meta: { label: 'Lot' },
+                cell: ({ row }) => row.original.lot,
+            },
+            {
+                id: 'door',
+                accessorFn: (row) => row.door,
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        title="Porte"
+                        sortDirection={column.getIsSorted()}
+                        onSort={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                    />
+                ),
+                meta: { label: 'Porte' },
+                cell: ({ row }) => row.original.door,
             },
             {
                 id: 'period',
@@ -348,6 +406,22 @@ export default function Caisse({
                 cell: ({ row }) => <span className="font-semibold text-[#4d8500]">{currency(row.original.amount)}</span>,
             },
             {
+                id: 'breakdown',
+                accessorFn: (row) => row.breakdown?.map((item) => item.label).join(' ') ?? '',
+                header: () => <span>Détail de l’encaissement</span>,
+                meta: { label: 'Détail de l’encaissement' },
+                cell: ({ row }) => row.original.breakdown?.length ? (
+                    <div className="min-w-56 space-y-1">
+                        {row.original.breakdown.map((item) => (
+                            <div key={item.label} className="flex items-center justify-between gap-3 text-xs">
+                                <span className="text-[#5f7182]">{item.label}</span>
+                                <span className="font-medium text-[#0f172a]">{currency(item.amount)}</span>
+                            </div>
+                        ))}
+                    </div>
+                ) : <span className="text-xs text-[#94a3b8]">Loyer périodique</span>,
+            },
+            {
                 id: 'mode',
                 accessorFn: (row) => row.mode,
                 header: ({ column }) => (
@@ -365,7 +439,17 @@ export default function Caisse({
                 header: () => <span className="block text-right">Actions</span>,
                 enableHiding: false,
                 meta: { label: 'Actions', headerClassName: 'text-right', cellClassName: 'text-right whitespace-nowrap' },
-                cell: () => <ViewButton />,
+                cell: ({ row }) => (
+                    <a
+                        href={row.original.receipt_url}
+                        download
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#c8d4de] px-2.5 py-1.5 text-xs font-medium text-[#00559b] transition hover:bg-[#eaf4fb]"
+                        title={`Télécharger le reçu ${row.original.receipt_number}`}
+                    >
+                        <Download className="h-3.5 w-3.5" />
+                        Reçu
+                    </a>
+                ),
             },
         ],
         []
@@ -583,7 +667,25 @@ export default function Caisse({
                     />
                 ),
                 meta: { label: 'Client' },
-                cell: ({ row }) => row.original.client,
+                cell: ({ row }) => (
+                    <div>
+                        <span className="block font-medium text-[#0f172a]">{row.original.client}</span>
+                        <span className="mt-0.5 block text-xs text-[#5f7182]">{row.original.client_phone}</span>
+                    </div>
+                ),
+            },
+            {
+                id: 'owner',
+                accessorFn: (row) => row.owner,
+                header: ({ column }) => (
+                    <DataTableColumnHeader
+                        title="Propriétaire"
+                        sortDirection={column.getIsSorted()}
+                        onSort={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                    />
+                ),
+                meta: { label: 'Propriétaire' },
+                cell: ({ row }) => row.original.owner,
             },
             {
                 id: 'property',
@@ -597,19 +699,6 @@ export default function Caisse({
                 ),
                 meta: { label: 'Bien' },
                 cell: ({ row }) => row.original.property,
-            },
-            {
-                id: 'reference',
-                accessorFn: (row) => row.reference,
-                header: ({ column }) => (
-                    <DataTableColumnHeader
-                        title="Référence"
-                        sortDirection={column.getIsSorted()}
-                        onSort={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                    />
-                ),
-                meta: { label: 'Référence' },
-                cell: ({ row }) => <span className="text-[#5f7182]">{row.original.reference}</span>,
             },
             {
                 id: 'amount',
@@ -643,29 +732,42 @@ export default function Caisse({
                 header: () => <span className="block text-right">Actions</span>,
                 enableHiding: false,
                 meta: { label: 'Actions', headerClassName: 'text-right', cellClassName: 'text-right whitespace-nowrap' },
-                cell: () => <ViewButton />,
+                cell: ({ row }) => (
+                    <a
+                        href={row.original.receipt_url}
+                        download
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#c8d4de] px-2.5 py-1.5 text-xs font-medium text-[#00559b] transition hover:bg-[#eaf4fb]"
+                        title={`Télécharger le reçu ${row.original.receipt_number}`}
+                    >
+                        <Download className="h-3.5 w-3.5" />
+                        Reçu
+                    </a>
+                ),
             },
         ],
         []
     );
 
-    const summaryRows = useMemo(
-        () => [
+    const summaryRows = useMemo(() => {
+        if (!summary.length) return [];
+
+        return [
             ...summary.map((row) => ({
                 ...row,
                 isTotal: false,
             })),
             {
                 mode: 'TOTAL',
-                total: summaryTotals.total,
+                entries: summaryTotals.entries,
+                outputs: summaryTotals.outputs,
+                balance: summaryTotals.balance,
                 count: summaryTotals.count,
-                commission: summaryTotals.commission,
-                net: summaryTotals.net,
+                entries_count: summaryTotals.entries_count,
+                outputs_count: summaryTotals.outputs_count,
                 isTotal: true,
             },
-        ],
-        [summary, summaryTotals]
-    );
+        ];
+    }, [summary, summaryTotals]);
 
     const summaryColumns = useMemo(
         () => [
@@ -687,20 +789,20 @@ export default function Caisse({
                 ),
             },
             {
-                id: 'total',
-                accessorFn: (row) => row.total,
+                id: 'entries',
+                accessorFn: (row) => row.entries,
                 header: ({ column }) => (
                     <DataTableColumnHeader
-                        title="Montant total"
+                        title="Entrées"
                         sortDirection={column.getIsSorted()}
                         onSort={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                         className="justify-end"
                     />
                 ),
-                meta: { label: 'Montant total', headerClassName: 'text-right', cellClassName: 'text-right' },
+                meta: { label: 'Entrées', headerClassName: 'text-right', cellClassName: 'text-right' },
                 cell: ({ row }) => (
-                    <span className={cn('text-[#0f172a]', row.original.isTotal && 'font-semibold')}>
-                        {currency(row.original.total)}
+                    <span className={cn('text-[#4d8500]', row.original.isTotal && 'font-semibold')}>
+                        + {currency(row.original.entries)}
                     </span>
                 ),
             },
@@ -723,38 +825,38 @@ export default function Caisse({
                 ),
             },
             {
-                id: 'commission',
-                accessorFn: (row) => row.commission,
+                id: 'outputs',
+                accessorFn: (row) => row.outputs,
                 header: ({ column }) => (
                     <DataTableColumnHeader
-                        title="Commission agence"
+                        title="Sorties"
                         sortDirection={column.getIsSorted()}
                         onSort={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                         className="justify-end"
                     />
                 ),
-                meta: { label: 'Commission agence', headerClassName: 'text-right', cellClassName: 'text-right' },
+                meta: { label: 'Sorties', headerClassName: 'text-right', cellClassName: 'text-right' },
                 cell: ({ row }) => (
-                    <span className={cn('text-[#0f172a]', row.original.isTotal && 'font-semibold')}>
-                        {currency(row.original.commission)}
+                    <span className={cn('text-[#b42318]', row.original.isTotal && 'font-semibold')}>
+                        - {currency(row.original.outputs)}
                     </span>
                 ),
             },
             {
-                id: 'net',
-                accessorFn: (row) => row.net,
+                id: 'balance',
+                accessorFn: (row) => row.balance,
                 header: ({ column }) => (
                     <DataTableColumnHeader
-                        title="Net propriétaire"
+                        title="Solde net"
                         sortDirection={column.getIsSorted()}
                         onSort={() => column.toggleSorting(column.getIsSorted() === 'asc')}
                         className="justify-end"
                     />
                 ),
-                meta: { label: 'Net propriétaire', headerClassName: 'text-right', cellClassName: 'text-right' },
+                meta: { label: 'Solde net', headerClassName: 'text-right', cellClassName: 'text-right' },
                 cell: ({ row }) => (
-                    <span className={cn('text-[#0f172a]', row.original.isTotal && 'font-semibold')}>
-                        {currency(row.original.net)}
+                    <span className={cn(Number(row.original.balance) >= 0 ? 'text-[#00559b]' : 'text-[#b42318]', row.original.isTotal && 'font-semibold')}>
+                        {currency(row.original.balance)}
                     </span>
                 ),
             },
@@ -767,6 +869,27 @@ export default function Caisse({
             <Head title="Caisse" />
 
             <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+                {isDemo ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        Mode démonstration : l’ouverture et la fermeture de la caisse sont simulées dans cette page et ne sont pas enregistrées.
+                    </div>
+                ) : null}
+
+                {demoNotice ? (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                        {demoNotice}
+                    </div>
+                ) : null}
+
+                {flash.cash_report_url ? (
+                    <div className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 sm:flex-row sm:items-center sm:justify-between">
+                        <span>La caisse est clôturée. Le rapport des activités de cette session est prêt.</span>
+                        <Button asChild size="sm" className={agenceButtonStyles.primary}>
+                            <a href={flash.cash_report_url} target="_blank" rel="noreferrer"><Download className="h-4 w-4" /> Télécharger le rapport PDF</a>
+                        </Button>
+                    </div>
+                ) : null}
+
                 {/* En-tête */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -774,25 +897,19 @@ export default function Caisse({
                         <h2 className="text-2xl font-semibold text-[#0f172a]">Gestion financière</h2>
                     </div>
 
-                    {caisseOuverte ? (
-                        <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2">
+                        {caisseOuverte ? (
+                            <>
+                            <Button asChild variant="outline" className={agenceButtonStyles.outline}>
+                                <Link href="/agence/caisse/historique">
+                                    <History className="h-4 w-4" />
+                                    Historique
+                                </Link>
+                            </Button>
                             <Button variant="outline" className={agenceButtonStyles.outline}>
                                 <Calendar className="h-4 w-4" />
                                 {new Date().toLocaleDateString('fr-FR')}
                             </Button>
-
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className={agenceButtonStyles.outline}>
-                                        Actions
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56">
-                                    <DropdownMenuItem>Rapport journalier</DropdownMenuItem>
-                                    <DropdownMenuItem>Journal de caisse du jour</DropdownMenuItem>
-                                    <DropdownMenuItem>Solde de caisse</DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
 
                             <Button
                                 variant="outline"
@@ -806,8 +923,9 @@ export default function Caisse({
                                 <Plus className="h-4 w-4" />
                                 Nouveau mouvement
                             </Button>
-                        </div>
-                    ) : null}
+                            </>
+                        ) : null}
+                    </div>
                 </div>
 
                 {/* Caisse fermée */}
@@ -859,7 +977,7 @@ export default function Caisse({
                                         <Button
                                             className={agenceButtonStyles.primary}
                                             disabled={ouvertureForm.processing}
-                                            onClick={() => ouvertureForm.post('/agence/caisse/ouvrir')}
+                                            onClick={ouvrirCaisse}
                                         >
                                             {ouvertureForm.processing ? 'Ouverture...' : 'Valider l\'ouverture'}
                                         </Button>
@@ -919,7 +1037,7 @@ export default function Caisse({
                                 <Button
                                     className={agenceButtonStyles.primary}
                                     disabled={fermetureForm.processing}
-                                    onClick={() => fermetureForm.post('/agence/caisse/fermer')}
+                                    onClick={fermerCaisse}
                                 >
                                     {fermetureForm.processing ? 'Clôture...' : 'Valider & clôturer'}
                                 </Button>
@@ -1086,7 +1204,9 @@ export default function Caisse({
                             <div className="flex flex-col gap-6">
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                                     {summary.map((row) => {
-                                        const Icon = row.icon;
+                                        const Icon = typeof row.icon === 'string'
+                                            ? (PAYMENT_ICONS[row.icon] ?? Wallet)
+                                            : (row.icon ?? Wallet);
                                         return (
                                             <Card key={row.mode} className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
                                                 <CardHeader className="flex flex-row items-center gap-3 space-y-0">
@@ -1096,10 +1216,10 @@ export default function Caisse({
                                                     <CardTitle className="text-base text-[#0f172a]">{row.mode}</CardTitle>
                                                 </CardHeader>
                                                 <CardContent className="flex flex-col gap-2 text-sm">
-                                                    <SummaryRow label="Montant total" value={<strong className="text-[#4d8500]">{currency(row.total)}</strong>} />
-                                                    <SummaryRow label="Nombre transactions" value={number(row.count)} />
-                                                    <SummaryRow label="Part agence (10%)" value={currency(row.commission)} />
-                                                    <SummaryRow label="Part propriétaires" value={currency(row.net)} />
+                                                    <SummaryRow label={`Entrées (${number(row.entries_count)})`} value={<strong className="text-[#4d8500]">+ {currency(row.entries)}</strong>} />
+                                                    <SummaryRow label={`Sorties (${number(row.outputs_count)})`} value={<strong className="text-[#b42318]">- {currency(row.outputs)}</strong>} />
+                                                    <SummaryRow label="Nombre de mouvements" value={number(row.count)} />
+                                                    <SummaryRow label="Solde net" value={<strong className={Number(row.balance) >= 0 ? 'text-[#00559b]' : 'text-[#b42318]'}>{currency(row.balance)}</strong>} />
                                                 </CardContent>
                                             </Card>
                                         );
@@ -1122,6 +1242,7 @@ export default function Caisse({
                         ) : null}
                     </>
                 ) : null}
+
             </div>
 
             {/* Modal Nouveau mouvement */}

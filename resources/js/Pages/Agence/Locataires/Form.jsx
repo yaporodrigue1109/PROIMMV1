@@ -362,12 +362,16 @@ function CountrySelect({ value, onChange, options }) {
     );
 }
 
-const PhoneInput = ({ label, required, error, value, onChange, placeholder }) => {
+const PhoneInput = ({ label, required, error, value, onChange, onCountryChange, countries, placeholder }) => {
+    const defaultCountry = usePage().props.geography?.defaultCountryCode ?? 'CI';
+
     return (
         <Field label={label} required={required} error={error}>
             <PhoneInputBase
                 international
-                defaultCountry="CI"
+                defaultCountry={defaultCountry}
+                countries={countries}
+                onCountryChange={onCountryChange}
                 countrySelectComponent={CountrySelect}
                 value={value}
                 onChange={(val) => onChange({ target: { value: val ?? '' } })}
@@ -384,8 +388,12 @@ const PhoneInput = ({ label, required, error, value, onChange, placeholder }) =>
 function formatContractDoor(door) {
     if (!door) return 'Aucune porte sélectionnée';
 
-    const type = door.typePorte?.libelle ?? door.typePorte?.name ?? door.type_porte?.name ?? 'Type non précisé';
-    return `${door.numero_porte ?? 'Porte'}`;
+    const type = door.typePorte?.libelle
+        ?? door.typePorte?.name
+        ?? door.type_porte?.libelle
+        ?? door.type_porte?.name
+        ?? 'Type non précisé';
+    return `${door.numero_porte ?? 'Porte sans nom'} — ${type}`;
 }
 
 function contractDefaultsFromDoor(door) {
@@ -519,14 +527,24 @@ export default function Form({
     modePaiement = [],
 }) {
     const isEdit = mode === 'edit';
-    const { flash } = usePage().props;
+    const { flash, geography = {} } = usePage().props;
     const serverError = flash?.error ?? '';
 
     const { data, setData, post, put, processing, errors, transform } = useForm(buildInitialData(locataire, isEdit));
+    const countries = asArray(geography.countries);
+    const geographyRegions = asArray(geography.regions).length ? geography.regions : regions;
+    const geographyCities = asArray(geography.cities).length ? geography.cities : villes;
+    const initialCountryCode = countries.find((country) =>
+        asArray(geographyRegions).some((region) => toId(region.id) === toId(data.region_id) && toId(region.pays_id) === toId(country.id))
+    )?.iso2 ?? geography.defaultCountryCode ?? 'CI';
+    const [countryCode, setCountryCode] = useState(initialCountryCode);
+    const selectedCountry = countries.find((country) => country.iso2 === countryCode);
     const [showArrieres, setShowArrieres] = useState(Boolean(data.a_des_arrieres));
     const [current, setCurrent] = useState(0);
     const [completed, setCompleted] = useState([]);
     const [stepErrors, setStepErrors] = useState({});
+    const [cashError, setCashError] = useState('');
+    const [checkingCash, setCheckingCash] = useState(false);
     const arriereMonthOptions = useMemo(() => buildArriereMonthOptions(24), []);
 
     const ownerOptions = useMemo(() => asArray(proprio), [proprio]);
@@ -727,7 +745,7 @@ export default function Form({
         setData((current) => ({ ...current, region_id: value, ville_id: '' }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         const locataireId = locataire?.locataire_id ?? locataire?.id;
@@ -742,6 +760,24 @@ export default function Form({
             return;
         }
 
+        setCheckingCash(true);
+        setCashError('');
+        try {
+            const response = await fetch('/agence/locataires/caisse/status', {
+                headers: { Accept: 'application/json' },
+            });
+            const payload = await response.json().catch(() => null);
+            if (!response.ok || !payload?.open) {
+                setCashError('La caisse est fermée. Ouvrez-la avant d’enregistrer ce nouveau locataire. Les informations saisies sont conservées.');
+                return;
+            }
+        } catch {
+            setCashError('Impossible de vérifier l’état de la caisse. Réessayez sans quitter cette page.');
+            return;
+        } finally {
+            setCheckingCash(false);
+        }
+
         post('/agence/locataires', {
             preserveScroll: true,
             forceFormData: hasFiles,
@@ -749,15 +785,17 @@ export default function Form({
     };
 
     const regionOptions = useMemo(
-        () => asArray(regions).map((region) => ({ value: toId(region.id), label: region.name })),
-        [regions]
+        () => asArray(geographyRegions)
+            .filter((region) => !selectedCountry || toId(region.pays_id) === toId(selectedCountry.id))
+            .map((region) => ({ value: toId(region.id), label: region.name })),
+        [geographyRegions, selectedCountry]
     );
 
     const villeOptions = useMemo(
-        () => asArray(villes)
+        () => asArray(geographyCities)
             .filter((ville) => !data.region_id || toId(ville.region_id) === toId(data.region_id))
             .map((ville) => ({ value: toId(ville.id), label: ville.name })),
-        [data.region_id, villes]
+        [data.region_id, geographyCities]
     );
 
     const typePieceOptions = useMemo(
@@ -962,7 +1000,7 @@ export default function Form({
                         </h1>
                         <p className="text-sm text-[#5f7182]">
                             {isEdit
-                                ? 'Les informations de contrat restent affichées à titre indicatif.'
+                                ? 'Les informations de contrat restent affichées à titre indicatif.'
                                 : 'Renseignez l’identité du locataire et le contrat de location.'}
                         </p>
                     </div>
@@ -985,6 +1023,15 @@ export default function Form({
                         <CardContent className="p-4">
                             <p className="text-sm font-semibold text-[#b42318]">Erreur Laravel</p>
                             <p className="mt-1 text-sm text-[#7f1d1d]">{serverError}</p>
+                        </CardContent>
+                    </Card>
+                ) : null}
+
+                {cashError ? (
+                    <Card className="rounded-2xl border-[#f5c2c7] bg-[#fff5f5] shadow-sm">
+                        <CardContent className="p-4">
+                            <p className="text-sm font-semibold text-[#b42318]">Caisse fermée</p>
+                            <p className="mt-1 text-sm text-[#7f1d1d]">{cashError}</p>
                         </CardContent>
                     </Card>
                 ) : null}
@@ -1041,6 +1088,12 @@ export default function Form({
                                 required
                                 error={fieldErrors.tel1}
                                 value={data.tel1}
+                                countries={countries.map((country) => country.iso2)}
+                                onCountryChange={(code) => {
+                                    if (!code || code === countryCode) return;
+                                    setCountryCode(code);
+                                    setData((current) => ({ ...current, region_id: '', ville_id: '' }));
+                                }}
                                 onChange={(e) => setData('tel1', e.target.value ?? '')}
                                 placeholder="07 00 00 00 00"
                             />
@@ -1092,6 +1145,16 @@ export default function Form({
                                     onChange={(e) => setData('lieu_naissance', e.target.value)}
                                     placeholder="Ex: Abidjan"
                                 />
+                            </Field>
+
+                            <Field label="Pays">
+                                <Select value={countryCode} onValueChange={(code) => {
+                                    setCountryCode(code);
+                                    setData((current) => ({ ...current, region_id: '', ville_id: '' }));
+                                }}>
+                                    <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                                    <SelectContent>{countries.map((country) => <SelectItem key={country.iso2} value={country.iso2}>{country.name} ({country.indicatif})</SelectItem>)}</SelectContent>
+                                </Select>
                             </Field>
 
                             <Field label="Région" error={fieldErrors.region_id}>
@@ -2164,11 +2227,11 @@ export default function Form({
                             <Button
                                 type="button"
                                 className={cn(agenceButtonStyles.primary, 'w-full sm:w-auto')}
-                                disabled={processing}
+                                disabled={processing || checkingCash}
                                 onClick={handleSubmit}
                             >
                                 <Save className="h-4 w-4" />
-                                {processing ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Enregistrer'}
+                                {checkingCash ? 'Vérification de la caisse...' : processing ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Enregistrer'}
                             </Button>
                         ) : (
                             <Button type="button" className={cn(agenceButtonStyles.primary, 'w-full sm:w-auto')} onClick={handleNext}>

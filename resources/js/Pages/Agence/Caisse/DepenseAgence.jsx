@@ -44,15 +44,14 @@ const categories = [
     'Divers',
 ];
 
-const paymentModes = ['Espèces', 'Wave', 'Orange Money', 'Virement bancaire'];
-
 const proofTypes = ['Aucun', 'Reçu', 'Facture', 'Bon de sortie'];
 
 const blankExpense = () => ({
     category: '',
     label: '',
     amount: '',
-    paymentMode: 'Espèces',
+    paymentModeId: '',
+    paymentModeLabel: '',
     proofType: 'Aucun',
     observation: '',
 });
@@ -145,7 +144,7 @@ function ExpenseRow({ expense, onRemove }) {
     );
 }
 
-export default function DepenseAgence({ caisseOuverte = true }) {
+export default function DepenseAgence({ caisseOuverte = false, modesPaiement = [] }) {
     const [expenseForm, setExpenseForm] = useState(blankExpense());
     const [expenses, setExpenses] = useState([]);
     const [referenceCounter, setReferenceCounter] = useState(1);
@@ -177,6 +176,11 @@ export default function DepenseAgence({ caisseOuverte = true }) {
             return;
         }
 
+        if (!expenseForm.paymentModeId) {
+            setFlash({ type: 'error', message: 'Veuillez sélectionner un mode de paiement.' });
+            return;
+        }
+
         setExpenses((current) => [
             ...current,
             {
@@ -185,7 +189,8 @@ export default function DepenseAgence({ caisseOuverte = true }) {
                 category: expenseForm.category,
                 label: expenseForm.label.trim(),
                 amount,
-                paymentMode: expenseForm.paymentMode,
+                paymentModeId: expenseForm.paymentModeId,
+                paymentMode: expenseForm.paymentModeLabel,
                 proofType: expenseForm.proofType,
                 observation: expenseForm.observation.trim(),
             },
@@ -210,6 +215,11 @@ export default function DepenseAgence({ caisseOuverte = true }) {
     const validateExpenses = async () => {
         if (!expenses.length) return;
 
+        if (!caisseOuverte) {
+            setFlash({ type: 'error', message: "La caisse doit être ouverte avant d'enregistrer une dépense." });
+            return;
+        }
+
         if (typeof window !== 'undefined' && !window.confirm(`Valider le décaissement global de ${currency(total)} ?`)) {
             return;
         }
@@ -217,12 +227,36 @@ export default function DepenseAgence({ caisseOuverte = true }) {
         setSubmitting(true);
 
         try {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            if (typeof window !== 'undefined') {
-                window.alert('Dépenses validées en statique.');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+            const response = await fetch('/agence/caisse/depense-agence', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                },
+                body: JSON.stringify({
+                    depenses: expenses.map((expense) => ({
+                        categorie: expense.category,
+                        libelle: expense.label,
+                        montant: expense.amount,
+                        mode_paiement_id: expense.paymentModeId,
+                        type_justificatif: expense.proofType === 'Aucun' ? null : expense.proofType,
+                        observation: expense.observation || null,
+                    })),
+                }),
+            });
+            const payload = await response.json().catch(() => null);
+
+            if (!response.ok || payload?.success === false) {
+                const firstError = payload?.errors ? Object.values(payload.errors).flat()[0] : null;
+                throw new Error(firstError ?? payload?.message ?? "L'enregistrement des dépenses a échoué.");
             }
             clearExpenses();
-            setFlash({ type: 'success', message: 'Dépenses validées en statique.' });
+            setFlash({ type: 'success', message: payload?.message ?? 'Dépenses enregistrées avec succès.' });
+            setTimeout(() => window.location.reload(), 300);
+        } catch (error) {
+            setFlash({ type: 'error', message: error.message || "L'enregistrement des dépenses a échoué." });
         } finally {
             setSubmitting(false);
         }
@@ -336,18 +370,25 @@ export default function DepenseAgence({ caisseOuverte = true }) {
                                 />
                             </Field>
 
-                            <Field label="Mode de paiement">
+                            <Field label="Mode de paiement" required>
                                 <Select
-                                    value={expenseForm.paymentMode}
-                                    onValueChange={(value) => setExpenseForm((current) => ({ ...current, paymentMode: value }))}
+                                    value={expenseForm.paymentModeId}
+                                    onValueChange={(value) => {
+                                        const mode = modesPaiement.find((item) => String(item.value) === String(value));
+                                        setExpenseForm((current) => ({
+                                            ...current,
+                                            paymentModeId: value,
+                                            paymentModeLabel: mode?.label ?? '',
+                                        }));
+                                    }}
                                 >
                                     <SelectTrigger className="h-11 rounded-xl border-[#c8d4de]">
                                         <SelectValue placeholder="Sélectionner" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {paymentModes.map((mode) => (
-                                            <SelectItem key={mode} value={mode}>
-                                                {mode}
+                                        {modesPaiement.map((mode) => (
+                                            <SelectItem key={String(mode.value)} value={String(mode.value)}>
+                                                {mode.label}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -428,7 +469,7 @@ export default function DepenseAgence({ caisseOuverte = true }) {
                                     Tout vider
                                 </Button>
 
-                                <Button type="button" className={agenceButtonStyles.primary} disabled={!expenses.length || submitting} onClick={validateExpenses}>
+                                <Button type="button" className={agenceButtonStyles.primary} disabled={!expenses.length || submitting || !caisseOuverte} onClick={validateExpenses}>
                                     {submitting ? (
                                         <>
                                             <Loader2 className="h-4 w-4 animate-spin" />

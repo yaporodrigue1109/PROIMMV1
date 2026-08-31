@@ -24,12 +24,14 @@ class Role extends Model
         'agence_id',
         'base_role_id',
         'is_active',
+        'is_system',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_system' => 'boolean',
     ];
 
     protected static function booted(): void

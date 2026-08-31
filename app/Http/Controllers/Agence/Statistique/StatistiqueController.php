@@ -7,6 +7,8 @@ use App\Models\Batiment;
 use App\Models\Maintenance;
 use App\Models\MaintenanceDetail;
 use App\Models\LocataireAgence;
+use App\Models\Loyer;
+use App\Models\ProprietaireLot;
 use App\Models\Porte;
 use App\Models\Propriete;
 use App\Models\ProprietaireAgence;
@@ -98,20 +100,32 @@ class StatistiqueController extends Controller
         );
 
         $batimentsTotal = $this->safeCount(fn () => $batimentsQuery->count());
-        $portesTotal = $this->safeCount(fn () => $portesQuery->count());
-        $portesOccupees = $this->safeCount(fn () => (clone $portesQuery)->where('is_occupe', true)->count());
+        $portesTotal = $this->safeCount(fn () => (clone $portesQuery)->where('is_actif', true)->count());
+        $portesOccupees = $this->safeCount(fn () => (clone $portesQuery)->where('is_actif', true)->where('is_occupe', true)->count());
         $portesLibres = $this->safeCount(fn () => (clone $portesQuery)->where('is_actif', true)->where('is_occupe', false)->count());
+        $lotsTotal = $this->safeCount(fn () => ProprietaireLot::where('agence_id', $agenceId)->count());
+        $personnelTotal = $this->safeCount(fn () => User::where('agence_id', $agenceId)->count());
+        $personnelActifs = $this->safeCount(fn () => User::where('agence_id', $agenceId)->where('statut', 1)->count());
+        $personnelParRole = $this->safeCollection(fn () => User::query()
+            ->leftJoin('roles', 'roles.role_id', '=', 'users.role_id')
+            ->where('users.agence_id', $agenceId)
+            ->selectRaw("COALESCE(roles.name, 'Sans rôle') as label, COUNT(*) as value")
+            ->groupBy('roles.name')
+            ->get());
 
         $maintenancesTotal = $this->safeCount(fn () => $maintenancesQuery->count());
         $maintenancesEnCours = $this->safeCount(fn () => (clone $maintenancesQuery)->where('statut', Maintenance::STATUT_EN_COURS)->count());
         $maintenancesTerminees = $this->safeCount(fn () => (clone $maintenancesQuery)->where('statut', Maintenance::STATUT_TERMINE)->count());
         $maintenancesEnAttente = $this->safeCount(fn () => (clone $maintenancesQuery)->where('statut', Maintenance::STATUT_EN_ATTENTE)->count());
         $maintenancesAnnulees = $this->safeCount(fn () => (clone $maintenancesQuery)->where('statut', Maintenance::STATUT_ANNULE)->count());
-        $coutMaintenanceMois = $this->safeFloat(fn () => (clone $maintenancesQuery)->sum('montant_global'));
+        $coutMaintenanceMois = $this->safeFloat(fn () => (clone $transactionsQuery)
+            ->where('type_transaction', 'maintenance')
+            ->sum('montant_global_verser'));
+        $depensesAgenceMontant = $this->safeFloat(fn () => (clone $transactionsQuery)
+            ->where('type_transaction', 'depense')
+            ->sum('montant_global_verser'));
+        $depensesTotal = $coutMaintenanceMois + $depensesAgenceMontant;
 
-        $transactionsValidees = $this->safeCount(fn () => (clone $transactionsQuery)->count());
-        $transactionsEnAttente = 0;
-        $transactionsEchouees = 0;
         $revenuMois = $this->safeFloat(fn () => (clone $transactionsQuery)
             ->where('type_transaction', 'loyer')
             ->sum('montant_global_verser'));
@@ -138,6 +152,77 @@ class StatistiqueController extends Controller
                 ->pluck('total', 'day')
                 ->toArray()
         );
+        $agencyExpensesByDay = $this->transactionAmountsByDay($transactionsQuery, 'depense');
+        $maintenanceExpensesByDay = $this->transactionAmountsByDay($transactionsQuery, 'maintenance');
+
+        $loyersQuery = Loyer::query()
+            ->where('agence_id', $agenceId)
+            ->whereBetween('date_limit_paiement', [$periodStart, $periodEnd]);
+        $loyersAttendus = $this->safeFloat(fn () => (clone $loyersQuery)->sum('montant_a_payer'));
+        // Le recouvrement doit porter sur les mêmes échéances que le montant attendu.
+        // Les transactions encaissées pendant la période peuvent contenir des avances
+        // ou le règlement d'anciens impayés et ne constituent donc pas le numérateur.
+        $loyersRecouvres = $this->safeFloat(fn () => (clone $loyersQuery)
+            ->selectRaw('COALESCE(SUM(LEAST(COALESCE(montant_payer, 0), montant_a_payer)), 0) AS total')
+            ->value('total'));
+        $impayesTotal = $this->safeFloat(fn () => (clone $loyersQuery)
+            ->whereIn('statut', [Loyer::STATUT_IMPAYE, Loyer::STATUT_PARTIEL])
+            ->sum('montant_restant'));
+        $impayesByDay = $this->safeArray(fn () => (clone $loyersQuery)
+            ->whereIn('statut', [Loyer::STATUT_IMPAYE, Loyer::STATUT_PARTIEL])
+            ->selectRaw('DATE(date_limit_paiement) as day, SUM(montant_restant) as total')
+            ->groupBy('day')
+            ->pluck('total', 'day')
+            ->toArray());
+
+        $modesPaiementRecouvrement = $this->safeCollection(fn () => (clone $transactionsQuery)
+            ->leftJoin('mode_paiements', 'mode_paiements.id', '=', 'transaction_agences.mode_paiement_id')
+            ->where('transaction_agences.type_transaction', TransactionAgence::STATUT_LOYER)
+            ->where('transaction_agences.montant_global_verser', '>', 0)
+            ->selectRaw("COALESCE(mode_paiements.name, 'Non renseigné') AS mode")
+            ->selectRaw('COUNT(transaction_agences.transaction_agence_id) AS nombre_paiements')
+            ->selectRaw('SUM(transaction_agences.montant_global_verser) AS montant_total')
+            ->groupBy('transaction_agences.mode_paiement_id', 'mode_paiements.name')
+            ->orderByDesc('nombre_paiements')
+            ->get()
+            ->map(fn ($mode) => [
+                'mode' => $mode->mode,
+                'nombre_paiements' => (int) $mode->nombre_paiements,
+                'montant_total' => (float) $mode->montant_total,
+            ]));
+
+        $meilleursPayeurs = $this->safeCollection(fn () => (clone $transactionsQuery)
+            ->join('locataire', 'locataire.locataire_id', '=', 'transaction_agences.locataire_id')
+            ->where('transaction_agences.type_transaction', TransactionAgence::STATUT_LOYER)
+            ->where('transaction_agences.montant_global_verser', '>', 0)
+            ->select('transaction_agences.locataire_id', 'locataire.name', 'locataire.code')
+            ->selectRaw('SUM(transaction_agences.montant_global_verser) AS montant_total')
+            ->groupBy('transaction_agences.locataire_id', 'locataire.name', 'locataire.code')
+            ->orderByDesc('montant_total')
+            ->limit(10)
+            ->get()
+            ->map(fn ($locataire) => [
+                'locataire_id' => $locataire->locataire_id,
+                'name' => $locataire->name,
+                'code' => $locataire->code,
+                'montant' => (float) $locataire->montant_total,
+            ]));
+
+        $mauvaisPayeurs = $this->safeCollection(fn () => (clone $loyersQuery)
+            ->join('locataire', 'locataire.locataire_id', '=', 'loyer.locataire_id')
+            ->where('loyer.montant_restant', '>', 0)
+            ->select('loyer.locataire_id', 'locataire.name', 'locataire.code')
+            ->selectRaw('SUM(loyer.montant_restant) AS montant_total')
+            ->groupBy('loyer.locataire_id', 'locataire.name', 'locataire.code')
+            ->orderByDesc('montant_total')
+            ->limit(10)
+            ->get()
+            ->map(fn ($locataire) => [
+                'locataire_id' => $locataire->locataire_id,
+                'name' => $locataire->name,
+                'code' => $locataire->code,
+                'montant' => (float) $locataire->montant_total,
+            ]));
 
         $maintenanceByDay = $this->safeArray(
             fn () => (clone $maintenancesQuery)
@@ -157,22 +242,12 @@ class StatistiqueController extends Controller
             User::query()->where('agence_id', $agenceId)->whereBetween('created_at', [$periodStart, $periodEnd])
         );
 
-        $statusLabels = [
-            'en_attente' => 'En attente',
-            'en_cours' => 'En cours',
-            'termine' => 'Terminée',
-            'annule' => 'Annulée',
-            'validee' => 'Validée',
-            'echouee' => 'Échouée',
+        $maintenanceSeries = [
+            ['label' => 'En attente', 'value' => $maintenancesEnAttente],
+            ['label' => 'En cours', 'value' => $maintenancesEnCours],
+            ['label' => 'Terminée', 'value' => $maintenancesTerminees],
+            ['label' => 'Annulée', 'value' => $maintenancesAnnulees],
         ];
-
-        $maintenanceSeries = collect($statusLabels)
-            ->map(fn ($label, $key) => [
-                'label' => $label,
-                'value' => (int) ($maintenanceStats[$key] ?? 0),
-            ])
-            ->values()
-            ->all();
 
         $monthlyLabels = [];
         $revenueSeries = [];
@@ -182,6 +257,8 @@ class StatistiqueController extends Controller
         $locatairesMonthSeries = [];
         $personnelMonthSeries = [];
         $loyersMonthSeries = [];
+        $depensesAgenceSeries = [];
+        $depensesMaintenanceSeries = [];
 
         for ($date = $periodStart->copy()->startOfDay(); $date->lte($periodEnd); $date->addDay()) {
             $dateKey = $date->toDateString();
@@ -189,11 +266,13 @@ class StatistiqueController extends Controller
             $revenueSeries[] = (float) ($revenueByDay[$dateKey] ?? 0);
             $salesMonthSeries[] = (float) ($salesByDay[$dateKey] ?? 0);
             $maintenanceMonthSeries[] = (float) ($maintenanceByDay[$dateKey] ?? 0);
+            $depensesAgenceSeries[] = (float) ($agencyExpensesByDay[$dateKey] ?? 0);
+            $depensesMaintenanceSeries[] = (float) ($maintenanceExpensesByDay[$dateKey] ?? 0);
             $proprietairesMonthSeries[] = (int) ($proprietairesByDay[$dateKey] ?? 0);
             $locatairesMonthSeries[] = (int) ($locatairesByDay[$dateKey] ?? 0);
             $personnelMonthSeries[] = (int) ($personnelByDay[$dateKey] ?? 0);
             $encaisse = (float) ($revenueByDay[$dateKey] ?? 0);
-            $loyersMonthSeries[] = ['encaisse' => $encaisse, 'impaye' => max($encaisse * 0.12, 0)];
+            $loyersMonthSeries[] = ['encaisse' => $encaisse, 'impaye' => (float) ($impayesByDay[$dateKey] ?? 0)];
         }
 
         $recentTransactions = $this->safeCollection(fn () => (clone $transactionsQuery)
@@ -213,6 +292,21 @@ class StatistiqueController extends Controller
             ->latest('created_at')
             ->limit(6)
             ->get());
+        $recentExpenses = $this->safeCollection(fn () => (clone $transactionsQuery)
+            ->whereIn('type_transaction', ['depense', 'maintenance'])
+            ->with('modePaiement')
+            ->latest('date_transaction')
+            ->limit(20)
+            ->get()
+            ->map(fn ($transaction) => [
+                'id' => $transaction->transaction_agence_id,
+                'type' => $transaction->type_transaction,
+                'label' => $transaction->mois_payer
+                    ?: ($transaction->type_transaction === 'maintenance' ? 'Maintenance' : 'Dépense agence'),
+                'amount' => (float) $transaction->montant_global_verser,
+                'mode' => $transaction->modePaiement?->name ?? 'Non renseigné',
+                'date' => optional($transaction->date_transaction)->format('d/m/Y H:i'),
+            ]));
 
         $topMaintenanceTypes = $this->safeCollection(fn () => MaintenanceDetail::query()
             ->join('maintenance', 'maintenance.maintenance_id', '=', 'maintenance_detail.maintenance_id')
@@ -258,6 +352,11 @@ class StatistiqueController extends Controller
             ->orderBy('date_reversement')
             ->get())
             ->groupBy('proprietaire_id');
+        $reversementsEnAttente = $this->safeCount(fn () => Reversement::query()
+            ->where('agence_id', $agenceId)
+            ->where('statut', 'en_attente')
+            ->whereBetween('created_at', [$periodStart, $periodEnd])
+            ->count());
         $proprietairesActifsReversements = $this->safeCollection(fn () => ProprietaireAgence::query()
             ->with('proprietaire')
             ->where('agence_id', $agenceId)
@@ -293,9 +392,6 @@ class StatistiqueController extends Controller
         $maintenanceCloseRate = $maintenancesTotal > 0
             ? round(($maintenancesTerminees / $maintenancesTotal) * 100)
             : 0;
-        $transactionSuccessRate = ($transactionsValidees + $transactionsEnAttente + $transactionsEchouees) > 0
-            ? round(($transactionsValidees / max(1, $transactionsValidees + $transactionsEnAttente + $transactionsEchouees)) * 100)
-            : 0;
 
         $stats = [
             'proprietes_total' => $proprietesStats['total'] ?? 0,
@@ -312,23 +408,31 @@ class StatistiqueController extends Controller
             'portes_total' => $portesTotal,
             'portes_occupees' => $portesOccupees,
             'portes_libres' => $portesLibres,
+            'lots_total' => $lotsTotal,
+            'personnel_total' => $personnelTotal,
+            'personnel_actifs' => $personnelActifs,
+            'locataires_a_jour' => max(0, (int) ($locatairesStats['actifs'] ?? 0) - $this->safeCount(fn () => (clone $loyersQuery)->impayesOuPartiels()->distinct('locataire_id')->count('locataire_id'))),
+            'locataires_en_retard' => $this->safeCount(fn () => (clone $loyersQuery)->impayesOuPartiels()->distinct('locataire_id')->count('locataire_id')),
             'maintenances_total' => $maintenancesTotal,
             'maintenances_en_cours' => $maintenancesEnCours,
             'maintenances_en_attente' => $maintenancesEnAttente,
             'maintenances_terminees' => $maintenancesTerminees,
             'maintenances_annulees' => $maintenancesAnnulees,
             'cout_maintenance_mois' => $coutMaintenanceMois,
+            'depenses_agence_montant' => $depensesAgenceMontant,
+            'depenses_total' => $depensesTotal,
+            'loyers_attendus' => $loyersAttendus,
+            'loyers_recouvres' => $loyersRecouvres,
+            'impayes_total' => $impayesTotal,
             'revenu_mois' => $revenuMois,
             'ventes_montant' => $ventesMontant,
             'ventes_nombre' => $ventesNombre,
             'total_encaisse' => $totalEncaisse,
-            'transactions_validees' => $transactionsValidees,
-            'transactions_en_attente' => $transactionsEnAttente,
-            'transactions_echouees' => $transactionsEchouees,
+            'reversements_attendu' => $loyersAttendus,
             'occupation_rate' => $occupationRate,
             'allocation_rate' => $allocationRate,
             'maintenance_close_rate' => $maintenanceCloseRate,
-            'transaction_success_rate' => $transactionSuccessRate,
+            'reversements_en_attente' => $reversementsEnAttente,
         ];
 
         return Inertia::render('Agence/Statistiques/Index', [
@@ -337,15 +441,22 @@ class StatistiqueController extends Controller
             'revenueSeries' => $revenueSeries,
             'salesMonthSeries' => $salesMonthSeries,
             'maintenanceMonthSeries' => $maintenanceMonthSeries,
+            'depensesAgenceSeries' => $depensesAgenceSeries,
+            'depensesMaintenanceSeries' => $depensesMaintenanceSeries,
             'proprietairesMonthSeries' => $proprietairesMonthSeries,
             'locatairesMonthSeries' => $locatairesMonthSeries,
             'personnelMonthSeries' => $personnelMonthSeries,
+            'personnelParRole' => $personnelParRole->all(),
             'loyersMonthSeries' => $loyersMonthSeries,
             'maintenanceSeries' => $maintenanceSeries,
             'topMaintenanceTypes' => $topMaintenanceTypes,
             'topProperties' => $topProperties,
             'recentTransactions' => $recentTransactions,
             'recentMaintenances' => $recentMaintenances,
+            'recentExpenses' => $recentExpenses,
+            'modesPaiementRecouvrement' => $modesPaiementRecouvrement->all(),
+            'meilleursPayeurs' => $meilleursPayeurs->all(),
+            'mauvaisPayeurs' => $mauvaisPayeurs->all(),
             'reversementsYearMatrix' => $reversementsYearMatrix->all(),
             'reversementMonthLabels' => array_values($reversementMonthLabels),
             'year' => $year,
@@ -407,6 +518,16 @@ class StatistiqueController extends Controller
     {
         return $this->safeArray(fn () => $query
             ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
+            ->groupBy('day')
+            ->pluck('total', 'day')
+            ->toArray());
+    }
+
+    private function transactionAmountsByDay($query, string $type): array
+    {
+        return $this->safeArray(fn () => (clone $query)
+            ->where('type_transaction', $type)
+            ->selectRaw('DATE(date_transaction) as day, SUM(montant_global_verser) as total')
             ->groupBy('day')
             ->pluck('total', 'day')
             ->toArray());

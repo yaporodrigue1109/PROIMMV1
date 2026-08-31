@@ -32,7 +32,7 @@ const moduleActionsByCode = {
     proprietes: ['Voir', 'Créer', 'Modifier', 'Supprimer'],
     proprietaire: ['Voir', 'Créer', 'Modifier', 'Supprimer'],
     locataires: ['Voir', 'Créer', 'Modifier', 'Supprimer'],
-    personnel: ['Voir', 'Créer', 'Modifier', 'Supprimer'],
+    personnel: ['Voir', 'Créer', 'Modifier', 'Désactiver'],
     maintenance: ['Voir', 'Créer', 'Modifier', 'Valider', 'Annuler'],
     caisse: ['Voir', 'Créer', 'Valider', 'Annuler'],
     reversement: ['Voir', 'Créer', 'Valider', 'Exporter'],

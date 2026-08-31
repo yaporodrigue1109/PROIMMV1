@@ -5,10 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
+use App\Models\Concerns\VisibleWithActiveProprietaire;
+use App\Models\Concerns\VisibleWithActiveLocataire;
 
 class Loyer extends Model
 {
-    use HasFactory;
+    use HasFactory, VisibleWithActiveProprietaire, VisibleWithActiveLocataire;
 
     protected $table      = 'loyer';
     protected $primaryKey = 'loyer_id';
@@ -57,6 +59,7 @@ protected $guarded    = [];
             if (empty($model->{$model->getKeyName()})) {
                 $model->{$model->getKeyName()} = (string) Str::uuid();
             }
+              $model->created_by = getInfoAgent()->users->id_users ?? null;
         });
     }
 
@@ -65,7 +68,7 @@ protected $guarded    = [];
     {
         return $query->whereIn('statut', ['Paiement en retard', 'Paiement partiel']);
     }
-    public function locataire()  { return $this->belongsTo(Locataire::class,  'locataire_id'); }
+    public function locataire()  { return $this->belongsTo(Locataire::class, 'locataire_id', 'locataire_id'); }
     public function modePaiement()  { return $this->belongsTo(ModePaiement::class,  'mode_paiement_id'); }
     public function porte()      { return $this->belongsTo(Porte::class,      'porte_id'); }
     public function propriete()  { return $this->belongsTo(Propriete::class,  'propriete_id'); }

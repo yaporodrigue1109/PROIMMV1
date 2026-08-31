@@ -60,9 +60,12 @@ export default function Dashboard({
         proprietaires = 0,
         lots = 0,
         monthlyRevenue = 0,
+        dailyRevenue = 0,
+        dailyExpenses = 0,
         expectedRevenue = 0,
         revenueTrend = 0,
         pendingPayments = 0,
+        totalUnpaid = 0,
         occupancyRate = 0,
     } = stats;
 
@@ -111,13 +114,24 @@ export default function Dashboard({
         },
         {
             label: 'Montant versé',
-            value: canViewFinancials ? currency(monthlyRevenue) : maskedAmount,
-            hint: canViewFinancials
-                ? `${revenueTrend >= 0 ? '+' : ''}${revenueTrend}% vs mois dernier`
-                : 'Accès financier requis',
+            value: canViewFinancials ? currency(dailyRevenue) : maskedAmount,
+            hint: canViewFinancials ? 'Total encaissé aujourd’hui' : 'Accès financier requis',
             icon: Banknote,
             accent: 'bg-[#eaf4fb] text-[#00559b]',
-            trend: canViewFinancials ? revenueTrend : undefined,
+        },
+        {
+            label: 'Total des impayés',
+            value: canViewFinancials ? currency(totalUnpaid) : maskedAmount,
+            hint: canViewFinancials ? 'Toutes les périodes confondues' : 'Accès financier requis',
+            icon: TrendingDown,
+            accent: 'bg-[#fff2e6] text-[#c2410c]',
+        },
+        {
+            label: 'Dépenses du jour',
+            value: canViewFinancials ? currency(dailyExpenses) : maskedAmount,
+            hint: canViewFinancials ? 'Dépenses agence et maintenances' : 'Accès financier requis',
+            icon: TrendingDown,
+            accent: 'bg-[#fdecec] text-[#b42318]',
         },
         {
             label: "Taux d'occupation",
@@ -258,7 +272,7 @@ export default function Dashboard({
                             </p>
                             <p className="mt-1 flex items-center gap-1 text-sm text-[#5f7182]">
                                 {!canViewFinancials ? <LockKeyhole className="h-3.5 w-3.5" /> : null}
-                                {canViewFinancials ? `Versé : ${currency(monthlyRevenue)}` : 'Montants masqués'}
+                                {canViewFinancials ? `Versé aujourd’hui : ${currency(dailyRevenue)}` : 'Montants masqués'}
                             </p>
                         </div>
                     </CardContent>
@@ -393,7 +407,7 @@ export default function Dashboard({
                             recentProperties.map((property) => (
                                 <Link
                                     key={property.id}
-                                    href={`/agence/proprietes/${property.id}`}
+                                    href={property.url}
                                     className="group rounded-xl border border-[#c8d4de] bg-white p-4 transition hover:border-[#00559b] hover:shadow-md hover:shadow-[#00559b]/5"
                                 >
                                     <div className="flex items-center justify-between">

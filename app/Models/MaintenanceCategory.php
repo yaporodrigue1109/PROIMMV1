@@ -42,6 +42,6 @@ class MaintenanceCategory extends Model
 
     public function types()
     {
-        return $this->hasMany(TypeMaintenance::class, 'maintenance_category_id', 'maintenance_category_id');
+        return $this->hasMany(TypeMaintenance::class, 'categorie', 'name');
     }
 }

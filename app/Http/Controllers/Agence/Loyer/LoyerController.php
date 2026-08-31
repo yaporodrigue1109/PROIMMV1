@@ -7,8 +7,12 @@ use App\Models\Locataire;
 use App\Models\Loyer;
 use App\Models\ModePaiement;
 use App\Models\CaisseSession;
+use App\Models\TransactionAgence;
+use App\Models\ParametrageAgence;
 use App\Services\Agence\PaiementLoyerService;
+use App\Services\Agence\LoyerReceiptService;
 use App\Services\Agence\CaisseClotureService;
+use App\Services\Agence\FacturationNotificationService;
 use App\Http\Requests\Agence\PayerLoyerRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +23,12 @@ use Inertia\Inertia;
 class LoyerController extends Controller
 {
 protected  $paiementLoyerService;
- public function __construct(PaiementLoyerService $paiementLoyerService, private CaisseClotureService $caisseClotureService)
+ public function __construct(
+     PaiementLoyerService $paiementLoyerService,
+     private CaisseClotureService $caisseClotureService,
+     private FacturationNotificationService $facturationNotifications,
+     private LoyerReceiptService $receiptService,
+ )
     {
         $this->paiementLoyerService = $paiementLoyerService;
     }
@@ -253,10 +262,17 @@ protected  $paiementLoyerService;
             $donnees['commentaire'] ?? null,
             $this->userId(),
         );
+
+        $this->facturationNotifications->sendPaymentReceipt(
+            $this->agenceId(),
+            $donnees['locataire_id'],
+            $resultat
+        );
  
         return response()->json([
             'success' => true,
             'message' => 'Paiement enregistre avec succes.',
+            'receipt_url' => route('agence.caisse.loyer.receipt', $resultat['transaction_id']),
         ] + $resultat);
     } catch (PaiementLoyerException $e) {
         // Erreur métier attendue (données manquantes/incohérentes) -> 422
@@ -274,6 +290,29 @@ protected  $paiementLoyerService;
         ], 500);
     }
 }
+
+    public function receipt(string $transaction)
+    {
+        $payment = TransactionAgence::query()
+            ->where('agence_id', $this->agenceId())
+            ->where('type_transaction', TransactionAgence::STATUT_LOYER)
+            ->findOrFail($transaction);
+
+        if (empty($payment->numero_recu)) {
+            $settings = ParametrageAgence::where('agence_id', $this->agenceId())->first();
+            $payment->numero_recu = $settings
+                ? $settings->getNextFactureNumber()
+                : TransactionAgence::genererReferenceUnique();
+            $payment->save();
+        }
+
+        $filename = 'recu-loyer-'.$payment->numero_recu.'.pdf';
+
+        return response($this->receiptService->generate($payment), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
 
     private function moisSuivant(int $mois, int $annee): array
     {

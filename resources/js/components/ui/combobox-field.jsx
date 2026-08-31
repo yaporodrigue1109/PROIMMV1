@@ -18,6 +18,7 @@ export function ComboboxField({
     searchValue,
     onSearchChange,
     searchPlaceholder,
+    action,
 }) {
     const rootRef = useRef(null);
     const [internalOpen, setInternalOpen] = useState(false);
@@ -99,10 +100,13 @@ export function ComboboxField({
 
     return (
         <div ref={rootRef} className={cn('space-y-2', className)}>
-            <label className="block text-sm font-semibold text-[#0f172a]">
-                {label}
-                {required ? <span className="ml-0.5 text-[#b42318]">*</span> : null}
-            </label>
+            <div className="flex items-center justify-between gap-3">
+                <label className="block text-sm font-semibold text-[#0f172a]">
+                    {label}
+                    {required ? <span className="ml-0.5 text-[#b42318]">*</span> : null}
+                </label>
+                {action ? <div className="shrink-0">{action}</div> : null}
+            </div>
 
             <div className="relative w-full">
                 <div

@@ -115,6 +115,9 @@ protected $guarded   = [];
         return static::with([
             'typePiece',
             'genre',
+            'proprietes',
+            'lots', 
+            
             'agences',
             'ville',
             'region'

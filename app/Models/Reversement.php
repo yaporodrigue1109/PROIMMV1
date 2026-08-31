@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Models\Concerns\VisibleWithActiveProprietaire;
 
 class Reversement extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, VisibleWithActiveProprietaire;
 
     protected $primaryKey = 'id_reversement';
     public $incrementing = false;
@@ -20,6 +21,8 @@ class Reversement extends Model
     protected $fillable = [
         'id_reversement',
         'lot_id',
+        'vente_id',
+        'type_reversement',
         'proprietaire_id',
         'agence_id',
         'periode_debut',
@@ -34,6 +37,9 @@ class Reversement extends Model
         'montant_apres_commission',
         'nouvelle_caution',
         'depenses_effectuees',
+        'frais_dossier',
+        'montant_maintenances',
+        'cautionSodeci',
         'net_a_reverser',
         'statut',
         'date_reversement',
@@ -62,7 +68,10 @@ class Reversement extends Model
         'montant_commission' => 'integer',
         'montant_apres_commission' => 'integer',
         'nouvelle_caution' => 'integer',
+        'cautionSodeci' => 'integer',   
         'depenses_effectuees' => 'integer',
+        'frais_dossier' => 'integer',
+        'montant_maintenances' => 'integer',
         'net_a_reverser' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -114,6 +123,11 @@ class Reversement extends Model
     public function lot(): BelongsTo
     {
         return $this->belongsTo(ProprietaireLot::class, 'lot_id', 'propreietaire_lot_id');
+    }
+
+    public function vente(): BelongsTo
+    {
+        return $this->belongsTo(VenteBien::class, 'vente_id', 'id_vente');
     }
 
     public function proprietaire(): BelongsTo

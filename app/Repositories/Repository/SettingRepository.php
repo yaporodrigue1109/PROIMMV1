@@ -5,6 +5,7 @@ namespace App\Repositories\Repository;
 use App\Repositories\Interfaces\SettingRepositoryInterface;
 use App\Models\Configuration;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Storage;
 
 class SettingRepository implements SettingRepositoryInterface
 {
@@ -38,22 +39,29 @@ class SettingRepository implements SettingRepositoryInterface
     {
         $setting = $this->get();
 
-        // Gérer les uploads de fichiers
+        $oldLogo = null;
+        $oldFavicon = null;
+
+        // Stocker les nouveaux fichiers avant de remplacer les anciens.
         if (isset($data['logo'])) {
-            if ($setting->logo) {
-                \Storage::disk('public')->delete($setting->logo);
-            }
-            $data['logo'] = $data['logo']->store('settings/logos', 'public');
+            $oldLogo = $setting->logo;
+            $data['logo'] = update( 'settings', $oldLogo,  'png', $data, 'logo'); //$data['logo']->store('settings/logos', 'public'); 
         }
 
         if (isset($data['flavicon'])) {
-            if ($setting->flavicon) {
-                \Storage::disk('public')->delete($setting->flavicon);
-            }
-            $data['flavicon'] = $data['flavicon']->store('settings/favicons', 'public');
+            $oldFavicon = $setting->flavicon;
+            $data['flavicon'] = update( 'settings', $oldFavicon,  'png', $data, 'flavicon');  //  $data['flavicon']->store('settings/favicons', 'public');
         }
 
-        $setting->update($data);
+        $setting->update($data); 
+
+        // if ($oldLogo && $oldLogo !== $setting->logo) {
+        //     Storage::disk('public')->delete($oldLogo);
+        // }
+
+        // if ($oldFavicon && $oldFavicon !== $setting->flavicon) {
+        //     Storage::disk('public')->delete($oldFavicon);
+        // }
 
         return $setting->fresh();
     }

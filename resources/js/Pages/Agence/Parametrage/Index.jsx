@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Bell,
     Brush,
@@ -11,6 +11,7 @@ import {
     FileText,
     Globe,
     Home,
+    History,
     Images,
     Layers3,
     LayoutGrid,
@@ -42,6 +43,7 @@ import { Tabs, TabsContent } from '../../../components/ui/tabs';
 import { cn } from '../../../lib/utils';
 import flags from 'react-phone-number-input/flags';
 import PhoneInputBase from 'react-phone-number-input';
+import GeographySelects from '../../../components/geography-selects';
 import 'react-phone-number-input/style.css';
 
 const inputClassName =
@@ -52,7 +54,38 @@ const textareaClassName =
 
 const getValue = (object, key, fallback = '') => object?.[key] ?? fallback;
 
-const defaultPreview = (path) => (path ? `/storage/${path}` : '');
+const defaultPreview = (value) => {
+    if (!value) return '';
+
+    const path = String(value).trim();
+    if (!path) return '';
+
+    if (/^https?:\/\//i.test(path)) {
+        try {
+            const url = new URL(path);
+
+            // Une URL locale enregistrée en base doit rester utilisable même si
+            // l'application est ouverte avec un autre hôte ou un autre port.
+            return ['localhost', '127.0.0.1'].includes(url.hostname)
+                ? `${url.pathname}${url.search}`
+                : path;
+        } catch {
+            return path;
+        }
+    }
+
+    if (path.startsWith('/')) return path;
+
+    if (
+        path.startsWith('storage/')
+        || path.startsWith('admin/')
+        || path.startsWith('assets/')
+    ) {
+        return `/${path}`;
+    }
+
+    return `/storage/${path.replace(/^public\//, '')}`;
+};
 
 const scrollToTop = () => {
     requestAnimationFrame(() => {
@@ -75,6 +108,7 @@ const NAV_ITEMS = [
     { value: 'visuel', label: 'Visuel', description: 'Logos & cachet', icon: Images, step: '06' },
     { value: 'signatures', label: 'Signatures', description: 'DG, SG & comptabilité', icon: ShieldCheck, step: '08' },
     { value: 'notifications', label: 'Notifications', description: 'Alertes & destinataires', icon: Bell, step: '10' },
+    { value: 'journal', label: "Journal d’activités", description: 'Historique des actions', icon: History, step: '11' },
     { value: 'roles', label: 'Rôles et permissions', description: 'Accès du personnel', icon: KeyRound, step: '12' },
 ];
 
@@ -354,13 +388,14 @@ function CountrySelect({ value, onChange, options }) {
 
 function PhoneInput({ name, defaultValue = '', placeholder = '', disabled = false }) {
     const [value, setValue] = useState(defaultValue ?? '');
+    const defaultCountry = usePage().props.geography?.defaultCountryCode ?? 'CI';
 
     return (
         <>
             <input type="hidden" name={name} value={value ?? ''} />
             <PhoneInputBase
                 international
-                defaultCountry="CI"
+                defaultCountry={defaultCountry}
                 countrySelectComponent={CountrySelect}
                 value={value}
                 onChange={setValue}
@@ -473,6 +508,7 @@ export default function Index({
     regions = [],
     villes = [],
     modePaiement = [],
+    activityLogs = null,
     agencyRoles = null,
     permissionGroups = null,
     rolePermissions: initialRolePermissions = null,
@@ -515,7 +551,19 @@ export default function Index({
     const [roleTemplate, setRoleTemplate] = useState('empty');
     const [roleFormErrors, setRoleFormErrors] = useState({});
     const [responsableConfirmOpen, setResponsableConfirmOpen] = useState(false);
+    const [activitySearch, setActivitySearch] = useState('');
     const responsableConfirmationAccepted = useRef(false);
+    const activityItems = activityLogs?.data ?? [];
+    const filteredActivityItems = activityItems.filter((entry) => {
+        const needle = activitySearch.trim().toLowerCase();
+        if (!needle) return true;
+
+        return [entry.user_name, entry.description, entry.action, entry.ip_address]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(needle);
+    });
     const roles = roleCatalog.map((role) => ({
         ...role,
         permissions: rolePermissions[role.role_id] ?? [],
@@ -595,8 +643,8 @@ export default function Index({
         notif_recu: Boolean(parametrage?.notif_recu ?? false),
     });
 
-    const currentRegionId = String(agence?.region_id ?? '');
-    const availableCities = villes.filter((ville) => String(ville.region_id ?? '') === currentRegionId);
+    const [selectedRegionId, setSelectedRegionId] = useState(String(agence?.region_id ?? ''));
+    const [selectedCityId, setSelectedCityId] = useState(String(agence?.ville_id ?? ''));
 
     const handlePreview = (name) => (event) => {
         const file = event.target.files?.[0];
@@ -1035,38 +1083,14 @@ export default function Index({
                                             <Field label="Email secondaire">
                                                 <Input name="email2" type="email" defaultValue={getValue(agence, 'email2')} placeholder="secondaire@agence.ci" className={inputClassName} />
                                             </Field>
-                                            <Field label="Région">
-                                                <FormSelect
-                                                    name="region_id"
-                                                    defaultValue={String(getValue(agence, 'region_id'))}
-                                                    placeholder="Choisir une région"
-                                                >
-                                                    {regions.map((region) => {
-                                                        const regionId = String(region.id ?? region.region_id);
-                                                        return (
-                                                            <SelectItem key={regionId} value={regionId}>
-                                                                {region.name}
-                                                            </SelectItem>
-                                                        );
-                                                    })}
-                                                </FormSelect>
-                                            </Field>
-                                            <Field label="Ville">
-                                                <FormSelect
-                                                    name="ville_id"
-                                                    defaultValue={String(getValue(agence, 'ville_id'))}
-                                                    placeholder="Choisir une ville"
-                                                >
-                                                    {availableCities.map((ville) => {
-                                                        const villeId = String(ville.id ?? ville.ville_id);
-                                                        return (
-                                                            <SelectItem key={villeId} value={villeId}>
-                                                                {ville.name}
-                                                            </SelectItem>
-                                                        );
-                                                    })}
-                                                </FormSelect>
-                                            </Field>
+                                            <GeographySelects
+                                                regionId={selectedRegionId}
+                                                cityId={selectedCityId}
+                                                onRegionChange={setSelectedRegionId}
+                                                onCityChange={setSelectedCityId}
+                                                regionName="region_id"
+                                                cityName="ville_id"
+                                            />
                                             <Field label="Boîte postale">
                                                 <Input name="bp" defaultValue={getValue(agence, 'bp')} placeholder="BP 1234" className={inputClassName} />
                                             </Field>
@@ -1498,6 +1522,96 @@ export default function Index({
                                         </Button>
                                     </div>
                                 </form>
+                            </TabsContent>
+
+                            <TabsContent value="journal">
+                                <div className="space-y-6">
+                                    <SectionCard
+                                        icon={History}
+                                        title="Journal d’activités"
+                                        description="Actions effectuées par les utilisateurs de votre agence."
+                                        step="11"
+                                        action={(
+                                            <Badge variant={generalFlags.journal_activites ? 'default' : 'secondary'}>
+                                                {generalFlags.journal_activites ? 'Enregistrement actif' : 'Enregistrement désactivé'}
+                                            </Badge>
+                                        )}
+                                    >
+                                        <div className="mt-4 space-y-4">
+                                            <div className="relative max-w-md">
+                                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8798a5]" />
+                                                <Input
+                                                    value={activitySearch}
+                                                    onChange={(event) => setActivitySearch(event.target.value)}
+                                                    placeholder="Rechercher un utilisateur ou une action…"
+                                                    className={`${inputClassName} pl-9`}
+                                                />
+                                            </div>
+
+                                            {!generalFlags.journal_activites ? (
+                                                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                                                    L’enregistrement est désactivé. Réactivez « Journal d’activités » dans la section Général pour enregistrer les prochaines actions.
+                                                </div>
+                                            ) : null}
+
+                                            <div className="overflow-hidden rounded-2xl border border-[#e2e8f0]">
+                                                {filteredActivityItems.length ? filteredActivityItems.map((entry) => (
+                                                    <div key={entry.id} className="flex flex-col gap-3 border-b border-[#e2e8f0] bg-white p-4 last:border-b-0 sm:flex-row sm:items-start sm:justify-between">
+                                                        <div className="flex min-w-0 gap-3">
+                                                            <span className={cn(
+                                                                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                                                                entry.action === 'suppression'
+                                                                    ? 'bg-red-50 text-red-700'
+                                                                    : entry.action === 'creation'
+                                                                        ? 'bg-emerald-50 text-emerald-700'
+                                                                        : 'bg-blue-50 text-[#00559b]'
+                                                            )}>
+                                                                <History className="h-4 w-4" />
+                                                            </span>
+                                                            <div className="min-w-0">
+                                                                <p className="font-medium text-[#0f172a]">{entry.description}</p>
+                                                                <p className="mt-1 text-sm text-[#5f7182]">
+                                                                    Par <strong>{entry.user_name}</strong>
+                                                                    {entry.ip_address ? ` · IP ${entry.ip_address}` : ''}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <time className="shrink-0 text-xs font-medium text-[#5f7182]" dateTime={entry.created_at}>
+                                                            {entry.created_at_label}
+                                                        </time>
+                                                    </div>
+                                                )) : (
+                                                    <div className="p-10 text-center">
+                                                        <History className="mx-auto h-9 w-9 text-[#94a3b8]" />
+                                                        <p className="mt-3 font-medium text-[#0f172a]">Aucune activité enregistrée</p>
+                                                        <p className="mt-1 text-sm text-[#5f7182]">Les prochaines actions apparaîtront ici.</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {activityLogs?.links?.length > 3 ? (
+                                                <div className="flex flex-wrap justify-center gap-2">
+                                                    {activityLogs.links.map((link, index) => (
+                                                        link.url ? (
+                                                            <Link
+                                                                key={`${link.label}-${index}`}
+                                                                href={`${link.url}${link.url.includes('?') ? '&' : '?'}tab=journal`}
+                                                                preserveScroll
+                                                                className={cn(
+                                                                    'rounded-lg border px-3 py-1.5 text-sm',
+                                                                    link.active ? 'border-[#00559b] bg-[#00559b] text-white' : 'border-[#c8d4de] bg-white text-[#0f172a]'
+                                                                )}
+                                                                dangerouslySetInnerHTML={{ __html: link.label }}
+                                                            />
+                                                        ) : (
+                                                            <span key={`${link.label}-${index}`} className="rounded-lg border border-[#e2e8f0] px-3 py-1.5 text-sm text-[#94a3b8]" dangerouslySetInnerHTML={{ __html: link.label }} />
+                                                        )
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </SectionCard>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="roles">

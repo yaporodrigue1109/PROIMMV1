@@ -16,33 +16,16 @@ import { PhoneInput } from '../../components/ui/phone-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import PublicLayout from './PublicLayout';
 
-const contactDetails = [
-    {
-        icon: Phone,
-        label: 'Téléphone',
-        value: '+225 07 00 00 00 00',
-        href: 'tel:+2250700000000',
-    },
-    {
-        icon: Mail,
-        label: 'E-mail',
-        value: 'contact@prosimmobilier.ci',
-        href: 'mailto:contact@prosimmobilier.ci',
-    },
-    {
-        icon: MapPin,
-        label: 'Adresse',
-        value: 'Abidjan, Côte d’Ivoire',
-    },
-    {
-        icon: Clock3,
-        label: 'Disponibilité',
-        value: 'Lun – Ven, 08h00 – 18h00',
-    },
-];
-
 export default function Contact() {
-    const success = usePage().props.flash?.success;
+    const pageProps = usePage().props;
+    const success = pageProps.flash?.success;
+    const config = pageProps.siteConfig ?? {};
+    const contactDetails = [
+        config.phone && { icon: Phone, label: 'Téléphone', value: config.phone, href: `tel:${config.phone}` },
+        config.email && { icon: Mail, label: 'E-mail', value: config.email, href: `mailto:${config.email}` },
+        config.address && { icon: MapPin, label: 'Adresse', value: config.address },
+        { icon: Clock3, label: 'Disponibilité', value: 'Lun – Ven, 08h00 – 18h00' },
+    ].filter(Boolean);
     const form = useForm({
         request_type: '',
         name: '',
@@ -129,10 +112,12 @@ export default function Contact() {
                             <div className="mt-8 grid gap-x-5 gap-y-6 sm:grid-cols-2">
                                 <Field
                                     label="Motif de la demande"
+                                    required
                                     error={form.errors.request_type}
                                     className="sm:col-span-2"
                                 >
                                     <Select
+                                        required
                                         value={form.data.request_type}
                                         onValueChange={(value) => form.setData('request_type', value)}
                                     >
@@ -151,9 +136,11 @@ export default function Contact() {
 
                                 <Field
                                     label="Nom complet"
+                                    required
                                     error={form.errors.name}
                                 >
                                     <Input
+                                        required
                                         value={form.data.name}
                                         onChange={(event) =>
                                             form.setData('name', event.target.value)
@@ -175,9 +162,11 @@ export default function Contact() {
 
                                 <Field
                                     label="Adresse e-mail"
+                                    required
                                     error={form.errors.email}
                                 >
                                     <Input
+                                        required
                                         type="email"
                                         value={form.data.email}
                                         onChange={(event) =>
@@ -189,9 +178,11 @@ export default function Contact() {
 
                                 <Field
                                     label="Objet"
+                                    required
                                     error={form.errors.subject}
                                 >
                                     <Input
+                                        required
                                         value={form.data.subject}
                                         onChange={(event) =>
                                             form.setData(
@@ -205,10 +196,12 @@ export default function Contact() {
 
                                 <Field
                                     label="Votre message"
+                                    required
                                     error={form.errors.message}
                                     className="sm:col-span-2"
                                 >
                                     <textarea
+                                        required
                                         rows="6"
                                         value={form.data.message}
                                         onChange={(event) =>
@@ -294,11 +287,14 @@ export default function Contact() {
 const textareaClass =
     'flex min-h-32 w-full resize-y rounded-md border border-[#c8d4de] bg-white px-3 py-2 text-sm text-[#0f172a] shadow-sm ring-offset-white placeholder:text-[#8798a5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00559b] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
-function Field({ label, error, className = '', children }) {
+function Field({ label, required = false, error, className = '', children }) {
     return (
         <div className={`space-y-1.5 ${className}`}>
             <label className="block text-sm font-medium text-[#0f172a]">
                 {label}
+                {required ? (
+                    <span className="ml-1 font-bold text-[#b42318]" aria-hidden="true">*</span>
+                ) : null}
             </label>
             {children}
             {error ? (

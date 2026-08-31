@@ -1,12 +1,19 @@
+@php
+    $adminAppLogo = app(\App\Services\SettingService::class)->getSetting()->logo_url
+        ?: asset('admin/logo/playstore-icon-revised.png');
+@endphp
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Connexion')</title>
+    <link rel="icon" href="{{ $adminAppLogo }}">
+    <link rel="shortcut icon" href="{{ $adminAppLogo }}">
+    <link rel="apple-touch-icon" href="{{ $adminAppLogo }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="{{ asset('app.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('styles.css')}}" />
 </head>

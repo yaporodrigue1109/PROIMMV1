@@ -6,6 +6,7 @@ namespace App\Http\Requests\Agence\Propriete;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class StoreProprieteRequest extends FormRequest
 {
@@ -26,7 +27,14 @@ class StoreProprieteRequest extends FormRequest
                 Rule::exists('propietaire_lots', 'propreietaire_lot_id')
                     ->where(fn ($query) => $query->where('proprietaire_id', $this->input('proprietaire_id'))),
             ],
-            'type_propriete_id' => ['nullable', 'integer', 'exists:type_proprietes,id'],
+            'type_propriete_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('type_proprietes', 'id')->where(function ($query) {
+                    $agenceId = Auth::guard('user')->user()?->agence_id;
+                    $query->where(fn ($query) => $query->whereNull('agence_id')->orWhere('agence_id', $agenceId));
+                }),
+            ],
             'description'       => ['nullable', 'string', 'max:2000'],
             'adresse_complete'  => ['nullable', 'string', 'max:500'],
             'videos_url'        => ['nullable', 'array'],
@@ -36,7 +44,14 @@ class StoreProprieteRequest extends FormRequest
             'sale_price'        => ['nullable', 'required_if:sale_type,whole', 'numeric', 'min:0.01'],
             'is_actif'          => ['boolean'],
             'proximites'        => ['nullable', 'array'],
-            'proximites.*.id'   => ['required', 'string'],
+            'proximites.*.id'   => [
+                'required',
+                'integer',
+                Rule::exists('prossimite_proprietes', 'id')->where(function ($query) {
+                    $agenceId = Auth::guard('user')->user()?->agence_id;
+                    $query->where(fn ($query) => $query->whereNull('agence_id')->orWhere('agence_id', $agenceId));
+                }),
+            ],
             'proximites.*.distance' => ['nullable', 'integer', 'min:0'],
             'proximites.*.unite'    => ['nullable', Rule::in(['m', 'km'])],
 
@@ -57,7 +72,13 @@ class StoreProprieteRequest extends FormRequest
             'batiments.*.portes.*.is_allocation'         => ['required', 'boolean'],
             'batiments.*.portes.*.description'           => ['nullable', 'string', 'max:500'],
             'batiments.*.portes.*.equipements'           => ['nullable', 'array'],
-            'batiments.*.portes.*.equipements.*'         => ['string'],
+            'batiments.*.portes.*.equipements.*'         => [
+                'integer',
+                Rule::exists('equipement_proprietes', 'id')->where(function ($query) {
+                    $agenceId = Auth::guard('user')->user()?->agence_id;
+                    $query->where(fn ($query) => $query->whereNull('agence_id')->orWhere('agence_id', $agenceId));
+                }),
+            ],
 
             // Tarif de chaque porte
             'batiments.*.portes.*.tarif.mt_loyer'           => ['nullable', 'numeric', 'min:0'],

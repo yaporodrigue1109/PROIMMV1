@@ -128,6 +128,7 @@ export default function Loyer({ modePaiement = [] }) {
     const [commentaire, setCommentaire] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [flash, setFlash] = useState(null);
+    const [lastReceipt, setLastReceipt] = useState(null);
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
     const selectedRental = useMemo(() => tenantData?.rentals?.[selectedIndex] ?? null, [tenantData, selectedIndex]);
@@ -278,6 +279,7 @@ export default function Loyer({ modePaiement = [] }) {
             }
 
             setFlash({ type: 'success', message: payload.message ?? 'Paiement enregistré avec succès.' });
+            setLastReceipt({ url: payload.receipt_url, number: payload.numero_recu });
             setCommentaire('');
             setTenantData(null);
             setQuery('');
@@ -294,6 +296,29 @@ export default function Loyer({ modePaiement = [] }) {
             <Head title="Paiement loyer" />
 
             <div className="mx-auto flex max-w-6xl flex-col gap-6 pb-10">
+                {flash ? (
+                    <div
+                        role="alert"
+                        className={cn(
+                            'rounded-xl border px-4 py-3 text-sm font-medium',
+                            flash.type === 'success'
+                                ? 'border-[#b7dfca] bg-[#edf9f2] text-[#18794e]'
+                                : 'border-[#f4c7c3] bg-[#fdecec] text-[#b42318]'
+                        )}
+                    >
+                        {flash.message}
+                    </div>
+                ) : null}
+
+                {lastReceipt?.url ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b7d7ef] bg-[#eaf4fb] px-4 py-3 text-sm text-[#0f4f7a]">
+                        <span>Reçu <strong>{lastReceipt.number}</strong> généré pour ce paiement.</span>
+                        <a href={lastReceipt.url} className={agenceButtonStyles.primary} download>
+                            Télécharger le reçu PDF
+                        </a>
+                    </div>
+                ) : null}
+
                 <div className="flex items-center gap-3">
                     <Button asChild variant="outline" size="icon" className="rounded-xl border-[#c8d4de]">
                         <Link href="/agence/caisse">

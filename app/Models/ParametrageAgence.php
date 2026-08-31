@@ -153,8 +153,9 @@ protected $guarded = [];
      */
     public function getNextFactureNumber(): string
     {
-        $numero = str_pad($this->sequence_facture, 6, '0', STR_PAD_LEFT);
+        $numero = str_pad((string) max(1, (int) $this->sequence_facture), 6, '0', STR_PAD_LEFT);
+        $prefixe = trim((string) $this->prefixe_facture) ?: 'FAC-';
         $this->increment('sequence_facture');
-        return $this->prefixe_facture . $numero;
+        return $prefixe . $numero;
     }
 }

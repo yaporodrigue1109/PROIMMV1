@@ -13,6 +13,7 @@ use App\Repositories\Agence\Interfaces\ParametrageAgenceRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Models\MobileApiToken;
 
 class LocataireRepository implements LocataireRepositoryInterface
 {
@@ -37,14 +38,8 @@ class LocataireRepository implements LocataireRepositoryInterface
         // pas seulement le premier.
         $contratsEagerLoad = function ($q) use ($agenceId, $filters) {
             $q->where('agence_id', $agenceId)
+                ->where('is_active', true)
                 ->with(['porte.tarifActif', 'propriete', 'proprietaire', 'batiment', 'lot']);
-
-            // Synchroniser : si on filtre les locataires par statut actif,
-            // on ne charge que leurs contrats actifs (évite d'afficher des
-            // contrats résiliés d'autres portes dans la vue)
-            if (!empty($filters['is_actif'])) {
-                $q->where('is_active', true);
-            }
 
             // Synchroniser : si on filtre par propriété, on ne charge que
             // les contrats de cette propriété (un locataire multi-propriétés
@@ -56,19 +51,13 @@ class LocataireRepository implements LocataireRepositoryInterface
 
         // ── Requête principale ────────────────────────────────────────────────
         $query = Locataire::with(['contrats' => $contratsEagerLoad])
-            ->whereHas('contrats', fn($q) => $q->where('agence_id', $agenceId));
+            ->whereHas('contrats', fn($q) => $q
+                ->where('agence_id', $agenceId)
+                ->where('is_active', true));
 
         // ── Filtres ───────────────────────────────────────────────────────────
         if (!empty($filters['search'])) {
             $query->search($filters['search']);
-        }
-
-        // Au moins un contrat actif dans cette agence
-        if (!empty($filters['is_actif'])) {
-            $query->whereHas('contrats', fn($q) => $q
-                ->where('agence_id', $agenceId)
-                ->where('is_active', true)
-            );
         }
 
         // Au moins un contrat sur cette propriété dans cette agence
@@ -99,6 +88,7 @@ class LocataireRepository implements LocataireRepositoryInterface
             // Contrats de cette agence uniquement + leurs relations
                 'contrats' => fn($q) => $q
                 ->where('agence_id', $agenceId)
+                ->where('is_active', true)
                 ->with([
                     'porte.tarifActif',
                     'propriete',
@@ -128,7 +118,9 @@ class LocataireRepository implements LocataireRepositoryInterface
                 ->limit(10),
         ])
             // S'assurer que le locataire appartient bien à cette agence
-            ->whereHas('contrats', fn($q) => $q->where('agence_id', $agenceId))
+            ->whereHas('contrats', fn($q) => $q
+                ->where('agence_id', $agenceId)
+                ->where('is_active', true))
             ->find($id);
     }
 
@@ -165,12 +157,11 @@ class LocataireRepository implements LocataireRepositoryInterface
     public function stats(): array
     {
         $agenceId = $this->agenceId();
-        $base     = LocataireAgence::where('agence_id', $agenceId);
+        $base     = LocataireAgence::where('agence_id', $agenceId)->where('is_active', true);
 
         return [
-            'total'    => (clone $base)->distinct('locataire_id')->count(),
-            'actifs'   => (clone $base)->where('is_active', true)->count(),
-            'resilies' => (clone $base)->where('is_active', false)->count(),
+            'total'    => (clone $base)->distinct('locataire_id')->count('locataire_id'),
+            'actifs'   => (clone $base)->count(),
             'ce_mois'  => (clone $base)
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
@@ -375,21 +366,51 @@ class LocataireRepository implements LocataireRepositoryInterface
 
     public function resilierContrat(Locataire $locataire): bool
     {
-        $contrat = $locataire->contrats()
-            ->where('agence_id', $this->agenceId())
-            ->where('is_active', true)
-            ->first();
+        return DB::transaction(function () use ($locataire): bool {
+            $contrats = LocataireAgence::withoutGlobalScopes()
+                ->where('locataire_id', $locataire->locataire_id)
+                ->where('agence_id', $this->agenceId())
+                ->where('is_active', true)
+                ->lockForUpdate()
+                ->get();
 
-        if (!$contrat) {
-            return false;
-        }
+            if ($contrats->isEmpty()) {
+                return false;
+            }
 
-        $contrat->update(['is_active' => false]);
+            LocataireAgence::withoutGlobalScopes()
+                ->whereIn('locataire_agence_id', $contrats->pluck('locataire_agence_id'))
+                ->update([
+                    'is_active' => false,
+                    'is_mobile_visible' => false,
+                    'updated_by' => getInfoAgent()?->users?->id_users,
+                    'updated_at' => now(),
+                ]);
 
-        // Libérer la porte
-        \App\Models\Porte::find($contrat->porte_id)?->update(['is_occupe' => false]);
+            foreach ($contrats->pluck('porte_id')->filter()->unique() as $porteId) {
+                $porteStillOccupied = LocataireAgence::withoutGlobalScopes()
+                    ->where('porte_id', $porteId)
+                    ->where('is_active', true)
+                    ->exists();
 
-        return true;
+                if (! $porteStillOccupied) {
+                    Porte::where('porte_id', $porteId)->update(['is_occupe' => false]);
+                }
+            }
+
+            $hasAnotherActiveLease = LocataireAgence::withoutGlobalScopes()
+                ->where('locataire_id', $locataire->locataire_id)
+                ->where('is_active', true)
+                ->exists();
+
+            if (! $hasAnotherActiveLease) {
+                MobileApiToken::where('actor_type', 'locataire')
+                    ->where('actor_id', $locataire->locataire_id)
+                    ->delete();
+            }
+
+            return true;
+        });
     }
 
     // =========================================================================
@@ -409,16 +430,15 @@ class LocataireRepository implements LocataireRepositoryInterface
 
         try {
             $dateDebut      = Carbon::parse($paiementData['date_entree']);
-            $porte = Porte::find($paiementData['porte_id']);
             $parametrage = $this->parametrageRepository->getByAgence($contrat->agence_id);
-            $moisAvance     = (int)   $porte->avance;
-            $moisCaution     = (int)   $porte->caution;
-            $moisAgence     = (int)   $porte->agence;
-            $mt_loyer     = (int)   $porte->mt_loyer;
-            $mt_caution_cie = (int)   $porte->mt_caution_cie;
-            $mt_caution_sodeci = (int)   $porte->mt_caution_sodeci;
-            $mt_autre_frais     = (int)   $porte->mt_autre_frais;
-            $montantTotal = $mt_loyer* ($moisAvance + $moisCaution + $moisAgence) + $mt_caution_cie + $mt_caution_sodeci + $mt_autre_frais;
+            $moisAvance = (int) $contrat->avance;
+            $mt_loyer = (float) $contrat->loyer_net;
+            $versements = collect($contrat->versements_depot_garantie ?? []);
+            $montantVerse = (float) $versements->sum(fn (array $versement) => (float) ($versement['montant'] ?? 0));
+            $montantTotal = $montantVerse > 0
+                ? $montantVerse
+                : (float) $contrat->montant_global_garantie;
+            $premierVersement = $versements->first();
 
             $percent = $parametrage->commission / 100;
 
@@ -463,7 +483,7 @@ class LocataireRepository implements LocataireRepositoryInterface
                     'annee_paiement'        => $annee,
                     'date_paiement'         => now(),
                     'date_limit_paiement'   => $dateLimite,
-                    'creaeted_by'           => $this->userId(),
+                    //'creaeted_by'           => $this->userId(),
                 ]);
             }
 
@@ -482,18 +502,34 @@ class LocataireRepository implements LocataireRepositoryInterface
                 'mois_payer'            => json_encode($moisPayer),
                 'arriere_actuel'        => 0,
                 'montant_arriere_payer' => 0,
-                'montant_loyer_payer'   =>  $mt_loyer,
-                'montant_avance_payer'  => (int)  ($mt_loyer *$moisAvance),
+                'montant_loyer_payer'   => (float) ($mt_loyer * $moisAvance),
+                'montant_avance_payer'  => (float) ($mt_loyer * $moisAvance),
                 'is_first'              => true,
                 'is_reversement'        => false,
-                'date_transaction'      => now(),
-                'mode_paiement_id' =>       $paiementData['mode_paiement_id'],
-                'created_by'            => $this->userId(),
+                'date_transaction'      => $this->transactionDateTime(
+                    $premierVersement['date_versement'] ?? null
+                ),
+                'mode_paiement_id'      => $premierVersement['mode_paiement_id'] ?? $paiementData['mode_paiement_id'],
+               // 'created_by'            => $this->userId(),
             ]);
         }catch (\Exception $exception){
             dd($exception->getMessage());
         }
 
+    }
+
+    private function transactionDateTime(?string $paymentDate): Carbon
+    {
+        if (empty($paymentDate)) {
+            return now();
+        }
+
+        $date = Carbon::parse($paymentDate);
+
+        // Le formulaire ne saisit que la date. Pour un encaissement effectué
+        // aujourd'hui, conserver l'heure réelle afin qu'il appartienne bien à
+        // la session de caisse actuellement ouverte.
+        return $date->isToday() ? now() : $date->startOfDay();
     }
 
     /**
@@ -554,7 +590,7 @@ class LocataireRepository implements LocataireRepositoryInterface
                     'date_paiement'         =>  null,
                     'date_limit_paiement'   => $dateDebut,
                     'commentaire'           => null,
-                    'creaeted_by'           => $this->userId(),
+                   // 'creaeted_by'           => $this->userId(),
                 ]);
             }
         }catch (\Exception $exception){
@@ -590,7 +626,7 @@ class LocataireRepository implements LocataireRepositoryInterface
 
     private function userId(): string
     {
-        return getInfoAgent()?->users?->id ?? auth('user')->user()?->id ?? 'system';
+        return getInfoAgent()?->users?->id_users ?? auth('user')->user()?->id_users ?? 'system';
     }
 
 

@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Agence\Reversement;
 
 use App\Http\Controllers\Controller;
 use App\Services\Agence\ReversementService;
+use App\Services\Agence\ReversementPdfService;
+use App\Services\Agence\AgencyDocumentBranding;
 use App\Services\ProprietaireService;
 use App\Models\ProprietaireLot;
 use App\Models\TransactionAgence;
 use App\Models\Loyer;
+use App\Models\Maintenance;
+use App\Models\VenteBien;
 use App\Models\ReversementDetail;
 use App\Models\Reversement;
 use  Illuminate\Support\Facades\DB;
@@ -15,22 +19,25 @@ use App\Repositories\Agence\Repository\LotRepository;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Collection;
-use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReversementController extends Controller
 {
     protected ReversementService $reversementService;
     protected ProprietaireService $proprietaireService;
     protected LotRepository $lotRepo;
+    protected ReversementPdfService $pdfService;
 
     public function __construct(
         ReversementService $reversementService,
         ProprietaireService $proprietaireService,
-        LotRepository $lotRepo
+        LotRepository $lotRepo,
+        ReversementPdfService $pdfService,
+        protected AgencyDocumentBranding $documentBranding,
     ) {
         $this->reversementService = $reversementService;
         $this->proprietaireService = $proprietaireService;
         $this->lotRepo = $lotRepo;
+        $this->pdfService = $pdfService;
     }
 
     /**
@@ -45,8 +52,8 @@ class ReversementController extends Controller
         $proprietaires = $this->proprietaireService->getPaginated($agenceId);
 
         $proprietaireId = $request->input('proprietaire');
-        $dateDebut = $request->input('date_debut');
-        $dateFin = $request->input('date_fin');
+        $dateDebut = $request->input('date_debut', now()->startOfMonth()->format('Y-m-d'));
+        $dateFin = $request->input('date_fin', now()->endOfMonth()->format('Y-m-d'));
 
         // La recherche est valide si on a un propriétaire OU une période complète
         $hasSearched = !empty($proprietaireId) || (!empty($dateDebut) && !empty($dateFin));
@@ -54,7 +61,7 @@ class ReversementController extends Controller
         $cours = collect();
 
         if ($hasSearched) {
-            // Si une seule des deux dates est fournie (ou aucune), on retombe sur le mois en cours
+            // Si une seule des deux dates est fournie, on complète avec le mois en cours.
             $periodeDebut = $dateDebut ?: now()->startOfMonth()->format('Y-m-d');
             $periodeFin = $dateFin ?: now()->endOfMonth()->format('Y-m-d');
 
@@ -106,6 +113,89 @@ class ReversementController extends Controller
 
         return $lots->map(function ($lot) use ($proprietairesIndex, $dateDebut, $dateFin) {
             $proprietaire = $proprietairesIndex->get($lot->proprietaire_id);
+            $montantMaintenances = $this->maintenanceAmountForLot(
+                (string) $lot->propreietaire_lot_id,
+                $dateDebut,
+                $dateFin
+            );
+            $vente = VenteBien::query()
+                ->with('acheteur')
+                ->where('agence_id', $this->agenceId())
+                ->where('lot_id', $lot->propreietaire_lot_id)
+                ->where('proprietaire_id', $lot->proprietaire_id)
+                ->where('statut', '!=', VenteBien::STATUT_ANNULE)
+                ->latest('created_at')
+                ->first();
+
+            $venteData = null;
+            if ($vente) {
+                $tousLesVersements = TransactionAgence::query()
+                    ->where('agence_id', $this->agenceId())
+                    ->where('type_transaction', TransactionAgence::STATUT_VENTE)
+                    ->where('reference', $vente->getKey())
+                    ->orderBy('date_transaction')
+                    ->get();
+                $versementsPeriode = $tousLesVersements
+                    ->filter(fn ($transaction) => ! $transaction->is_reversement
+                        && $transaction->date_transaction
+                        && $transaction->date_transaction->between(
+                            $dateDebut.' 00:00:00',
+                            $dateFin.' 23:59:59'
+                        ));
+                $totalVerse = (float) $tousLesVersements->sum('montant_global_verser');
+                $venteSoldee = $totalVerse >= (float) $vente->prix_vente;
+                $tousLesVersementsReverses = $tousLesVersements->isNotEmpty()
+                    && $tousLesVersements->every(fn ($transaction) => (bool) $transaction->is_reversement);
+
+                if ($venteSoldee && $tousLesVersementsReverses) {
+                    return null;
+                }
+                $tauxAgence = (float) $vente->prix_vente > 0 && (float) $vente->commission > 0
+                    ? ((float) $vente->commission / (float) $vente->prix_vente) * 100
+                    : (float) (getparametrageAgence($this->agenceId())->commission ?? 0);
+                $commissionPeriode = (float) $versementsPeriode->sum('montant_global_verser') * ($tauxAgence / 100);
+                $versementsPeriodeIds = $versementsPeriode->pluck('transaction_agence_id')->flip();
+                $cumulVerse = 0;
+                $versementsData = $tousLesVersements->map(function ($transaction) use (&$cumulVerse, $versementsPeriodeIds, $vente, $tauxAgence) {
+                    $montant = (float) $transaction->montant_global_verser;
+                    $cumulVerse += $montant;
+                    if (! $versementsPeriodeIds->has($transaction->getKey())) {
+                        return null;
+                    }
+                    $commission = $montant * ($tauxAgence / 100);
+                    return [
+                        'id' => (string) $transaction->getKey(),
+                        'date' => optional($transaction->date_transaction)->format('Y-m-d H:i:s'),
+                        'montant' => $montant,
+                        'tauxAgence' => $tauxAgence,
+                        'commissionAgence' => $commission,
+                        'netApresCommission' => $montant - $commission,
+                        'resteApresVersement' => max((float) $vente->prix_vente - $cumulVerse, 0),
+                        'numeroRecu' => $transaction->numero_recu,
+                    ];
+                })->filter()->values();
+
+                $venteData = [
+                    'id' => (string) $vente->getKey(),
+                    'reference' => $vente->reference,
+                    'dateAccord' => optional($vente->date_accord)->format('Y-m-d'),
+                    'prixVente' => (float) $vente->prix_vente,
+                    'montantVersePeriode' => (float) $versementsPeriode->sum('montant_global_verser'),
+                    'totalVerse' => $totalVerse,
+                    'montantRestant' => max((float) $vente->prix_vente - $totalVerse, 0),
+                    'tauxAgence' => $tauxAgence,
+                    'commissionAgencePeriode' => $commissionPeriode,
+                    'netProprietairePeriode' => (float) $versementsPeriode->sum('montant_global_verser') - $commissionPeriode,
+                    'statut' => $vente->statut,
+                    'typePaiement' => $vente->type_paiement,
+                    'acheteur' => [
+                        'nom' => $vente->acheteur?->name ?? '—',
+                        'telephone' => $vente->acheteur?->telephone1 ?? '',
+                        'email' => $vente->acheteur?->email ?? '',
+                    ],
+                    'versements' => $versementsData->all(),
+                ];
+            }
 
             $locataires = collect();
             $montantLoyerTotal = 0;
@@ -145,6 +235,7 @@ class ReversementController extends Controller
 
                                          $cautionPayee  = $isFirst ? ($locataireAgence->loyer_net * $locataireAgence->caution) : 0;
                                          $cautionSodeci = $isFirst ? ($locataireAgence->caution_sodeci + $locataireAgence->caution_cie) : 0;
+                                         $fraisDossier = $isFirst ? (float) ($locataireAgence->frais_de_dossier ?? 0) : 0;
 
                                   //       dd( $isFirst);
 
@@ -170,6 +261,7 @@ class ReversementController extends Controller
                                         // 'cautionSodeci' => $locataireAgence->caution_sodeci + $locataireAgence->caution_cie,
                                             'cautionPayee' => $cautionPayee ,
                                             'cautionSodeci' =>$cautionSodeci ,
+                                           'fraisDossier' => $fraisDossier,
                                            'isFirst' => $isFirst,
                                            'mois_payer' =>$finances['mois_payer'],
                                            'datePaiement' =>$finances['date_paiement']
@@ -188,6 +280,14 @@ class ReversementController extends Controller
             return [
                 'id' => $lot->propreietaire_lot_id,
                 'nom' => $lot->name ?? $lot->designation ?? 'Lot sans nom',
+                'ficheType' => $venteData ? 'vente' : 'location',
+                'vente' => $venteData,
+                'lot' => [
+                    'nom' => $lot->name ?? $lot->designation ?? 'Lot sans nom',
+                    'numero' => $lot->num_lot ?? '',
+                    'ilot' => $lot->num_ilot ?? '',
+                    'adresse' => $lot->adresse ?? '',
+                ],
                 'proprietaireId' => $lot->proprietaire_id,
                 'proprietaire_nom' => $proprietaire->name ??  '—',
                 'proprietaire_tel' => $proprietaire->tel1 ??  '',
@@ -198,14 +298,38 @@ class ReversementController extends Controller
                 ],
                 'statut' => $lot->statut ?? 'en_attente',
                 'depenses' => $lot->depenses ?? 0,
+                'montantMaintenances' => $montantMaintenances,
+                'cautionSodeci' => $lot->caution_sodeci ?? 0,
                 'nouvelleCaution' => $lot->nouvelle_caution ?? 0,
                 'observation' => $lot->observation ?? '',
                 'montant_loyer_total' => $montantLoyerTotal,
                 'locataires' => $locataires->toArray(),
                 'name_entreprise' => getInfoAgence($this->agenceId())->name,
-                'logo_entreprise' =>getparametrageAgence($this->agenceId())->logo
+                'logo_entreprise' => $this->documentBranding->logoUrl(getInfoAgence($this->agenceId()))
             ];
-        })->values();
+        })->filter()->values();
+    }
+
+    /** Montant payé en caisse pour les maintenances supportées par le propriétaire. */
+    protected function maintenanceAmountForLot(string $lotId, string $dateDebut, string $dateFin): float
+    {
+        $maintenanceIds = Maintenance::query()
+            ->where('agence_id', $this->agenceId())
+            ->where('lot_id', $lotId)
+            ->where('prise_en_charge_par', Maintenance::PRISE_EN_CHARGE_PROPRIETAIRE)
+            ->pluck('maintenance_id');
+
+        if ($maintenanceIds->isEmpty()) {
+            return 0;
+        }
+
+        return (float) TransactionAgence::query()
+            ->where('agence_id', $this->agenceId())
+            ->where('type_transaction', TransactionAgence::STATUT_MAINTENANCE)
+            ->where('is_reversement', 0)
+            ->whereIn('reference', $maintenanceIds)
+            ->whereBetween('date_transaction', [$dateDebut.' 00:00:00', $dateFin.' 23:59:59'])
+            ->sum('montant_global_verser');
     }
 
     /**
@@ -316,6 +440,8 @@ public function marquerReverse(Request $request, string $lotId)
         'nouvelle_caution'     =>'nullable|numeric',
         'caution_sodeci'     => 'nullable|numeric',
         'depenses_effectuees'  => 'nullable|numeric',
+        'frais_dossier' => 'nullable|numeric|min:0',
+        'montant_maintenances' => 'nullable|numeric|min:0',
         'net_a_reverser'       => 'nullable|numeric',
         'observation'          => 'nullable|string',
         'locataires'                    => 'required|array|min:1',
@@ -343,21 +469,28 @@ public function marquerReverse(Request $request, string $lotId)
 
 
     // On ne fait jamais confiance aux totaux envoyés par le client : on les recalcule ici
-    $totalAttendu = $totalEncaisse = $totalLoyerPaye = $totalArrierePaye = $totalRestant = 0;
+    $totalAttendu = $totalEncaisse = $totalLoyerPaye = $totalArrierePaye = $totalRestant = $totalCautionSodeci = $totalFraisDossier = 0;
     foreach ($data['locataires'] as $l) {
         $totalAttendu     += $l['montant_attendu'];
         $totalEncaisse    += $l['montant_paye'];
         $totalLoyerPaye   += $l['loyer_paye'] ?? 0;
         $totalArrierePaye += $l['arriere_paye'] ?? 0;
         $totalRestant     += $l['restant'] ?? 0;
+        $totalCautionSodeci += $l['caution_sodeci'] ?? 0;
+        $totalFraisDossier += $l['frais_dossier'] ?? 0;
     }
 
 
 
     $lot = ProprietaireLot::where('agence_id', $agenceId)->findOrFail($lotId);
+    $montantMaintenances = $this->maintenanceAmountForLot(
+        $lotId,
+        $data['periode_debut'],
+        $data['periode_fin']
+    );
 
 
-    return DB::transaction(function () use ($data, $lotId, $agenceId, $lot, $totalAttendu, $totalEncaisse, $totalLoyerPaye, $totalArrierePaye, $totalRestant) {
+    return DB::transaction(function () use ($data, $lotId, $agenceId, $lot, $totalAttendu, $totalEncaisse, $totalLoyerPaye, $totalArrierePaye, $totalRestant, $totalCautionSodeci, $totalFraisDossier, $montantMaintenances) {
 
         // $tauxCommission         = (float) $data['taux_commission'];
         // $montantCommission      = $totalEncaisse * $tauxCommission;
@@ -381,7 +514,10 @@ public function marquerReverse(Request $request, string $lotId)
                 'montant_commission' => $data['montant_commission'] ?? 0,
                 'montant_apres_commission' => $data['montant_apres_commission'] ?? 0,
                 'nouvelle_caution' => $data['nouvelle_caution'] ?? 0,
+                'cautionSodeci' => $totalCautionSodeci,
                 'depenses_effectuees' => $data['depenses_effectuees'] ?? 0,
+                'frais_dossier' => $totalFraisDossier,
+                'montant_maintenances' => $montantMaintenances,
                 'net_a_reverser' => $data['net_a_reverser'] ?? 0,
                 'statut' => 'reverse',
                 'date_reversement' => now(),
@@ -442,10 +578,109 @@ public function marquerReverse(Request $request, string $lotId)
                 'reversement_by' => $this->usersId()
             ]);
 
+        $maintenanceIds = Maintenance::query()
+            ->where('agence_id', $agenceId)
+            ->where('lot_id', $lotId)
+            ->where('prise_en_charge_par', Maintenance::PRISE_EN_CHARGE_PROPRIETAIRE)
+            ->pluck('maintenance_id');
+
+        TransactionAgence::where('agence_id', $agenceId)
+            ->where('type_transaction', TransactionAgence::STATUT_MAINTENANCE)
+            ->where('is_reversement', 0)
+            ->whereIn('reference', $maintenanceIds)
+            ->whereBetween('date_transaction', [$data['periode_debut'].' 00:00:00', $data['periode_fin'].' 23:59:59'])
+            ->update([
+                'is_reversement' => 1,
+                'date_reversement' => now(),
+                'reversement_by' => $this->usersId(),
+            ]);
+
        // $lot->statut = 'reverse';
        // $lot->save();
 
         return redirect()->back()->with('success', 'Reversement effectué avec succès.');
+    });
+}
+
+public function marquerVenteReverse(Request $request, string $venteId)
+{
+    $data = $request->validate([
+        'periode_debut' => ['required', 'date'],
+        'periode_fin' => ['required', 'date', 'after_or_equal:periode_debut'],
+    ]);
+    $agenceId = $this->agenceId();
+
+    return DB::transaction(function () use ($venteId, $data, $agenceId) {
+        $vente = VenteBien::query()
+            ->where('agence_id', $agenceId)
+            ->with(['lot', 'acheteur'])
+            ->lockForUpdate()
+            ->findOrFail($venteId);
+
+        if (! $vente->lot_id) {
+            abort(422, 'Cette fiche est réservée aux ventes portant sur un lot.');
+        }
+
+        $transactions = TransactionAgence::query()
+            ->where('agence_id', $agenceId)
+            ->where('type_transaction', TransactionAgence::STATUT_VENTE)
+            ->where('reference', $vente->getKey())
+            ->where('is_reversement', 0)
+            ->whereBetween('date_transaction', [$data['periode_debut'].' 00:00:00', $data['periode_fin'].' 23:59:59'])
+            ->lockForUpdate()
+            ->get();
+
+        $montantEncaisse = (float) $transactions->sum('montant_global_verser');
+        if ($montantEncaisse <= 0) {
+            abort(422, 'Aucun versement de vente non reversé n’existe sur cette période.');
+        }
+
+        $tauxCommission = (float) $vente->prix_vente > 0 && (float) $vente->commission > 0
+            ? ((float) $vente->commission / (float) $vente->prix_vente)
+            : ((float) (getparametrageAgence($agenceId)->commission ?? 0) / 100);
+        $montantCommission = round($montantEncaisse * $tauxCommission, 2);
+        $net = $montantEncaisse - $montantCommission;
+        $totalVerse = (float) TransactionAgence::query()
+            ->where('agence_id', $agenceId)
+            ->where('type_transaction', TransactionAgence::STATUT_VENTE)
+            ->where('reference', $vente->getKey())
+            ->sum('montant_global_verser');
+
+        $reversement = Reversement::create([
+            'lot_id' => $vente->lot_id,
+            'vente_id' => $vente->getKey(),
+            'type_reversement' => 'vente',
+            'proprietaire_id' => $vente->proprietaire_id,
+            'agence_id' => $agenceId,
+            'periode_debut' => $data['periode_debut'],
+            'periode_fin' => $data['periode_fin'],
+            'total_attendu' => $vente->prix_vente,
+            'total_encaisse' => $montantEncaisse,
+            'total_restant' => max((float) $vente->prix_vente - $totalVerse, 0),
+            'total_loyer_paye' => 0,
+            'total_arriere_paye' => 0,
+            'taux_commission' => $tauxCommission * 100,
+            'montant_commission' => $montantCommission,
+            'montant_apres_commission' => $net,
+            'nouvelle_caution' => 0,
+            'cautionSodeci' => 0,
+            'depenses_effectuees' => 0,
+            'montant_maintenances' => 0,
+            'net_a_reverser' => $net,
+            'statut' => 'reverse',
+            'date_reversement' => now(),
+            'observation' => 'Reversement des versements de la vente '.$vente->reference,
+        ]);
+
+        TransactionAgence::whereIn('transaction_agence_id', $transactions->pluck('transaction_agence_id'))
+            ->update([
+                'is_reversement' => 1,
+                'date_reversement' => now(),
+                'reversement_by' => $this->usersId(),
+            ]);
+
+        return redirect()->route('agence.reversements.historique.detail', $reversement->id_reversement)
+            ->with('success', 'Reversement de la vente effectué avec succès : '.number_format($net, 0, ',', ' ').' FCFA reversés au propriétaire.');
     });
 }
 
@@ -517,15 +752,10 @@ public function historique(Request $request)
      */
     public function pdfReversement(string $id, ?string $debut = null, ?string $fin = null)
     {
+        $reversement = Reversement::where('agence_id', $this->agenceId())
+            ->findOrFail($id);
 
-        $cour = $this->buildCourArchive($id, $debut, $fin);
-
-        $pdf = Pdf::loadView('agence.reversement.pdf', ['cour' => $cour])
-            ->setPaper('a4', 'landscape');
-
-        $nomFichier = 'reversement-' . str_replace(' ', '_', $cour['nom']) . '.pdf';
-
-        return $pdf->download($nomFichier);
+        return $this->pdfService->download($reversement);
     }
 
 
@@ -537,7 +767,7 @@ public function historique(Request $request)
     {
         $agenceId = $this->agenceId();
 
-        $reversement = Reversement::with(['proprietaire', 'lot', 'details.locataire', 'details.porte'])
+        $reversement = Reversement::with(['proprietaire', 'lot', 'vente.acheteur', 'details.locataire', 'details.porte'])
             ->where('agence_id', $agenceId)
             ->when($debut && $fin, function ($query) use ($debut, $fin) {
                 $query->whereDate('periode_debut', $debut)
@@ -569,9 +799,60 @@ public function historique(Request $request)
             ];
         })->values();
 
+        $venteData = null;
+        if ($reversement->type_reversement === 'vente' && $reversement->vente) {
+            $vente = $reversement->vente;
+            $versements = TransactionAgence::query()
+                ->where('agence_id', $agenceId)
+                ->where('type_transaction', TransactionAgence::STATUT_VENTE)
+                ->where('reference', $vente->getKey())
+                ->whereBetween('date_transaction', [optional($reversement->periode_debut)->startOfDay(), optional($reversement->periode_fin)->endOfDay()])
+                ->orderBy('date_transaction')
+                ->get();
+            $totalVerse = (float) TransactionAgence::query()->where('agence_id', $agenceId)
+                ->where('type_transaction', TransactionAgence::STATUT_VENTE)->where('reference', $vente->getKey())
+                ->sum('montant_global_verser');
+            $cumulVerse = (float) TransactionAgence::query()
+                ->where('agence_id', $agenceId)
+                ->where('type_transaction', TransactionAgence::STATUT_VENTE)
+                ->where('reference', $vente->getKey())
+                ->where('date_transaction', '<', optional($reversement->periode_debut)->startOfDay())
+                ->sum('montant_global_verser');
+            $tauxAgence = (float) $reversement->taux_commission;
+            $versementsData = $versements->map(function ($transaction) use (&$cumulVerse, $vente, $tauxAgence) {
+                $montant = (float) $transaction->montant_global_verser;
+                $cumulVerse += $montant;
+                $commission = $montant * ($tauxAgence / 100);
+                return [
+                    'id' => (string) $transaction->getKey(),
+                    'date' => optional($transaction->date_transaction)->format('Y-m-d H:i:s'),
+                    'montant' => $montant,
+                    'tauxAgence' => $tauxAgence,
+                    'commissionAgence' => $commission,
+                    'netApresCommission' => $montant - $commission,
+                    'resteApresVersement' => max((float) $vente->prix_vente - $cumulVerse, 0),
+                    'numeroRecu' => $transaction->numero_recu,
+                ];
+            });
+            $venteData = [
+                'id' => (string) $vente->getKey(), 'reference' => $vente->reference,
+                'dateAccord' => optional($vente->date_accord)->format('Y-m-d'), 'prixVente' => (float) $vente->prix_vente,
+                'montantVersePeriode' => (float) $reversement->total_encaisse, 'totalVerse' => $totalVerse,
+                'montantRestant' => (float) $reversement->total_restant, 'typePaiement' => $vente->type_paiement,
+                'tauxAgence' => (float) $reversement->taux_commission,
+                'commissionAgencePeriode' => (float) $reversement->montant_commission,
+                'netProprietairePeriode' => (float) $reversement->net_a_reverser,
+                'acheteur' => ['nom' => $vente->acheteur?->name ?? '—', 'telephone' => $vente->acheteur?->telephone1 ?? '', 'email' => $vente->acheteur?->email ?? ''],
+                'versements' => $versementsData->values()->all(),
+            ];
+        }
+
         return [
             'id' => $reversement->id_reversement,
             'nom' => $reversement->lot->name ?? 'Lot',
+            'ficheType' => $venteData ? 'vente' : 'location',
+            'vente' => $venteData,
+            'lot' => ['nom' => $reversement->lot->name ?? 'Lot', 'numero' => $reversement->lot->num_lot ?? '', 'ilot' => $reversement->lot->num_ilot ?? '', 'adresse' => $reversement->lot->adresse ?? ''],
             'proprietaireId' => $reversement->proprietaire_id,
             'proprietaire_nom' => $reversement->proprietaire->name ?? '—',
             'proprietaire_tel' => $reversement->proprietaire->tel1 ?? '',
@@ -582,11 +863,14 @@ public function historique(Request $request)
             ],
             'statut' => $reversement->statut,
             'depenses' => (float) $reversement->depenses_effectuees,
+            'fraisDossier' => (float) $reversement->frais_dossier,
+            'montantMaintenances' => (float) $reversement->montant_maintenances,
             'nouvelleCaution' => (float) $reversement->nouvelle_caution,
+            'cautionSodeci' => (float) $reversement->cautionSodeci,
             'observation' => $reversement->observation,
             'locataires' => $locataires,
             'name_entreprise' => getInfoAgence($agenceId)->name,
-            'logo_entreprise' => getparametrageAgence($agenceId)->logo,
+            'logo_entreprise' => $this->documentBranding->logoUrl(getInfoAgence($agenceId)),
             'totaux' => [
                 'totalAttendu' => (float) $reversement->total_attendu,
                 'totalEncaisse' => (float) $reversement->total_encaisse,

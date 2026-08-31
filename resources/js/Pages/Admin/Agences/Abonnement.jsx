@@ -8,15 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 const formatMoney = (value) =>
     new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(value ?? 0)) + ' FCFA';
 
-export default function Abonnement({ agence }) {
-    const base = agence?.abonnement?.prix_mensuel_ht ?? 49900;
-    const modules = agence?.modules_payants ?? [
-        { nom: 'Gestion des biens' },
-        { nom: 'Rapports & stats' },
-        { nom: 'Multi-utilisateurs' },
-    ];
-    const modulesTotal = modules.length * 5000;
-    const total = base + modulesTotal;
+export default function Abonnement({ agence, billing = {} }) {
+    const subscription = agence?.subscription ?? agence?.abonnement;
+    const modules = agence?.modules_payants ?? [];
+    const modulesAvailable = subscription?.modules_available ?? modules.length;
+    const base = Number(billing.montant_base ?? subscription?.prix_ht ?? subscription?.prix_mensuel_ht ?? 0);
+    const modulesTotal = Number(billing.montant_modules ?? modules.reduce((sum, module) => sum + Number(module.prix ?? 0), 0));
+    const total = Number(billing.montant_courant ?? base + modulesTotal);
+    const history = billing.historique ?? [];
 
     return (
         <AdminLayout title="Abonnement agence">
@@ -44,10 +43,10 @@ export default function Abonnement({ agence }) {
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     {[
-                        ['Total facturé', formatMoney(598800)],
-                        ['Paiements réussis', '12'],
-                        ['Modules actifs', `${modules.length} / 4`],
-                        ['Membre depuis', '1 an'],
+                        ['Total facturé', formatMoney(billing.total_facture)],
+                        ['Paiements réussis', String(billing.paiements_reussis ?? 0)],
+                        ['Modules actifs', `${modules.length} / ${modulesAvailable}`],
+                        ['Membre depuis', billing.membre_depuis ?? '—'],
                     ].map(([label, value]) => (
                         <Card key={label} className="border-slate-200 shadow-sm">
                             <CardContent className="p-5">
@@ -68,13 +67,15 @@ export default function Abonnement({ agence }) {
                             <div className="flex items-start justify-between gap-4">
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Statut</p>
-                                    <h3 className="mt-2 text-2xl font-semibold text-slate-900">{agence?.abonnement?.name ?? 'Plan Standard'}</h3>
+                                    <h3 className="mt-2 text-2xl font-semibold text-slate-900">{subscription?.name ?? 'Sans abonnement'}</h3>
                                     <p className="mt-2 text-sm text-slate-500">
-                                        {agence?.abonnement?.description ?? 'Accès complet · Annonces illimitées · Support prioritaire'}
+                                        {subscription?.description_text ?? 'Aucune description disponible'}
                                     </p>
                                 </div>
-                                <Badge className="rounded-full border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
-                                    Actif
+                                <Badge className={billing.statut === 'Actif'
+                                    ? 'rounded-full border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700'
+                                    : 'rounded-full border-red-200 bg-red-50 px-3 py-1 text-red-700'}>
+                                    {billing.statut ?? 'Inactif'}
                                 </Badge>
                             </div>
 
@@ -82,10 +83,11 @@ export default function Abonnement({ agence }) {
                                 <p className="text-sm text-slate-500">Modules</p>
                                 <div className="mt-3 flex flex-wrap gap-2">
                                     {modules.map((module) => (
-                                        <Badge key={module.nom} variant="outline" className="rounded-full border-emerald-200 bg-emerald-50 text-emerald-700">
-                                            {module.nom}
+                                        <Badge key={module.id ?? module.nom} variant="outline" className="rounded-full border-emerald-200 bg-emerald-50 text-emerald-700">
+                                            {module.nom}{module.prix ? ` · ${formatMoney(module.prix)}` : ''}
                                         </Badge>
                                     ))}
+                                    {modules.length === 0 ? <span className="text-sm text-slate-500">Aucun module complémentaire</span> : null}
                                 </div>
                             </div>
 
@@ -135,21 +137,22 @@ export default function Abonnement({ agence }) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
-                                        {[
-                                            ['3 mai 2025 → 3 juin 2025', '64 900 FCFA', 'Payé'],
-                                            ['3 avr. 2025 → 3 mai 2025', '64 900 FCFA', 'Payé'],
-                                            ['3 mars 2025 → 3 avr. 2025', '57 900 FCFA', 'Payé'],
-                                        ].map(([period, amount, status]) => (
-                                            <tr key={period}>
-                                                <td className="px-6 py-4 text-slate-900">{period}</td>
-                                                <td className="px-6 py-4 font-medium text-slate-900">{amount}</td>
+                                        {history.map((item) => (
+                                            <tr key={item.reference}>
+                                                <td className="px-6 py-4 text-slate-900">{item.debut ?? '—'} → {item.fin ?? '—'}</td>
+                                                <td className="px-6 py-4 font-medium text-slate-900">{formatMoney(item.montant)}</td>
                                                 <td className="px-6 py-4">
-                                                    <Badge className="rounded-full border-emerald-200 bg-emerald-50 text-emerald-700">
-                                                        {status}
+                                                    <Badge className={item.statut === 'Payé'
+                                                        ? 'rounded-full border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                        : 'rounded-full border-amber-200 bg-amber-50 text-amber-700'}>
+                                                        {item.statut}
                                                     </Badge>
                                                 </td>
                                             </tr>
                                         ))}
+                                        {history.length === 0 ? (
+                                            <tr><td colSpan="3" className="px-6 py-8 text-center text-slate-500">Aucune facturation enregistrée.</td></tr>
+                                        ) : null}
                                     </tbody>
                                 </table>
                             </div>

@@ -80,7 +80,7 @@ class MaintenancierRepository implements MaintenancierRepositoryInterface
 
     public function getActifs()
     {
-        return $this->model->actif()->get();
+        return $this->model->where('agence_id', $this->agenceId())->actif()->get();
     }
 
     public function getDisponibles()

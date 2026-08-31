@@ -9,6 +9,7 @@ use App\Models\Porte;
 use App\Models\Propriete;
 use App\Models\ProprietaireAgence;
 use App\Models\ProprietaireLot;
+use App\Models\TransactionAgence;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -60,7 +61,10 @@ class DashboardController extends Controller
 
         $montantAttendu = null;
         $montantVerse = null;
+        $montantVerseJour = null;
+        $depensesJour = null;
         $pendingPayments = null;
+        $totalUnpaid = null;
         $revenueTrend = null;
 
         if ($canViewFinancials) {
@@ -76,8 +80,23 @@ class DashboardController extends Controller
 
             $montantAttendu = (float) $loyersCurrent->sum('montant_a_payer');
             $montantVerse = (float) $loyersCurrent->sum('montant_payer');
+            $montantVerseJour = (float) TransactionAgence::withoutGlobalScopes()
+                ->where('agence_id', $agenceId)
+                ->where('type_transaction', 'loyer')
+                ->whereBetween('created_at', [$now->copy()->startOfDay(), $now->copy()->endOfDay()])
+                ->sum('montant_global_verser');
+            $depensesJour = (float) TransactionAgence::withoutGlobalScopes()
+                ->where('agence_id', $agenceId)
+                ->whereIn('type_transaction', ['maintenance', 'depense'])
+                ->whereBetween('created_at', [$now->copy()->startOfDay(), $now->copy()->endOfDay()])
+                ->sum('montant_global_verser');
             $montantVerseMoisPrecedent = (float) $loyersPrevious->sum('montant_payer');
             $pendingPayments = max($montantAttendu - $montantVerse, 0);
+            $totalUnpaid = (float) Loyer::query()
+                ->where('agence_id', $agenceId)
+                ->whereRaw('montant_a_payer > COALESCE(montant_payer, 0)')
+                ->get(['montant_a_payer', 'montant_payer'])
+                ->sum(fn (Loyer $loyer) => max((float) $loyer->montant_a_payer - (float) $loyer->montant_payer, 0));
             $revenueTrend = $montantVerseMoisPrecedent > 0
                 ? round((($montantVerse - $montantVerseMoisPrecedent) / $montantVerseMoisPrecedent) * 100)
                 : 0;
@@ -130,6 +149,7 @@ class DashboardController extends Controller
             ->get()
             ->map(fn ($property) => [
                 'id' => $property->propriete_id,
+                'url' => route('agence.proprietes.show', ['id' => $property->propriete_id]),
                 'name' => $property->reference ?? 'Propriété',
                 'location' => $property->adresse_complete ?? '—',
                 'rent' => $canViewFinancials
@@ -149,8 +169,11 @@ class DashboardController extends Controller
             'proprietaires' => $proprietaires,
             'lots' => $lots,
             'monthlyRevenue' => $montantVerse,
+            'dailyRevenue' => $montantVerseJour,
+            'dailyExpenses' => $depensesJour,
             'expectedRevenue' => $montantAttendu,
             'pendingPayments' => $pendingPayments,
+            'totalUnpaid' => $totalUnpaid,
             'occupancyRate' => $occupancyRate,
             'revenueTrend' => $revenueTrend,
         ];

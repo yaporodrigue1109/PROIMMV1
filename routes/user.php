@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Agence\Auth\AuthController;
@@ -23,7 +23,12 @@ use App\Http\Controllers\Agence\Propriete\ProssimiteProprieteController;
 use App\Http\Controllers\Agence\Parametrage\ParametrageController;
 use App\Http\Controllers\Agence\Reversement\ReversementDetailController;
 use App\Http\Controllers\Agence\Support\SupportController;
+use App\Http\Controllers\Agence\Announcement\AnnouncementController;
+use App\Http\Controllers\Agence\Profile\ProfileController;
+use App\Http\Controllers\Agence\Logs\LogsController;
+use App\Http\Controllers\Admin\Agence\AgencyImpersonationController;
 use App\Http\Middleware\BlockDemoAgenceMutations;
+use App\Http\Middleware\LogAgencyActivity;
 use Inertia\Inertia;
 
 
@@ -37,9 +42,26 @@ Route::controller(AuthController::class)->group(function () {
     Route::post('/login', 'login')->name('login.post');
 });
 
-Route::middleware(['user', 'agency.permission', BlockDemoAgenceMutations::class])->group(function () {
+Route::post('/retour-administration', [AgencyImpersonationController::class, 'stop'])
+    ->name('impersonation.stop'); 
+
+Route::middleware(['user', 'agency.permission', BlockDemoAgenceMutations::class, LogAgencyActivity::class])->group(function () {
+
+    Route::prefix('logs')->name('logs.')->controller(LogsController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::patch('/proprietaires/{link}/restore', 'restoreOwner')->name('owners.restore');
+        Route::patch('/locataires/{tenant}/restore', 'restoreTenant')->name('tenants.restore');
+        Route::patch('/personnel/{user}/restore', 'restorePersonnel')->name('personnel.restore');
+    });
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::get('/aide', function () {
+        return Inertia::render('Help/Index', [
+            'area' => 'agence',
+            'captureBaseUrl' => url('/guide/captures'),
+        ]);
+    })->name('aide');
 
     Route::controller(AbonnementController::class)->prefix('abonnement')->name('abonnement.')->group(function () {
         Route::get('/consultation', 'consultation')->name('consultation');
@@ -50,11 +72,11 @@ Route::middleware(['user', 'agency.permission', BlockDemoAgenceMutations::class]
         Route::post('/paiement/test', 'testValidate')->name('paiement.test');
     });
 
-    Route::get('/profile', function () {
-        return Inertia::render('Agence/Profile/Index', [
-            'user' => auth('user')->user(),
-        ]);
-    })->name('profile');
+    Route::controller(ProfileController::class)->prefix('profile')->group(function () {
+        Route::get('/', 'show')->name('profile');
+        Route::patch('/', 'update')->name('profile.update');
+        Route::patch('/password', 'updatePassword')->name('profile.password.update');
+    });
 
     /*Route::get('/support', function () {
         $phone = company_phone() ?: null;
@@ -290,7 +312,10 @@ Route::middleware(['user', 'agency.permission', BlockDemoAgenceMutations::class]
             // ðŸ†• Routes de mise Ã  jour
             Route::put('/maintenancier/{id}', 'updateMaintenancier')->name('maintenancier.update');
             Route::put('/fonction/{id}', 'updateFonction')->name('fonction.update');
-            Route::put('/type-intervention/{id}', 'updateTypeIntervention')->name('type.update');
+            Route::put('/type-intervention/{id}', 'updateTypeIntervention')->name('type_intervention.update');
+
+            Route::put('/{id}', 'update')->name('update');
+            Route::delete('/{id}', 'destroy')->name('destroy');
 
             // âš ï¸ Cette route doit Ãªtre la DERNIÃˆRE car elle capture tout ce qui n'est pas matchÃ© avant
             Route::get('/{id}', 'show')->name('show.json'); // pour AJAX
@@ -327,15 +352,21 @@ Route::middleware(['user', 'agency.permission', BlockDemoAgenceMutations::class]
         Route::post('/',                       'store')->name('store');
         Route::get('/{id}/edit',               'edit')->name('edit');
         Route::put('/{id}',                    'update')->name('update');
-        Route::delete('/{id}',                 'destroy')->name('destroy');
         Route::patch('/{id}/activate',         'activate')->name('activate');
         Route::patch('/{id}/deactivate',       'deactivate')->name('deactivate');
     });
 
 
+    Route::get('locataires/impayes', [LocataireController::class, 'impayes'])->name('locataires.impayes');
+    Route::get('locataires/impayes/pdf', [LocataireController::class, 'impayesPdf'])->name('locataires.impayes.pdf');
+    Route::get('locataires/impayes/{locataire}', [LocataireController::class, 'detailImpayes'])->name('locataires.impayes.detail');
+    Route::get('locataires/caisse/status', [LocataireController::class, 'caisseStatus'])->name('locataires.caisse.status');
     Route::get('locataires/{locataire}/documents/{type}', [LocataireController::class, 'downloadContractDocument'])
         ->name('locataires.documents.download');
     Route::resource('locataires', LocataireController::class);
+
+    Route::get('annonces', [AnnouncementController::class, 'index'])->name('announcements.index');
+    Route::post('annonces', [AnnouncementController::class, 'store'])->name('announcements.store');
 
     Route::patch('locataires/{locataire}/resilier',[LocataireController::class, 'resilier'])->name('locataires.resilier');
 
@@ -346,18 +377,28 @@ Route::middleware(['user', 'agency.permission', BlockDemoAgenceMutations::class]
 
     Route::prefix('caisse')->name('caisse.')->group(function () {
         Route::get('/', [CaisseController::class, 'index'])->name('index');
+        Route::get('/historique', [CaisseController::class, 'historique'])->name('historique');
+        Route::get('/historique-pdf', [CaisseController::class, 'historiquePdf'])->name('historique.pdf');
+        Route::get('/historique/{session}', [CaisseController::class, 'detailHistorique'])->name('historique.detail');
+        Route::get('/historique/{session}/pdf', [CaisseController::class, 'detailHistoriquePdf'])->name('historique.detail.pdf');
         Route::post('/ouvrir', [CaisseController::class, 'ouvrir'])->name('ouvrir');
         Route::post('/fermer', [CaisseController::class, 'fermer'])->name('fermer');
         // Route::get('/loyer', [CaisseController::class, 'loyer'])->name('caisse.loyer');
         Route::get('/maintenance', [CaisseController::class, 'maintenance'])->name('maintenance');
+        Route::post('/maintenance/{maintenance}/payer', [CaisseController::class, 'payerMaintenance'])->name('maintenance.payer');
         Route::get('/depense-agence', [CaisseController::class, 'depenseAgence'])->name('depense.agence');
+        Route::post('/depense-agence', [CaisseController::class, 'enregistrerDepensesAgence'])->name('depense.agence.store');
         Route::get('/vente-bien', [CaisseController::class, 'venteBien'])->name('vente.bien');
+        Route::post('/vente-bien', [CaisseController::class, 'enregistrerVente'])->name('vente.store');
+        Route::post('/vente-bien/{vente}/paiement', [CaisseController::class, 'payerVente'])->name('vente.payer');
+        Route::get('/vente-bien/facture/{transaction}', [CaisseController::class, 'factureVente'])->name('vente.facture');
 
 
         Route::controller(LoyerController::class)->prefix('loyer')->group(function () {
             Route::get('/', 'index')->name('loyer');
             Route::get('/search',  'search')->name('loyer.search');
             Route::post('/pay', 'pay')->name('loyer.payer');
+            Route::get('/receipt/{transaction}', 'receipt')->name('loyer.receipt');
 
         });
 
@@ -378,6 +419,7 @@ Route::middleware(['user', 'agency.permission', BlockDemoAgenceMutations::class]
             Route::post('/{id}/annuler','annuler')->name('annuler');
             Route::delete('/{id}', 'destroy')->name('destroy');
             Route::post('/{lotId}/marquer-reverse', 'marquerReverse')->name('marquer-reverse');
+            Route::post('/ventes/{venteId}/marquer-reverse', 'marquerVenteReverse')->name('vente.marquer-reverse');
             Route::get('/historique/{id}', 'historiqueDetail')->name('historique.detail');
             Route::get('/pdf/{id}/{debut}/{fin}', 'PdfReversement')->name('historique.pdf');
             Route::get('/historique', 'historique')->name('historique');

@@ -16,11 +16,11 @@
     <title>@yield('title', 'Pros Immobilier — Espace Agence')</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="{{ asset('app.js') }}"></script>
     <link rel="stylesheet" href="{{ asset('styles.css') }}" />
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/app.css', 'resources/js/required-field-markers.js'])
     @stack('styles')
     @yield('styles')
 </head>

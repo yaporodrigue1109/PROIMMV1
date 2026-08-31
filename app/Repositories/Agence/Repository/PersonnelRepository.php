@@ -65,21 +65,12 @@ class PersonnelRepository implements PersonnelRepositoryInterface
         return $user->fresh();
     }
 
-    public function delete(string $id): bool
-    {
-        $user = $this->findById($id);
-        $user->deleted_by = auth('user')->id();
-        $user->save();
-
-        return $user->delete();
-    }
-
     public function activate(string $id): bool
     {
         return User::where('id_users', $id)
                 ->update([
                     'statut'     => 'actif',
-
+                    'updated_by' => auth('user')->id(),
                 ]) > 0;
     }
 
@@ -88,7 +79,7 @@ class PersonnelRepository implements PersonnelRepositoryInterface
         return User::where('id_users', $id)
                 ->update([
                     'statut'     => 'inactif',
-                    
+                    'updated_by' => auth('user')->id(),
                 ]) > 0;
     }
 }

@@ -25,17 +25,18 @@ class ProssimiteProprieteController extends Controller
     public function store(Request $request): RedirectResponse
     {
         try {
-            // dd($request->all());
-            $data = $request->all();
+            $data = $request->validate([
+                'name' => ['required', 'string', 'max:150'],
+                'description' => ['nullable', 'string', 'max:1000'],
+            ]);
 
             $this->service->create($data);
 
             return redirect()
                 ->route('agence.proprietes.index', ['#panel-types'])
-                ->with('success', 'Type « ' . $request->name . ' » créé avec succès.');
+                ->with('success', 'Proximité « ' . $request->name . ' » créée avec succès.');
 
         } catch (\Exception $e) {
-            dd($e->getMessage());
             return back()
                 ->withInput()
                 ->with('error', $e->getMessage());
@@ -49,7 +50,13 @@ class ProssimiteProprieteController extends Controller
     public function update(Request $request, int $prossimite): RedirectResponse
     {
         try {
-            $this->service->update($prossimite, $request->validated());
+            $data = $request->validate([
+                'name' => ['required', 'string', 'max:150'],
+                'description' => ['nullable', 'string', 'max:1000'],
+            ]);
+            $item = $this->service->findById($prossimite);
+            abort_unless($item && $item->agence_id === getInfoAgent()->users->agence_id, 403);
+            $this->service->update($item, $data);
 
             return redirect()
                 ->route('agence.proprietes.index', ['#panel-types'])
@@ -70,7 +77,9 @@ class ProssimiteProprieteController extends Controller
     {
         try {
             // dd($types_propriete);
-            $this->service->delete($prossimite);
+            $item = $this->service->findById($prossimite);
+            abort_unless($item && $item->agence_id === getInfoAgent()->users->agence_id, 403);
+            $this->service->delete($item);
 
             return redirect()
                 ->route('agence.proprietes.index', ['#panel-types'])

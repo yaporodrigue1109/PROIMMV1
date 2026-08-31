@@ -18,6 +18,31 @@
         @include('agence.partials.sidebar')
 
         <div class="main-content" id="mainContent">
+            @php
+                $impersonation = session('admin_agency_impersonation');
+                $isAgencyImpersonation = auth('admin')->check()
+                    && auth('user')->check()
+                    && is_array($impersonation)
+                    && (string) data_get($impersonation, 'admin_id') === (string) auth('admin')->id()
+                    && (string) data_get($impersonation, 'user_id') === (string) auth('user')->id()
+                    && (string) data_get($impersonation, 'agence_id') === (string) auth('user')->user()->agence_id;
+            @endphp
+            @if($isAgencyImpersonation)
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 20px;background:#fff7ed;border-bottom:1px solid #fed7aa;color:#9a3412;font-size:13px;position:sticky;top:0;z-index:60;">
+                    <span>
+                        <strong>Administrateur en consultation :</strong>
+                        {{ $impersonation['admin_name'] ?? 'Administrateur' }} consulte l’agence
+                        {{ $impersonation['agence_name'] ?? $authUser?->agence?->name }} via le compte de
+                        {{ $authUser?->name ?? 'son responsable' }}.
+                    </span>
+                    <form method="POST" action="{{ route('agence.impersonation.stop') }}" style="margin:0;">
+                        @csrf
+                        <button type="submit" style="border:0;border-radius:9px;background:#9a3412;color:#fff;padding:8px 13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+                            Retour à l’administration
+                        </button>
+                    </form>
+                </div>
+            @endif
             <x-app-header
                     :user-initials="$agenceInitials"
                     :user-name="$agenceName"
@@ -33,6 +58,21 @@
     </div>
 
     <script>
+        @if((bool) ($authUser?->agence?->parametrage?->double_validation ?? true))
+        document.addEventListener('submit', function (event) {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) return;
+
+            const data = new FormData(form);
+            const method = String(data.get('_method') || form.method || '').toLowerCase();
+
+            if (method === 'delete' && !window.confirm('Confirmation de sécurité : voulez-vous vraiment effectuer cette suppression ? Cette action peut être irréversible.')) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        }, true);
+        @endif
+
         function getRequest(route, id, type, value) {
             $.get({
                 url: route,

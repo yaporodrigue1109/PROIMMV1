@@ -84,7 +84,7 @@ class StoreUserRequest extends FormRequest
 
         // Traiter la photo s'il y en a une
         if ($this->hasFile('photo')) {
-            $validated['photo'] = $this->file('photo')->store('users', 'public');
+            $validated['photo'] = upload('users', 'png', 'photo', $this);
         }
 
         return $validated;

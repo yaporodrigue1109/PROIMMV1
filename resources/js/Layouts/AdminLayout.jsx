@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import logo from '../../../admin/logo/playstore-icon-revised.png';
+import defaultLogo from '../../../admin/logo/playstore-icon-revised.png';
 import {
     BarChart3,
     Building2,
     ChevronDown,
     ChevronRight,
     CircleGauge,
+    CircleHelp,
     Layers3,
     LogOut,
     PanelLeftClose,
@@ -15,6 +16,7 @@ import {
     Ticket,
     LifeBuoy,
     MessagesSquare,
+    MapPinned,
     UserRound,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -42,11 +44,16 @@ const navigation = [
     {
         section: 'Administration',
         items: [
+            { label: 'Administrateurs', href: '/admin/administrateurs', icon: UserRound, activeMatch: '/admin/administrateurs' },
             { label: 'Modules', href: '/admin/modules', icon: Layers3, activeMatch: '/admin/modules' },
+            { label: 'Proximités', href: '/admin/proximites', icon: MapPinned, activeMatch: '/admin/proximites' },
+            { label: 'Types de propriétés', href: '/admin/types-proprietes', icon: Building2, activeMatch: '/admin/types-proprietes' },
+            { label: 'Équipements', href: '/admin/equipements-proprietes', icon: Layers3, activeMatch: '/admin/equipements-proprietes' },
             { label: 'Configuration', href: '/admin/settings', icon: Settings, activeMatch: '/admin/settings' },
             { label: 'Statistiques', href: '/admin/statistiques', icon: CircleGauge, activeMatch: '/admin/statistiques' },
             { label: 'Tickets', href: '/admin/tickets', icon: LifeBuoy, activeMatch: '/admin/tickets' },
             { label: 'Contacts', href: '/admin/contacts', icon: MessagesSquare, activeMatch: '/admin/contacts' },
+            { label: 'Aide', href: '/admin/aide', icon: CircleHelp, activeMatch: '/admin/aide' },
         ],
     },
 ];
@@ -55,12 +62,17 @@ const breadcrumbLabels = {
     dashboard: 'Tableau de bord',
     agences: 'Agences',
     abonnements: 'Abonnements',
+    administrateurs: 'Administrateurs',
     modules: 'Modules',
+    proximites: 'Proximités',
+    'types-proprietes': 'Types de propriétés',
+    'equipements-proprietes': 'Équipements',
     settings: 'Configuration',
     statistiques: 'Statistiques',
     tickets: 'Tickets',
     contacts: 'Contacts',
     profile: 'Profil',
+    aide: 'Aide',
 };
 
 function buildBreadcrumbs(currentPath, title) {
@@ -89,7 +101,9 @@ function buildBreadcrumbs(currentPath, title) {
 
 export default function AdminLayout({ title, children }) {
     const page = usePage();
-    const { auth, appName, admin, flash } = page.props;
+    const { auth, appName, admin, flash, branding } = page.props;
+    const logo = branding?.logoUrl || defaultLogo;
+    const companyName = branding?.name || appName || 'Pros Immobilier';
     const currentPath = page.url.split('?')[0];
     const breadcrumbs = buildBreadcrumbs(currentPath, title);
     const currentAdmin = admin ?? auth?.admin;
@@ -105,7 +119,11 @@ export default function AdminLayout({ title, children }) {
 
     return (
         <div className="min-h-screen bg-transparent text-[#0f172a]">
-            <Head title={title ? `${title} - ${appName}` : appName} />
+            <Head title={title ? `${title} - ${appName}` : appName}>
+                <link rel="icon" href={logo} />
+                <link rel="shortcut icon" href={logo} />
+                <link rel="apple-touch-icon" href={logo} />
+            </Head>
 
             <div className="mx-auto flex min-h-screen w-full max-w-[1680px] gap-2 p-3">
                 <aside className="hidden w-64 shrink-0 lg:block">
@@ -114,12 +132,12 @@ export default function AdminLayout({ title, children }) {
                             <div className="flex items-center gap-3">
                                 <img
                                     src={logo}
-                                    alt="Pros Immobilier"
+                                    alt={companyName}
                                     className="h-10 w-10 rounded-xl object-contain shadow-sm ring-1 ring-[#c8d4de]"
                                 />
 
                                 <div className="min-w-0">
-                                    <CardTitle className="truncate text-base">Pros Immobilier</CardTitle>
+                                    <CardTitle className="truncate text-base">{companyName}</CardTitle>
                                     <CardDescription className="truncate text-xs">Espace d'administration</CardDescription>
                                 </div>
                             </div>
@@ -184,12 +202,12 @@ export default function AdminLayout({ title, children }) {
                                 <div className="flex items-center gap-3">
                                     <img
                                         src={logo}
-                                        alt="Pros Immobilier"
+                                        alt={companyName}
                                         className="h-10 w-10 rounded-xl object-contain shadow-sm ring-1 ring-[#c8d4de]"
                                     />
 
                                     <div className="min-w-0">
-                                        <p className="truncate text-sm font-semibold text-[#0f172a]">Pros Immobilier</p>
+                                        <p className="truncate text-sm font-semibold text-[#0f172a]">{companyName}</p>
                                         <p className="truncate text-xs text-[#5f7182]">Admin workspace</p>
                                     </div>
                                 </div>

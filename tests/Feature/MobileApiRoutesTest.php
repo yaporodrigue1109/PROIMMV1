@@ -10,7 +10,14 @@ class MobileApiRoutesTest extends TestCase
     {
         $this->postJson('/api/mobile/auth/locataire/register', [])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['first_name', 'last_name', 'phone', 'password']);
+            ->assertJsonValidationErrors([
+                'first_name',
+                'last_name',
+                'phone',
+                'type_piece_id',
+                'num_piece',
+                'password',
+            ]);
     }
 
     public function test_mobile_login_validates_the_payload(): void

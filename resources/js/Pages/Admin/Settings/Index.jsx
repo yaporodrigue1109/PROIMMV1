@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { usePage } from '@inertiajs/react';
 import { Check, Cog, Globe, Layers3, Palette, Save, ShieldCheck, Sparkles, Upload } from 'lucide-react';
 
 import AdminLayout from '../../../Layouts/AdminLayout';
@@ -13,9 +14,11 @@ import {
 } from '../../../components/ui/card';
 import { Checkbox } from '../../../components/ui/checkbox';
 import { Input } from '../../../components/ui/input';
+import { PhoneInput } from '../../../components/ui/phone-input';
 import RichTextEditor from '../../../components/rich-text-editor';
 import { Label } from '../../../components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import { SearchableSelect } from '../../../components/ui/searchable-select';
 
 const inputClassName =
     'flex h-11 w-full rounded-md border border-[#c8d4de] bg-white px-3 py-2 text-sm text-[#0f172a] ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00559b] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
@@ -37,8 +40,14 @@ const defaultWebsiteFaqs = [
     { question: 'Puis-je accéder à Pros Immobilier en déplacement ?', answer: 'Oui. La plateforme est accessible depuis un navigateur sur ordinateur, tablette ou téléphone, partout où vous disposez d’une connexion internet.' },
 ];
 
-export default function Index({ setting = {}, tarifs = {} }) {
+export default function Index({ setting = {}, tarifs = {}, csrfToken = '' }) {
+    const errors = usePage().props.errors ?? {};
     const [tab, setTab] = useState('entreprise');
+    const activeFormId = tab === 'tarifaire'
+        ? 'tarification-form'
+        : tab === 'site'
+            ? 'website-form'
+            : 'settings-form';
     const commitmentRows = setting.website_commitments?.length
         ? setting.website_commitments
         : ['', '', ''];
@@ -76,13 +85,22 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                 <Cog className="h-4 w-4" />
                                 Raccourcis
                             </Button>
-                            <Button type="button" className="h-11 rounded-xl bg-[#00559b] px-4 text-white hover:bg-[#004980]">
+                            <Button type="submit" form={activeFormId} className="h-11 rounded-xl bg-[#00559b] px-4 text-white hover:bg-[#004980]">
                                 <Save className="h-4 w-4" />
                                 Enregistrer
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
+
+                {Object.keys(errors).length > 0 ? (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800">
+                        <p className="font-semibold">Certaines informations n’ont pas pu être enregistrées :</p>
+                        <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {Object.entries(errors).map(([field, message]) => <li key={field}>{message}</li>)}
+                        </ul>
+                    </div>
+                ) : null}
 
                 <Card className="rounded-3xl border-slate-200 shadow-sm">
                     <CardContent className="p-4">
@@ -104,7 +122,8 @@ export default function Index({ setting = {}, tarifs = {} }) {
 
                 {tab === 'entreprise' ? (
                     <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-                        <form id="settings-form" action="/admin/settings" method="POST" encType="multipart/form-data" className="space-y-6">
+                        <form key={`settings-${JSON.stringify(setting)}`} id="settings-form" action="/admin/settings" method="POST" encType="multipart/form-data" className="space-y-6">
+                            <input type="hidden" name="_token" value={csrfToken} />
                             <input type="hidden" name="_method" value="PUT" />
                             <div className="space-y-6">
                                 <Section title="Identite generale" step="01" icon={Palette}>
@@ -122,13 +141,13 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                             <Input name="email2" type="email" defaultValue={setting.email2 ?? ''} className={inputClassName} />
                                         </Field>
                                         <Field label="Telephone principal">
-                                            <Input name="contact1" defaultValue={setting.contact1 ?? ''} className={inputClassName} />
+                                            <AdminPhoneInput name="contact1" defaultValue={setting.contact1 ?? ''} />
                                         </Field>
                                         <Field label="Telephone secondaire">
-                                            <Input name="contact2" defaultValue={setting.contact2 ?? ''} className={inputClassName} />
+                                            <AdminPhoneInput name="contact2" defaultValue={setting.contact2 ?? ''} />
                                         </Field>
                                         <Field label="Telephone tertiaire">
-                                            <Input name="contact3" defaultValue={setting.contact3 ?? ''} className={inputClassName} />
+                                            <AdminPhoneInput name="contact3" defaultValue={setting.contact3 ?? ''} />
                                         </Field>
                                         <Field label="Boite postale">
                                             <Input name="boite_postal" defaultValue={setting.boite_postal ?? ''} className={inputClassName} />
@@ -145,15 +164,51 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                             <Input name="site_web" defaultValue={setting.site_web ?? ''} className={inputClassName} />
                                         </Field>
                                         <Field label="Langue par defaut">
-                                            <select name="langue" defaultValue={setting.langue ?? 'fr'} className={inputClassName}>
+                                            <SearchableSelect name="langue" defaultValue={setting.langue ?? 'fr'} className={inputClassName}>
                                                 <option value="fr">Francais</option>
                                                 <option value="en">Anglais</option>
-                                            </select>
+                                            </SearchableSelect>
                                         </Field>
                                     </div>
                                 </Section>
 
-                                <Section title="Informations legales" step="03" icon={ShieldCheck}>
+                                <Section title="Paiement des abonnements agence" step="03" icon={Layers3}>
+                                    <div className="space-y-5">
+                                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                            Ce mode est temporaire. Lorsqu’il est activé, les agences voient ces numéros à la place du paiement automatique. Désactivez-le pour rétablir l’ancien parcours.
+                                        </div>
+                                        <label className="flex items-center gap-3 rounded-xl border border-slate-200 p-4">
+                                            <input type="hidden" name="subscription_manual_payment_enabled" value="0" />
+                                            <input
+                                                type="checkbox"
+                                                name="subscription_manual_payment_enabled"
+                                                value="1"
+                                                defaultChecked={Boolean(setting.subscription_manual_payment_enabled)}
+                                                className="h-4 w-4 rounded border-slate-300 text-[#00559b] focus:ring-[#00559b]"
+                                            />
+                                            <span>
+                                                <span className="block text-sm font-semibold text-slate-900">Activer le paiement manuel temporaire</span>
+                                                <span className="block text-sm text-slate-500">Les paiements ne valideront pas automatiquement l’abonnement.</span>
+                                            </span>
+                                        </label>
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            <Field label="Numéro Wave" error={errors.subscription_wave_number}>
+                                                <AdminPhoneInput name="subscription_wave_number" defaultValue={setting.subscription_wave_number ?? ''} />
+                                            </Field>
+                                            <Field label="Numéro Orange Money" error={errors.subscription_orange_money_number}>
+                                                <AdminPhoneInput name="subscription_orange_money_number" defaultValue={setting.subscription_orange_money_number ?? ''} />
+                                            </Field>
+                                            <Field label="Numéro Moov Money" error={errors.subscription_moov_money_number}>
+                                                <AdminPhoneInput name="subscription_moov_money_number" defaultValue={setting.subscription_moov_money_number ?? ''} />
+                                            </Field>
+                                            <Field label="Numéro MTN Money" error={errors.subscription_mtn_money_number}>
+                                                <AdminPhoneInput name="subscription_mtn_money_number" defaultValue={setting.subscription_mtn_money_number ?? ''} />
+                                            </Field>
+                                        </div>
+                                    </div>
+                                </Section>
+
+                                <Section title="Informations legales" step="04" icon={ShieldCheck}>
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <Field label="Numero RCCM">
                                             <Input name="num_rccm" defaultValue={setting.num_rccm ?? ''} className={inputClassName} />
@@ -170,15 +225,18 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                     </div>
                                 </Section>
 
-                                <Section title="Politiques et conditions" step="04" icon={ShieldCheck}>
+                                <Section title="Politiques et conditions" step="05" icon={ShieldCheck}>
                                     <div className="grid gap-4">
-                                        <Field label="Politique de confidentialite">
+                                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                            Ces modèles sont préremplis à partir des informations de l’entreprise. Complétez les mentions entre crochets et faites valider les textes avant leur publication.
+                                        </div>
+                                        <Field label="Politique de confidentialité et de protection des données">
                                             <RichTextEditor name="politique_confidentialite" defaultValue={setting.politique_confidentialite ?? ''} />
                                         </Field>
-                                        <Field label="Conditions generales">
+                                        <Field label="Conditions générales de service">
                                             <RichTextEditor name="condition_generale" defaultValue={setting.condition_generale ?? ''} />
                                         </Field>
-                                        <Field label="CGU">
+                                        <Field label="Conditions générales d’utilisation (CGU)">
                                             <RichTextEditor name="cgu" defaultValue={setting.cgu ?? ''} />
                                         </Field>
                                         <Field label="Mentions légales">
@@ -187,21 +245,21 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                     </div>
                                 </Section>
 
-                                <Section title="Reseaux sociaux" step="05" icon={Globe}>
+                                <Section title="Reseaux sociaux" step="06" icon={Globe}>
                                     <div className="grid gap-4 md:grid-cols-2">
-                                        <Field label="Facebook">
+                                        <Field label="Facebook" error={errors.facebook}>
                                             <Input name="facebook" defaultValue={setting.facebook ?? ''} className={inputClassName} />
                                         </Field>
-                                        <Field label="Instagram">
+                                        <Field label="Instagram" error={errors.instagram}>
                                             <Input name="instagram" defaultValue={setting.instagram ?? ''} className={inputClassName} />
                                         </Field>
-                                        <Field label="LinkedIn">
+                                        <Field label="LinkedIn" error={errors.linkedin}>
                                             <Input name="linkedin" defaultValue={setting.linkedin ?? ''} className={inputClassName} />
                                         </Field>
-                                        <Field label="Twitter">
+                                        <Field label="Twitter" error={errors.twitter}>
                                             <Input name="twitter" defaultValue={setting.twitter ?? ''} className={inputClassName} />
                                         </Field>
-                                        <Field label="Google Business" className="md:col-span-2">
+                                        <Field label="Google Business" error={errors.google} className="md:col-span-2">
                                             <Input name="google" defaultValue={setting.google ?? ''} className={inputClassName} />
                                         </Field>
                                     </div>
@@ -216,10 +274,10 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                     <CardDescription>Logo et apercu rapide de la configuration.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4 p-6">
-                                    {setting.logo ? (
+                                    {setting.logo_url ? (
                                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                                             <img
-                                                src={`/storage/${setting.logo}`}
+                                                src={setting.logo_url}
                                                 alt="Logo actuel"
                                                 className="mx-auto max-h-24 object-contain"
                                             />
@@ -232,7 +290,13 @@ export default function Index({ setting = {}, tarifs = {} }) {
 
                                     <label className="block space-y-2">
                                         <Label className="text-sm font-medium text-slate-700">Logo</Label>
-                                        <Input type="file" name="logo" className="h-11 rounded-md border-slate-200" />
+                                        <Input
+                                            type="file"
+                                            name="logo"
+                                            form="settings-form"
+                                            accept="image/jpeg,image/png,image/gif,image/webp"
+                                            className="h-11 rounded-md border-slate-200"
+                                        />
                                     </label>
 
                                     <div className="grid gap-3">
@@ -251,7 +315,8 @@ export default function Index({ setting = {}, tarifs = {} }) {
                     </div>
                 ) : tab === 'tarifaire' ? (
                     <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-                        <form id="tarification-form" action="/admin/settings/tarification" method="POST" className="space-y-6">
+                        <form key={`tarification-${JSON.stringify(tarifs)}`} id="tarification-form" action="/admin/settings/tarification" method="POST" className="space-y-6">
+                            <input type="hidden" name="_token" value={csrfToken} />
                             <input type="hidden" name="_method" value="PUT" />
                             <div className="space-y-6">
                                 <Section title="Plan principal" step="01" icon={Layers3}>
@@ -279,12 +344,12 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                             />
                                         </Field>
                                         <Field label="Cycle de facturation">
-                                            <select name="cycle_facturation" defaultValue={tarifs.cycle_facturation ?? 'mensuel'} className={inputClassName}>
+                                            <SearchableSelect name="cycle_facturation" defaultValue={tarifs.cycle_facturation ?? 'mensuel'} className={inputClassName}>
                                                 <option value="mensuel">Mensuel</option>
                                                 <option value="trimestriel">Trimestriel</option>
                                                 <option value="semestriel">Semestriel</option>
                                                 <option value="annuel">Annuel</option>
-                                            </select>
+                                            </SearchableSelect>
                                         </Field>
                                         <Field label="Description du plan" className="md:col-span-2">
                                             <RichTextEditor name="plan_description" defaultValue={tarifs.plan_description ?? ''} />
@@ -317,6 +382,7 @@ export default function Index({ setting = {}, tarifs = {} }) {
                                             <div key={module.id} className="rounded-2xl border border-slate-200 bg-white p-4">
                                                 <div className="grid gap-4 md:grid-cols-[1fr_160px_140px] md:items-center">
                                                     <label className="flex items-center gap-3">
+                                                        <input type="hidden" name={`modules[${module.id}][actif]`} value="0" />
                                                         <Checkbox
                                                             name={`modules[${module.id}][actif]`}
                                                             value="1"
@@ -378,7 +444,8 @@ export default function Index({ setting = {}, tarifs = {} }) {
                         </aside>
                     </div>
                 ) : (
-                    <form id="website-form" action="/admin/settings/site-web" method="POST" className="space-y-6">
+                    <form key={`website-${JSON.stringify(setting.website_faqs)}-${JSON.stringify(setting.website_commitments)}`} id="website-form" action="/admin/settings/site-web" method="POST" className="space-y-6">
+                        <input type="hidden" name="_token" value={csrfToken} />
                         <input type="hidden" name="_method" value="PUT" />
 
                         <Section title="Page À propos" step="01" icon={Globe}>
@@ -467,12 +534,29 @@ function Section({ title, step, icon: Icon, children }) {
     );
 }
 
-function Field({ label, className = '', children }) {
+function Field({ label, error, className = '', children }) {
     return (
         <label className={`space-y-2 ${className}`}>
             <Label className="text-sm font-medium text-slate-700">{label}</Label>
             {children}
+            {error ? <span className="block text-xs font-medium text-red-600">{error}</span> : null}
         </label>
+    );
+}
+
+function AdminPhoneInput({ name, defaultValue = '' }) {
+    const [value, setValue] = useState(defaultValue);
+
+    return (
+        <>
+            <PhoneInput
+                value={value}
+                onChange={setValue}
+                placeholder="07 00 00 00 00"
+                className="h-11"
+            />
+            <input type="hidden" name={name} value={value} />
+        </>
     );
 }
 

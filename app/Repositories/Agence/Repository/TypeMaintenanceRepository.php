@@ -16,7 +16,7 @@ class TypeMaintenanceRepository implements TypeMaintenanceRepositoryInterface
 
     public function all(array $filters = [])
     {
-        $query = $this->model->with(['agence', 'maintenanceCategory']);
+        $query = $this->model->with(['agence']);
 
         $query->where('agence_id', $this->agenceId());
 
@@ -25,7 +25,7 @@ class TypeMaintenanceRepository implements TypeMaintenanceRepositoryInterface
 
     public function find($id)
     {
-        return $this->model->with(['agence', 'maintenances', 'maintenanceCategory'])
+        return $this->model->with(['agence', 'maintenances'])
             ->where('agence_id', $this->agenceId())
             ->find($id);
     }
@@ -56,7 +56,7 @@ class TypeMaintenanceRepository implements TypeMaintenanceRepositoryInterface
 
     public function getByAgence($agenceId)
     {
-        return $this->model->with('maintenanceCategory')->where('agence_id', $agenceId)->get();
+        return $this->model->where('agence_id', $agenceId)->get();
     }
 
     private function agenceId(): string

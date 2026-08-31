@@ -19,7 +19,7 @@ class FonctionMaintenanceController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['agence_id', 'per_page']);
+        $filters = $request->only(['per_page']);
         $fonctions = $this->service->getAllFonctions($filters);
 
         return response()->json([

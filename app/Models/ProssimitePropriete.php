@@ -38,6 +38,16 @@ class ProssimitePropriete extends Model
         return $query->where('agence_id', $agenceId);
     }
 
+    /** Référentiel global admin + référentiel privé de l'agence. */
+    public function scopeVisibleForAgence($query, string $agenceId)
+    {
+        return $query->where(function ($query) use ($agenceId) {
+            $query->whereNull('agence_id')
+                ->orWhere('agence_id', '')
+                ->orWhere('agence_id', $agenceId);
+        });
+    }
+
     // ─── Accesseurs ───────────────────────────────────────────────
 
     /** Alias "libelle" pour compatibilité avec les vues existantes */

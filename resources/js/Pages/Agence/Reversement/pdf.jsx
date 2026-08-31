@@ -123,6 +123,15 @@ const styles = StyleSheet.create({
         color: '#0f172a',
         backgroundColor: '#ffffff',
     },
+    watermark: {
+        position: 'absolute',
+        top: '25%',
+        left: '32%',
+        width: '36%',
+        height: '50%',
+        objectFit: 'contain',
+        opacity: 0.07,
+    },
 
     // Header amélioré
     headerRow: { 
@@ -372,6 +381,9 @@ export default function ReversementPdfDocument({ cour }) {
     return (
         <Document>
             <Page size="A4" orientation="landscape" style={styles.page}>
+                {cour?.logo_entreprise ? (
+                    <Image src={cour.logo_entreprise} style={styles.watermark} fixed />
+                ) : null}
                 {/* En-tête amélioré */}
                 <View style={styles.headerRow}>
                     <View>
@@ -493,6 +505,14 @@ export default function ReversementPdfDocument({ cour }) {
                         <View style={styles.recapLine}>
                             <Text style={styles.recapLabel}>NOUVELLE CAUTION</Text>
                             <Text style={styles.recapValue}>{fmt(cour?.nouvelleCaution)} FCFA</Text>
+                        </View>
+                        <View style={styles.recapLine}>
+                            <Text style={styles.recapLabel}>Caution cie/ Sodeci</Text>
+                            <Text style={styles.recapValue}>{fmt(cour?.cautionSodeci)} FCFA</Text>
+                        </View>
+                        <View style={styles.recapLine}>
+                            <Text style={styles.recapLabel}>MAINTENANCES — MONTANT VERSÉ SUR LA PÉRIODE</Text>
+                            <Text style={styles.recapValue}>{fmt(cour?.montantMaintenances)} FCFA</Text>
                         </View>
                         <View style={styles.recapLine}>
                             <Text style={styles.recapLabel}>DÉPENSES EFFECTUÉES</Text>

@@ -5,12 +5,14 @@ namespace App\Repositories\Agence\Repository;
 use App\Models\EquipementPropriete;
 use App\Repositories\Agence\Interfaces\EquipementProprieteRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class EquipementProprieteRepository implements EquipementProprieteRepositoryInterface
 {
     public function getAllByAgence(string $agenceId): Collection
     {
-        return EquipementPropriete::where('agence_id', $agenceId)
+        return EquipementPropriete::visibleForAgence($agenceId)
+            ->orderByRaw('agence_id IS NOT NULL')
             ->orderBy('name')
             ->get();
     }
@@ -40,14 +42,11 @@ class EquipementProprieteRepository implements EquipementProprieteRepositoryInte
         return $type->fresh();
     }
 
-    public function delete( $id): bool
+    public function delete(EquipementPropriete $type): bool
     {
-        $type = $this->findOrFail($id);
-//        if ($this->isUsed($type)) {
-//            throw new \Exception(
-//                "Impossible de supprimer « {$type->name} » : {$this->countProprietes($type)} propriété(s) l'utilisent."
-//            );
-//        }
+        if ($type->agence_id !== $this->agenceId()) {
+            throw new ModelNotFoundException('Cet équipement global est géré uniquement par l’administrateur.');
+        }
 
         return $type->delete();
     }
@@ -71,7 +70,7 @@ class EquipementProprieteRepository implements EquipementProprieteRepositoryInte
         $type = $this->findById($id);
 
         if (!$type || $type->agence_id !== $this->agenceId()) {
-            throw new ModelNotFoundException("Type de propriété #$id introuvable.");
+            throw new ModelNotFoundException("Équipement #$id introuvable ou non modifiable.");
         }
 
         return $type;

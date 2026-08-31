@@ -18,6 +18,8 @@ use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Models\TypePiece;
+use App\Models\Maintenance;
+use App\Models\TransactionAgence;
 
 class MaintenanceController extends Controller
 {
@@ -50,24 +52,58 @@ class MaintenanceController extends Controller
 
     public function index(Request $request)
     {
-        //dd('dsjhksml,./');
+        $agencyId = $this->agenceId();
         $filters = $request->only([
-            'statut', 'maintenancier_id', 'agence_id',
+            'statut', 'maintenancier_id',
             'date_debut', 'date_fin', 'per_page',
         ]);
 
-        $agencyFilters = ['agence_id' => $this->agenceId()];
+        $agencyFilters = ['agence_id' => $agencyId];
         $filters = array_merge($filters, $agencyFilters);
 
-        $maintenances        = $this->toArray($this->service->getAllMaintenances($filters));
-        $maintenancier       = $this->toArray($this->maintenancierService->getAllMaintenanciers($agencyFilters));
-        $typeMaintenance     = $this->toArray($this->typeMaintenanceService->getAllTypes($agencyFilters));
-        $fonctionMaintenance = $this->toArray($this->fonctionMaintenanceService->getAllFonctions($agencyFilters));
-        $proprietaires       = $this->toArray($this->proprietaireRepo->getAllByAgence($this->agenceId()));
+        $maintenances = $this->onlyCurrentAgency(
+            $this->toArray($this->service->getAllMaintenances($filters)),
+            $agencyId,
+        );
+        $maintenancePayments = TransactionAgence::withoutGlobalScopes()
+            ->where('agence_id', $agencyId)
+            ->where('type_transaction', TransactionAgence::STATUT_MAINTENANCE)
+            ->whereIn('reference', collect($maintenances)->pluck('maintenance_id')->filter()->all())
+            ->selectRaw('reference, SUM(montant_global_verser) as total_paid')
+            ->groupBy('reference')
+            ->pluck('total_paid', 'reference');
+        $maintenances = array_map(function ($maintenance) use ($maintenancePayments) {
+            $maintenance = $maintenance instanceof \Illuminate\Database\Eloquent\Model
+                ? $maintenance->toArray()
+                : (array) $maintenance;
+            $id = (string) ($maintenance['maintenance_id'] ?? $maintenance['id'] ?? '');
+            $total = (float) ($maintenance['montant_global'] ?? 0);
+            $paid = (float) ($maintenancePayments[$id] ?? 0);
+            $remaining = max($total - $paid, 0);
+            $maintenance['montant_paye'] = $paid;
+            $maintenance['reste_a_payer'] = $remaining;
+            $maintenance['statut_paiement'] = $paid <= 0 ? 'non_reglee' : ($remaining > 0 ? 'partiellement_reglee' : 'soldee');
+            $maintenance['modification_verrouillee'] = $paid > 0;
+
+            return $maintenance;
+        }, $maintenances);
+        $maintenancier = $this->onlyCurrentAgency(
+            $this->toArray($this->maintenancierService->getAllMaintenanciers($agencyFilters)),
+            $agencyId,
+        );
+        $typeMaintenance = $this->onlyCurrentAgency(
+            $this->toArray($this->typeMaintenanceService->getAllTypes($agencyFilters)),
+            $agencyId,
+        );
+        $fonctionMaintenance = $this->onlyCurrentAgency(
+            $this->toArray($this->fonctionMaintenanceService->getAllFonctions($agencyFilters)),
+            $agencyId,
+        );
+        $proprietaires = $this->toArray($this->proprietaireRepo->getAllByAgence($agencyId));
         $lots = $this->toArray(
             ProprietaireLot::query()
                 ->with(['proprietaire'])
-                ->where('agence_id', $this->agenceId())
+                ->where('agence_id', $agencyId)
                 ->orderBy('name')
                 ->get([
                     'propreietaire_lot_id',
@@ -82,7 +118,7 @@ class MaintenanceController extends Controller
         $proprietes = $this->toArray(
             Propriete::query()
                 ->with(['proprietaire', 'lot'])
-                ->where('agence_id', $this->agenceId())
+                ->where('agence_id', $agencyId)
                 ->orderBy('reference')
                 ->get([
                     'propriete_id',
@@ -98,7 +134,7 @@ class MaintenanceController extends Controller
         $batiments = $this->toArray(
             Batiment::query()
                 ->with(['propriete'])
-                ->whereHas('propriete', fn ($query) => $query->where('agence_id', $this->agenceId()))
+                ->whereHas('propriete', fn ($query) => $query->where('agence_id', $agencyId))
                 ->orderBy('name')
                 ->get([
                     'batiment_id',
@@ -112,7 +148,7 @@ class MaintenanceController extends Controller
         $portes = $this->toArray(
             Porte::query()
                 ->with(['batiment.propriete'])
-                ->whereHas('batiment.propriete', fn ($query) => $query->where('agence_id', $this->agenceId()))
+                ->whereHas('batiment.propriete', fn ($query) => $query->where('agence_id', $agencyId))
                 ->orderBy('numero_porte')
                 ->get([
                     'porte_id',
@@ -175,26 +211,41 @@ class MaintenanceController extends Controller
 
     public function store(Request $request)
     {
+        $agencyId = $this->agenceId();
         $validated = $request->validate([
             // --- En-tête maintenance ---
             'titre'              => 'required|string|max:255',
             'description_generale' => 'nullable|string',
-            'proprietaire_id'    => 'required|exists:proprietaires,proprietaire_id',
-            'lot_id'             => 'nullable|exists:propietaire_lots,propreietaire_lot_id',
-            'propriete_id'       => 'nullable|exists:propriete,propriete_id',
-            'batiment_id'        => 'nullable|exists:batiment,batiment_id',
-            'porte_id'           => 'nullable|exists:porte,porte_id',
+            'proprietaire_id'    => [
+                'required',
+                Rule::exists('proprietaire_agences', 'proprietaire_id')
+                    ->where('agence_id', $agencyId)
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at'),
+            ],
+            'lot_id'             => ['nullable', Rule::exists('propietaire_lots', 'propreietaire_lot_id')->where('agence_id', $agencyId)],
+            'propriete_id'       => ['nullable', Rule::exists('propriete', 'propriete_id')->where('agence_id', $agencyId)],
+            'batiment_id'        => ['nullable', Rule::exists('batiment', 'batiment_id')->where('agence_id', $agencyId)],
+            'porte_id'           => ['nullable', Rule::exists('porte', 'porte_id')->where('agence_id', $agencyId)],
             'prise_en_charge_par'=> ['nullable', Rule::in(['proprietaire', 'locataire', 'agence'])],
 
             // --- Détails (tableau) ---
             'details'                              => 'required|array|min:1',
-            'details.*.type_intervention_id'       => 'required|exists:type_maintenances,type_maintenance_id',
-            'details.*.maintenancier_id'            => 'required|exists:maintenanciers,maintenancier_id',
+            'details.*.type_intervention_id'       => ['required', Rule::exists('type_maintenances', 'type_maintenance_id')->where('agence_id', $agencyId)],
+            'details.*.maintenancier_id'            => ['required', Rule::exists('maintenanciers', 'maintenancier_id')->where('agence_id', $agencyId)],
             'details.*.date_debut'                 => 'required|date',
             'details.*.date_fin'                   => 'nullable|date|after_or_equal:details.*.date_debut',
             'details.*.priorite'                   => ['nullable', Rule::in(['basse', 'normale', 'haute'])],
             'details.*.prix'                       => 'required|numeric|min:0',
             'details.*.description'                => 'nullable|string',
+        ], [
+            'details.required' => 'Ajoutez au moins une ligne d’intervention.',
+            'details.min' => 'Ajoutez au moins une ligne d’intervention.',
+            'details.*.type_intervention_id.required' => "Le type d’intervention est obligatoire pour chaque ligne.",
+            'details.*.type_intervention_id.exists' => "Le type d’intervention sélectionné est invalide.",
+            'details.*.maintenancier_id.required' => 'Le maintenancier est obligatoire pour chaque ligne.',
+            'details.*.date_debut.required' => 'La date de début est obligatoire pour chaque ligne.',
+            'details.*.prix.required' => 'Le montant est obligatoire pour chaque ligne.',
         ]);
 
         // Ajoute l'agence courante à la donnée principale
@@ -229,21 +280,42 @@ class MaintenanceController extends Controller
 
     public function update(Request $request, $id)
     {
+        $agencyId = $this->agenceId();
+        $maintenance = Maintenance::withoutGlobalScopes()
+            ->where('agence_id', $agencyId)
+            ->findOrFail($id);
+        $amountPaid = (float) TransactionAgence::withoutGlobalScopes()
+            ->where('agence_id', $agencyId)
+            ->where('type_transaction', TransactionAgence::STATUT_MAINTENANCE)
+            ->where('reference', (string) $maintenance->getKey())
+            ->sum('montant_global_verser');
+        if ($amountPaid > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cette maintenance a déjà reçu un paiement et ne peut plus être modifiée.',
+            ], 422);
+        }
         $validated = $request->validate([
             'titre'               => 'sometimes|string|max:255',
             'description_generale'=> 'nullable|string',
             'statut'              => ['sometimes', Rule::in(['en_attente', 'en_cours', 'terminer', 'annule'])],
             'prise_en_charge_par' => ['nullable', Rule::in(['proprietaire', 'locataire', 'agence'])],
-            'proprietaire_id'     => 'sometimes|exists:proprietaires,proprietaire_id',
-            'lot_id'              => 'nullable|exists:propietaire_lots,propreietaire_lot_id',
-            'propriete_id'        => 'nullable|exists:propriete,propriete_id',
-            'batiment_id'         => 'nullable|exists:batiment,batiment_id',
-            'porte_id'            => 'nullable|exists:porte,porte_id',
+            'proprietaire_id'     => [
+                'sometimes',
+                Rule::exists('proprietaire_agences', 'proprietaire_id')
+                    ->where('agence_id', $agencyId)
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at'),
+            ],
+            'lot_id'              => ['nullable', Rule::exists('propietaire_lots', 'propreietaire_lot_id')->where('agence_id', $agencyId)],
+            'propriete_id'        => ['nullable', Rule::exists('propriete', 'propriete_id')->where('agence_id', $agencyId)],
+            'batiment_id'         => ['nullable', Rule::exists('batiment', 'batiment_id')->where('agence_id', $agencyId)],
+            'porte_id'            => ['nullable', Rule::exists('porte', 'porte_id')->where('agence_id', $agencyId)],
 
             // Détails optionnels : si absents, on ne touche pas aux détails existants
             'details'                        => 'sometimes|array|min:1',
-            'details.*.type_intervention_id' => 'required_with:details|exists:type_maintenances,type_maintenance_id',
-            'details.*.maintenancier_id'     => 'required_with:details|exists:maintenanciers,maintenancier_id',
+            'details.*.type_intervention_id' => ['required_with:details', Rule::exists('type_maintenances', 'type_maintenance_id')->where('agence_id', $agencyId)],
+            'details.*.maintenancier_id'     => ['required_with:details', Rule::exists('maintenanciers', 'maintenancier_id')->where('agence_id', $agencyId)],
             'details.*.date_debut'           => 'required_with:details|date',
             'details.*.date_fin'             => 'nullable|date',
             'details.*.priorite'             => ['nullable', Rule::in(['basse', 'normale', 'haute'])],
@@ -371,6 +443,14 @@ class MaintenanceController extends Controller
         }
 
         return (array) $result;
+    }
+
+    private function onlyCurrentAgency(array $rows, string $agencyId): array
+    {
+        return collect($rows)
+            ->filter(fn ($row) => (string) data_get($row, 'agence_id') === $agencyId)
+            ->values()
+            ->all();
     }
 
     private function agenceId(): string

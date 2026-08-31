@@ -1,13 +1,20 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
+import GlobalOperationNotifier from './components/global-operation-notifier';
+import './required-field-markers';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - Pros Immobilier` : 'Pros Immobilier'),
     resolve: (name) =>
         resolvePageComponent(`./Pages/${name}.jsx`, import.meta.glob('./Pages/**/*.jsx')),
     setup({ el, App, props }) {
-        createRoot(el).render(<App {...props} />);
+        createRoot(el).render(
+            <>
+                <App {...props} />
+                <GlobalOperationNotifier />
+            </>
+        );
     },
     progress: {
         color: '#0f172a',

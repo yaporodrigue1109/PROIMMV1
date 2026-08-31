@@ -41,4 +41,5 @@ class LotRepository implements LotRepositoryInterface
         $lot = $this->findById($id);
         return $lot->delete();
     }
+
 }

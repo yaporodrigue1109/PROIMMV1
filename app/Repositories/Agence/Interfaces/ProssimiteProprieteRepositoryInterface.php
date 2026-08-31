@@ -11,7 +11,7 @@ interface ProssimiteProprieteRepositoryInterface
 
     public function findById(int $id): ?ProssimitePropriete;
 
-    public function findByName(string $name, int $agenceId): ?ProssimitePropriete;
+    public function findByName(string $name, string $agenceId): ?ProssimitePropriete;
 
     public function create(array $data): ProssimitePropriete;
 

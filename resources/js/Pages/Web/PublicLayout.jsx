@@ -1,7 +1,7 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { Clock3, Mail, MapPin, Menu, Phone, X } from 'lucide-react';
 import { useState } from 'react';
-import logo from '../../../../admin/logo/playstore-icon-revised.png';
+import defaultLogo from '../../../../admin/logo/playstore-icon-revised.png';
 
 const navigation = [
     { label: 'Accueil', href: '/' },
@@ -12,17 +12,21 @@ const navigation = [
 ];
 
 export default function PublicLayout({ children }) {
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const config = props.siteConfig ?? {};
+    const logo = config.logoUrl || defaultLogo;
+    const companyName = config.name || 'Pros Immobilier';
     const [menuOpen, setMenuOpen] = useState(false);
     const pathname = url.split('?')[0];
 
     return (
         <div className="min-h-screen bg-white font-sans text-[#16243d]">
+            {config.faviconUrl ? <Head><link rel="icon" href={config.faviconUrl} /></Head> : null}
             <div className="hidden bg-[#111f3d] text-white lg:block">
                 <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-2.5 text-xs">
                     <div className="flex items-center gap-6 text-white/75">
-                        <span className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-[#76c206]" /> contact@prosimmobilier.ci</span>
-                        <span className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-[#76c206]" /> +225 07 00 00 00 00</span>
+                        {config.email ? <a href={`mailto:${config.email}`} className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-[#76c206]" /> {config.email}</a> : null}
+                        {config.phone ? <a href={`tel:${config.phone}`} className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-[#76c206]" /> {config.phone}</a> : null}
                     </div>
                     <div className="flex items-center gap-5 text-white/75">
                         <span className="flex items-center gap-2"><Clock3 className="h-3.5 w-3.5 text-[#76c206]" /> Lun - Ven : 08h00 - 18h00</span>
@@ -34,9 +38,9 @@ export default function PublicLayout({ children }) {
             <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 shadow-[0_8px_30px_rgba(15,31,61,0.06)] backdrop-blur">
                 <nav className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5 lg:px-6">
                     <Link href="/" className="flex items-center gap-3">
-                        <img src={logo} alt="Pros Immobilier" className="h-11 w-11 rounded-xl object-contain" />
+                        <img src={logo} alt={companyName} className="h-11 w-11 rounded-xl object-contain" />
                         <div>
-                            <p className="text-lg font-extrabold leading-none tracking-tight text-[#111f3d]">PROS IMMOBILIER</p>
+                            <p className="text-lg font-extrabold leading-none tracking-tight text-[#111f3d]">{companyName}</p>
                         </div>
                     </Link>
 
@@ -78,22 +82,25 @@ export default function PublicLayout({ children }) {
             <footer className="bg-[#0d1931] text-white">
                 <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 md:grid-cols-2 lg:grid-cols-4">
                     <div>
-                        <div className="flex items-center gap-3"><img src={logo} alt="Pros Immobilier" className="h-11 w-11 rounded-xl object-contain" /><span className="font-extrabold">PROS IMMOBILIER</span></div>
+                        <div className="flex items-center gap-3"><img src={logo} alt={companyName} className="h-11 w-11 rounded-xl object-contain" /><span className="font-extrabold">{companyName}</span></div>
                         <p className="mt-5 text-sm leading-7 text-white/60">La plateforme qui rapproche agences, propriétaires et locataires.</p>
                         <div className="mt-6 flex gap-2">
-                            <span role="img" aria-label="Facebook" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-[#1877f2]">
+                            {config.social?.facebook ? <a href={config.social.facebook} target="_blank" rel="noreferrer" aria-label="Facebook" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-[#1877f2]">
                                 <FacebookIcon className="h-4 w-4" />
-                            </span>
-                            <span role="img" aria-label="Instagram" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-[#e4405f]">
+                            </a> : null}
+                            {config.social?.instagram ? <a href={config.social.instagram} target="_blank" rel="noreferrer" aria-label="Instagram" className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-[#e4405f]">
                                 <InstagramIcon className="h-4 w-4" />
-                            </span>
+                            </a> : null}
                         </div>
                     </div>
                     <div><h3 className="font-bold">Navigation</h3><div className="mt-5 flex flex-col gap-3 text-sm text-white/60">{navigation.map((item) => <Link key={item.href} href={item.href} className="hover:text-[#76c206]">{item.label}</Link>)}</div></div>
                     <div><h3 className="font-bold">Nos services</h3><div className="mt-5 flex flex-col gap-3 text-sm text-white/60"><span>Gestion locative</span><span>Location de biens</span><span>Vente immobilière</span><span>Suivi des loyers</span><span>Accompagnement propriétaire</span></div></div>
-                    <div><h3 className="font-bold">Nous contacter</h3><div className="mt-5 space-y-4 text-sm text-white/60"><p className="flex gap-3"><MapPin className="h-5 w-5 shrink-0 text-[#76c206]" /> Abidjan, Côte d’Ivoire</p><p className="flex gap-3"><Phone className="h-5 w-5 shrink-0 text-[#76c206]" /> +225 07 00 00 00 00</p><p className="flex gap-3"><Mail className="h-5 w-5 shrink-0 text-[#76c206]" /> contact@prosimmobilier.ci</p></div></div>
+                    <div><h3 className="font-bold">Nous contacter</h3><div className="mt-5 space-y-4 text-sm text-white/60">{config.address ? <p className="flex gap-3"><MapPin className="h-5 w-5 shrink-0 text-[#76c206]" /> {config.address}</p> : null}{config.phone ? <a href={`tel:${config.phone}`} className="flex gap-3"><Phone className="h-5 w-5 shrink-0 text-[#76c206]" /> {config.phone}</a> : null}{config.email ? <a href={`mailto:${config.email}`} className="flex gap-3"><Mail className="h-5 w-5 shrink-0 text-[#76c206]" /> {config.email}</a> : null}</div></div>
                 </div>
-                <div className="border-t border-white/10 px-6 py-5 text-center text-xs text-white/45">© {new Date().getFullYear()} Pros Immobilier. Tous droits réservés.</div>
+                <div className="border-t border-white/10 px-6 py-5 text-center text-xs text-white/45">
+                    <div className="mb-3 flex flex-wrap justify-center gap-4"><Link href="/informations-legales/politique-confidentialite">Confidentialité</Link><Link href="/informations-legales/conditions-generales">Conditions générales</Link><Link href="/informations-legales/conditions-utilisation">CGU</Link><Link href="/informations-legales/mentions-legales">Mentions légales</Link></div>
+                    © {new Date().getFullYear()} {companyName}. Tous droits réservés.
+                </div>
             </footer>
         </div>
     );

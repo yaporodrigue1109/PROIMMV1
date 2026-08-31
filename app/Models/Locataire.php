@@ -70,6 +70,11 @@ class Locataire extends Authenticatable
         return $this->hasMany(LocataireAgence::class, 'locataire_id', 'locataire_id');
     }
 
+    public function typePiece()
+    {
+        return $this->belongsTo(TypePiece::class, 'type_piece_id','type_pieces_id');
+    }
+
     public function loyers()
     {
         return $this->hasMany(Loyer::class, 'locataire_id', 'locataire_id');
@@ -122,9 +127,11 @@ class Locataire extends Authenticatable
             'ville',
             'region',
             'genre',
+            'typePiece',
             'contrats',
             'loyers',
             'transactions'
+
 
         ]);
     }

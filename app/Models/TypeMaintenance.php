@@ -15,7 +15,6 @@ class TypeMaintenance extends Model
         'agence_id',
         'name',
         'categorie',
-        'maintenance_category_id',
         'duree_estimee',
         'description',
         'created_by',
@@ -46,11 +45,6 @@ class TypeMaintenance extends Model
     public function agence()
     {
         return $this->belongsTo(Agence::class, 'agence_id');
-    }
-
-    public function maintenanceCategory()
-    {
-        return $this->belongsTo(MaintenanceCategory::class, 'maintenance_category_id', 'maintenance_category_id');
     }
 
     public function maintenances()

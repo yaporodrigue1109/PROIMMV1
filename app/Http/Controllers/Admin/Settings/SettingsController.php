@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SettingsRequest;
 use App\Services\SettingService;  // ← Import correct
 use App\Services\ConfigurationTarifService;
+use App\Services\LegalContentService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -14,11 +15,17 @@ class SettingsController extends Controller
 {
     protected SettingService $settingService;  // ← Type correct
     protected ConfigurationTarifService $tarifService;
+    protected LegalContentService $legalContentService;
 
-    public function __construct(SettingService $settingService,ConfigurationTarifService $tarifService)  // ← Injection correcte
+    public function __construct(
+        SettingService $settingService,
+        ConfigurationTarifService $tarifService,
+        LegalContentService $legalContentService
+    )
     {
         $this->settingService = $settingService;
         $this->tarifService = $tarifService;
+        $this->legalContentService = $legalContentService;
 
         // Décommenter les middlewares si vous en avez besoin
         // $this->middleware('permission:view_settings')->only(['index']);
@@ -32,11 +39,17 @@ class SettingsController extends Controller
     {
         $setting = $this->settingService->getSetting();
         $tarifs = $this->tarifService->getTarifsPourFormulaire();
-//dd($tarifs);
+
+        foreach ($this->legalContentService->defaults($setting) as $field => $content) {
+            if (blank($setting->getAttribute($field))) {
+                $setting->setAttribute($field, $content);
+            }
+        }
 
         return Inertia::render('Admin/Settings/Index', [
             'setting' => $setting,
             'tarifs' => $tarifs,
+            'csrfToken' => csrf_token(),
         ]);
     }
 

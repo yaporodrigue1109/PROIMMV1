@@ -10,7 +10,6 @@ import {
     Plus,
     Power,
     UserRound,
-    X,
 } from 'lucide-react';
 import AgenceLayout from '../../../Layouts/AgenceLayout';
 import { Avatar, AvatarFallback } from '../../../components/ui/avatar';
@@ -172,7 +171,6 @@ export default function Index({
 }) {
     const [search, setSearch] = useState(filters.search ?? '');
     const [proprieteId, setProprieteId] = useState(filters.propriete_id ?? '__all__');
-    const [isActif, setIsActif] = useState(filters.is_actif ?? '__all__');
     const didMountRef = useRef(false);
 
     const rows = useMemo(() => asArray(locataires?.data).map(normalizeLocataire), [locataires?.data]);
@@ -185,20 +183,15 @@ export default function Index({
     const selectedPropertyLabel =
         propertyOptions.find((item) => item.value === proprieteId)?.label ?? 'Toutes les propriétés';
 
-    const selectedStatusLabel =
-        isActif === '1' ? 'Actifs' : isActif === '0' ? 'Résiliés' : 'Tous les statuts';
-
     const activeFilters = [
         search.trim() ? `"${search.trim()}"` : null,
         proprieteId !== '__all__' ? selectedPropertyLabel : null,
-        isActif !== '__all__' ? selectedStatusLabel : null,
     ].filter(Boolean);
 
     const applyFilters = (next = {}) => {
         const query = {
             search: next.search ?? search,
             propriete_id: next.propriete_id ?? proprieteId,
-            is_actif: next.is_actif ?? isActif,
         };
 
         Object.keys(query).forEach((key) => {
@@ -226,7 +219,6 @@ export default function Index({
 
             if (trimmedSearch) query.search = trimmedSearch;
             if (proprieteId !== '__all__') query.propriete_id = proprieteId;
-            if (isActif !== '__all__') query.is_actif = isActif;
 
             router.get('/agence/locataires', query, {
                 preserveScroll: true,
@@ -236,12 +228,11 @@ export default function Index({
         }, 300);
 
         return () => window.clearTimeout(timeoutId);
-    }, [search, proprieteId, isActif]);
+    }, [search, proprieteId]);
 
     const resetFilters = () => {
         setSearch('');
         setProprieteId('__all__');
-        setIsActif('__all__');
 
         router.get('/agence/locataires', {}, {
             preserveScroll: true,
@@ -284,13 +275,6 @@ export default function Index({
             icon: Home,
             accent: COLORS.greenDark,
             tint: '#eef8df',
-        },
-        {
-            label: 'Contrats résiliés',
-            value: number(stats.resilies ?? 0),
-            icon: X,
-            accent: '#b42318',
-            tint: '#fff4f4',
         },
         {
             label: 'Ce mois',
@@ -547,14 +531,17 @@ export default function Index({
                         <h2 className="text-2xl font-semibold text-[#0f172a]">Gestion des locataires</h2>
                     </div>
 
+                    <div className="flex gap-2">
+                    <Button asChild variant="outline" className={agenceButtonStyles.outline}><Link href="/agence/locataires/impayes">Locataires en impayé</Link></Button>
                     <Button asChild className={agenceButtonStyles.primary}>
                         <Link href="/agence/locataires/create">
                             <Plus className="h-4 w-4" /> Nouveau locataire
                         </Link>
                     </Button>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {kpis.map((kpi) => {
                         const Icon = kpi.icon;
 
@@ -631,23 +618,6 @@ export default function Index({
                                 </SelectContent>
                             </Select>
 
-                            <Select
-                                value={isActif}
-                                onValueChange={(value) => {
-                                    setIsActif(value);
-                                    applyFilters({ is_actif: value });
-                                }}
-                            >
-                                <SelectTrigger className="h-10 rounded-xl border-[#c8d4de]">
-                                    <SelectValue placeholder="Tous les statuts" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__all__">Tous les statuts</SelectItem>
-                                    <SelectItem value="1">Actifs</SelectItem>
-                                    <SelectItem value="0">Résiliés</SelectItem>
-                                </SelectContent>
-                            </Select>
-
                             <div className="flex items-center gap-2">
                                 <Button type="submit" className={agenceButtonStyles.primary}>
                                     Filtrer
@@ -686,16 +656,6 @@ export default function Index({
                                             </SelectContent>
                                         </Select>
 
-                                        <Select value={isActif} onValueChange={setIsActif}>
-                                            <SelectTrigger className="h-9 w-full md:w-[170px] rounded-xl">
-                                                <SelectValue placeholder="Tous les statuts" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="__all__">Tous les statuts</SelectItem>
-                                                <SelectItem value="1">Actifs</SelectItem>
-                                                <SelectItem value="0">Résiliés</SelectItem>
-                                            </SelectContent>
-                                        </Select>
                                   </div>
 
                                 }

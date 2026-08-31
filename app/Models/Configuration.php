@@ -44,6 +44,11 @@ class Configuration extends Model
         'owner_ios_url',
         'tenant_android_url',
         'tenant_ios_url',
+        'subscription_manual_payment_enabled',
+        'subscription_wave_number',
+        'subscription_orange_money_number',
+        'subscription_moov_money_number',
+        'subscription_mtn_money_number',
     ];
 
     protected $casts = [
@@ -51,6 +56,12 @@ class Configuration extends Model
         'updated_at' => 'datetime',
         'website_commitments' => 'array',
         'website_faqs' => 'array',
+        'subscription_manual_payment_enabled' => 'boolean',
+    ];
+
+    protected $appends = [
+        'logo_url',
+        'favicon_url',
     ];
 
     /**
@@ -58,7 +69,7 @@ class Configuration extends Model
      */
     public function getLogoUrlAttribute(): ?string
     {
-        return $this->logo ? asset('storage/' . $this->logo) : null;
+        return $this->publicMediaUrl($this->logo);
     }
 
     /**
@@ -66,7 +77,31 @@ class Configuration extends Model
      */
     public function getFaviconUrlAttribute(): ?string
     {
-        return $this->flavicon ? asset('storage/' . $this->flavicon) : null;
+        return $this->publicMediaUrl($this->flavicon);
+    }
+
+    private function publicMediaUrl(?string $path): ?string
+    {
+        $path = trim((string) $path);
+
+        if ($path === '') {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+
+        $path = ltrim($path, '/');
+
+        // Compatibilité avec les anciens fichiers placés directement dans public/admin/...
+        if (is_file(public_path($path))) {
+            return asset($path);
+        }
+
+        $path = preg_replace('#^storage/#', '', $path);
+
+        return asset('storage/' . $path);
     }
 
     /**

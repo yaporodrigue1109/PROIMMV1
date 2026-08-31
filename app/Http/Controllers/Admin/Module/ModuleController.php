@@ -388,7 +388,7 @@ class ModuleController extends Controller
             'proprietes' => ['Voir' => 'view', 'Créer' => 'create', 'Modifier' => 'edit', 'Supprimer' => 'delete'],
             'proprietaire' => ['Voir' => 'view', 'Créer' => 'create', 'Modifier' => 'edit', 'Supprimer' => 'delete'],
             'locataires' => ['Voir' => 'view', 'Créer' => 'create', 'Modifier' => 'edit', 'Supprimer' => 'delete'],
-            'personnel' => ['Voir' => 'view', 'Créer' => 'create', 'Modifier' => 'edit', 'Supprimer' => 'delete'],
+            'personnel' => ['Voir' => 'view', 'Créer' => 'create', 'Modifier' => 'edit', 'Désactiver' => 'delete'],
             'maintenance' => ['Voir' => 'view', 'Créer' => 'create', 'Modifier' => 'edit', 'Valider' => 'validate', 'Annuler' => 'cancel'],
             'caisse' => ['Voir' => 'view', 'Créer' => 'create', 'Valider' => 'validate', 'Annuler' => 'cancel'],
             'reversement' => ['Voir' => 'view', 'Créer' => 'create', 'Valider' => 'validate', 'Exporter' => 'export'],

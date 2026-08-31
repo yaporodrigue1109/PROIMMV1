@@ -26,6 +26,7 @@ import {
     Clock,
     FileText,
     PiggyBank,
+    ShoppingBag,
     TrendingUp,
     Users,
     UserCheck,
@@ -38,6 +39,7 @@ import AgenceLayout from '../../../Layouts/AgenceLayout';
 import { DateRangePicker } from '../../../components/date-range-picker';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
+import { SearchableSelect } from '../../../components/ui/searchable-select';
 import { cn } from '../../../lib/utils';
 
 const BRAND = '#00559b';
@@ -48,6 +50,7 @@ const TABS = [
     { key: 'locataires', label: 'Locataires', icon: Users },
     { key: 'personnel', label: 'Personnel', icon: BriefcaseBusiness },
     { key: 'finances', label: 'Finances & Recouvrement', icon: Banknote },
+    { key: 'depenses', label: 'Dépenses', icon: PiggyBank },
     { key: 'reversements', label: 'Tableau des reversements', icon: Wallet },
     { key: 'maintenance', label: 'Gestion & Maintenance', icon: Wrench },
 ];
@@ -136,12 +139,20 @@ function StatCard({ icon: Icon, label, value, sub, tone = 'brand' }) {
 
 function ComboChart({ data }) {
     return (
-        <div className="h-60 w-full min-w-[560px]">
-            <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+        <div className="w-full min-w-0">
+            <div className="h-60 w-full min-w-0 overflow-hidden">
+                <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data} margin={{ top: 18, right: 16, left: 0, bottom: 0 }}>
                     <CartesianGrid stroke="#eef2f6" vertical={false} />
                     <XAxis dataKey="mois" tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                    <YAxis tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} width={32} />
+                    <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fill: '#94a3b8', fontSize: 11 }}
+                        width={48}
+                        domain={[0, (dataMax) => Math.max(1, Math.ceil(Number(dataMax || 0) * 1.1))]}
+                        allowDataOverflow={false}
+                    />
                     <Tooltip
                         cursor={{ fill: 'rgba(0,85,155,0.04)' }}
                         contentStyle={{
@@ -151,9 +162,12 @@ function ComboChart({ data }) {
                     />
                     <Bar dataKey="loyers" name="Loyers encaissés" stackId="revenus" fill="rgba(0,85,155,0.78)" radius={[0, 0, 0, 0]} barSize={24} />
                     <Bar dataKey="ventes" name="Ventes" stackId="revenus" fill="#4d8500" radius={[3, 3, 0, 0]} barSize={24} />
+                    <Bar dataKey="depensesAgence" name="Dépenses agence" stackId="sorties" fill="#f59e0b" radius={[0, 0, 0, 0]} barSize={18} />
+                    <Bar dataKey="depensesMaintenance" name="Maintenances réglées" stackId="sorties" fill="#ef4444" radius={[3, 3, 0, 0]} barSize={18} />
                     <Line type="monotone" dataKey="impaye" name="Impayés" stroke="#ff5a6f" strokeWidth={2.5} dot={false} />
-                </ComposedChart>
-            </ResponsiveContainer>
+                    </ComposedChart>
+                </ResponsiveContainer>
+            </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-5 pl-2 text-xs">
                 <span className="flex items-center gap-2 text-slate-600">
@@ -161,6 +175,12 @@ function ComboChart({ data }) {
                 </span>
                 <span className="flex items-center gap-2 text-slate-600">
                     <span className="h-2 w-4 rounded-full bg-[#ff5a6f]" /> Impayés
+                </span>
+                <span className="flex items-center gap-2 text-slate-600">
+                    <span className="h-2 w-4 rounded-full bg-[#f59e0b]" /> Dépenses agence
+                </span>
+                <span className="flex items-center gap-2 text-slate-600">
+                    <span className="h-2 w-4 rounded-full bg-[#ef4444]" /> Maintenances réglées
                 </span>
             </div>
         </div>
@@ -271,6 +291,64 @@ function RankedList({ items, formatValue }) {
     );
 }
 
+function TenantRankingCard({ title, subtitle, items, tone = 'brand' }) {
+    const barColor = tone === 'red' ? '#dc2626' : '#16803c';
+
+    return (
+        <Card className="min-w-0 rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
+            <CardContent className="mt-4 p-5">
+                <SectionTitle icon={tone === 'red' ? AlertTriangle : UserCheck} title={title} subtitle={subtitle} />
+                {items.length ? (
+                    <div className="space-y-3">
+                        {items.map((item, index) => {
+                            const max = Math.max(...items.map((entry) => Number(entry.montant ?? 0)), 1);
+                            return (
+                                <div key={item.locataire_id ?? `${item.name}-${index}`}>
+                                    <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                                        <span className="flex min-w-0 items-center gap-2 text-slate-600">
+                                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-500">{index + 1}</span>
+                                            <span className="truncate">{item.name}{item.code ? ` · ${item.code}` : ''}</span>
+                                        </span>
+                                        <span className="shrink-0 font-semibold text-slate-800">{fmtF(Number(item.montant ?? 0))}</span>
+                                    </div>
+                                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                                        <div className="h-full rounded-full" style={{ width: `${(Number(item.montant ?? 0) / max) * 100}%`, backgroundColor: barColor }} />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : <p className="py-8 text-center text-sm text-slate-500">Aucune donnée sur la période sélectionnée.</p>}
+            </CardContent>
+        </Card>
+    );
+}
+
+function PaymentMethodsCard({ items }) {
+    return (
+        <Card className="rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
+            <CardContent className="mt-4 p-5">
+                <SectionTitle icon={Wallet} title="Moyens de paiement les plus utilisés" subtitle="Classement des encaissements de loyer sur la période" />
+                <div className="overflow-x-auto">
+                    <table className="w-full min-w-[560px] text-sm">
+                        <thead><tr className="border-b text-left text-xs uppercase text-slate-500"><th className="px-3 py-3">Rang</th><th className="px-3 py-3">Moyen de paiement</th><th className="px-3 py-3 text-right">Utilisations</th><th className="px-3 py-3 text-right">Montant encaissé</th></tr></thead>
+                        <tbody>
+                            {items.length ? items.map((item, index) => (
+                                <tr key={`${item.mode}-${index}`} className="border-b border-slate-100 last:border-0">
+                                    <td className="px-3 py-3 font-semibold text-[#00559b]">#{index + 1}</td>
+                                    <td className="px-3 py-3 font-medium text-slate-800">{item.mode}</td>
+                                    <td className="px-3 py-3 text-right text-slate-600">{item.nombre_paiements}</td>
+                                    <td className="px-3 py-3 text-right font-semibold text-slate-900">{fmtF(Number(item.montant_total ?? 0))}</td>
+                                </tr>
+                            )) : <tr><td colSpan={4} className="px-3 py-8 text-center text-slate-500">Aucun encaissement de loyer sur cette période.</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
 function ActivityCard({ items, compact = false }) {
     return (
         <Card className="rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
@@ -352,7 +430,7 @@ function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, so
 
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-500">Trier</span>
-                    <select
+                    <SearchableSelect
                         value={sortBy}
                         onChange={(event) => setSortBy(event.target.value)}
                         className="rounded-xl border border-[#dbe3ea] bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none"
@@ -360,7 +438,7 @@ function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, so
                         <option value="recent">Plus récents</option>
                         <option value="amount">Montant</option>
                         <option value="name">Nom</option>
-                    </select>
+                    </SearchableSelect>
                 </div>
             </div> */}
 
@@ -390,11 +468,11 @@ function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, so
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <p className="text-sm font-semibold text-slate-900">
-                                    Performance des Encaissements
+                                    Performance financière
                                 </p>
 
                                 <p className="text-xs text-slate-500">
-                                    Comparatif des encaissements et impayés
+                                    Encaissements, impayés et dépenses réellement enregistrées
                                 </p>
                             </div>
 
@@ -407,7 +485,7 @@ function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, so
                             </Button>
                         </div>
 
-                        <div className="flex min-h-[350px] flex-1 items-center">
+                        <div className="flex min-h-[350px] min-w-0 flex-1 items-center overflow-hidden">
                             <ComboChart data={d.evolution} />
                         </div>
                     </CardContent>
@@ -421,7 +499,7 @@ function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, so
                             <SectionTitle
                                 icon={TrendingUp}
                                 title="Occupation"
-                                subtitle="Lots occupés et libres"
+                                subtitle="Portes occupées et libres"
                             />
 
                             <div className="mt-3 flex items-end justify-between gap-4">
@@ -436,7 +514,7 @@ function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, so
                                 </div>
 
                                 <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
-                                    {d.patrimoine.occupes} lots occupés
+                                    {d.patrimoine.occupes} portes occupées
                                 </div>
                             </div>
 
@@ -457,7 +535,7 @@ function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, so
                                     </span>
 
                                     <span className="font-medium text-slate-900">
-                                        {d.patrimoine.occupes} lots
+                                        {d.patrimoine.occupes} portes
                                     </span>
                                 </div>
 
@@ -468,7 +546,7 @@ function OverviewTab({ d, tauxOccupation, metrics, searchTerm, setSearchTerm, so
                                     </span>
 
                                     <span className="font-medium text-slate-900">
-                                        {d.patrimoine.libres} lots
+                                        {d.patrimoine.libres} portes
                                     </span>
                                 </div>
                             </div>
@@ -628,7 +706,7 @@ class StatisticsTabBoundary extends Component {
     }
 }
 
-function FinancesTab({ d, tauxRecouvrement }) {
+function FinancesTab({ d, tauxRecouvrement, modesPaiement = [] }) {
     return (
         <div className="space-y-6">
         <div className="grid items-stretch gap-6 lg:grid-cols-2">
@@ -639,10 +717,6 @@ function FinancesTab({ d, tauxRecouvrement }) {
                             <p className="text-sm font-semibold text-slate-900">Revenus & Commissions</p>
                             <p className="text-xs text-slate-500">Encaissements sur la période sélectionnée</p>
                         </div>
-                        <Button variant="ghost" className="h-8 rounded-lg px-3 text-xs text-slate-500 hover:bg-slate-50">
-                            CSV
-                            <FileText className="ml-1 h-4 w-4" />
-                        </Button>
                     </div>
                     <div className="flex min-h-[350px] flex-1 items-center">
                         <ComboChart data={d.evolution} />
@@ -658,7 +732,7 @@ function FinancesTab({ d, tauxRecouvrement }) {
 
                         <div className="mt-4 space-y-3 border-t border-[#d7e4f1] pt-4">
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-slate-600">Encaissements</span>
+                                <span className="text-slate-600">Loyers recouvrés sur ces échéances</span>
                                 <span className="font-semibold text-slate-900">{fmtF(d.finances.loyersEncaisses)}</span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
@@ -688,11 +762,70 @@ function FinancesTab({ d, tauxRecouvrement }) {
                 />
             </aside>
         </div>
+        <PaymentMethodsCard items={modesPaiement} />
         </div>
     );
 }
 
-function MaintenanceTab({ d }) {
+function DepensesTab({ stats, labels, agencySeries, maintenanceSeries, rows }) {
+    const chartData = labels.map((label, index) => ({
+        periode: label,
+        agence: Number(agencySeries[index] ?? 0),
+        maintenance: Number(maintenanceSeries[index] ?? 0),
+    }));
+
+    return (
+        <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-3">
+                <StatCard icon={ShoppingBag} label="Dépenses agence" value={fmtF(Number(stats.depenses_agence_montant ?? 0))} sub="Charges de fonctionnement réglées" tone="amber" />
+                <StatCard icon={Wrench} label="Maintenances réglées" value={fmtF(Number(stats.cout_maintenance_mois ?? 0))} sub="Décaissements de maintenance" tone="red" />
+                <StatCard icon={PiggyBank} label="Total des dépenses" value={fmtF(Number(stats.depenses_total ?? 0))} sub="Agence + maintenance" tone="violet" />
+            </div>
+
+            <Card className="rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
+                <CardContent className="mt-4 p-5">
+                    <SectionTitle icon={PiggyBank} title="Évolution des dépenses" subtitle="Décaissements réellement enregistrés sur la période" />
+                    <div className="h-72 min-w-[560px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData}>
+                                <CartesianGrid stroke="#eef2f6" vertical={false} />
+                                <XAxis dataKey="periode" tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                                <YAxis tickLine={false} axisLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                                <Tooltip formatter={(value) => fmtF(Number(value))} />
+                                <Bar dataKey="agence" name="Dépenses agence" stackId="depenses" fill="#f59e0b" />
+                                <Bar dataKey="maintenance" name="Maintenance" stackId="depenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-[#dbe3ea] bg-white shadow-sm">
+                <CardContent className="mt-4 p-5">
+                    <SectionTitle icon={FileText} title="Dernières dépenses" subtitle="Transactions de caisse de la période" />
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead><tr className="border-b text-left text-slate-500"><th className="py-3">Date</th><th>Nature</th><th>Libellé</th><th>Mode</th><th className="text-right">Montant</th></tr></thead>
+                            <tbody>
+                                {rows.map((row) => (
+                                    <tr key={row.id} className="border-b border-slate-100">
+                                        <td className="py-3 text-slate-500">{row.date}</td>
+                                        <td>{row.type === 'maintenance' ? 'Maintenance' : 'Dépense agence'}</td>
+                                        <td>{row.label}</td><td>{row.mode}</td>
+                                        <td className="text-right font-semibold text-red-600">{fmtF(Number(row.amount ?? 0))}</td>
+                                    </tr>
+                                ))}
+                                {!rows.length ? <tr><td colSpan="5" className="py-10 text-center text-slate-500">Aucune dépense sur cette période.</td></tr> : null}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+function MaintenanceTab({ d, stats, periodLabel }) {
     const maintenancePieData = d.maintenance.interventionsParType.map((segment) => ({
         label: segment.label,
         value: Number(segment.valeur ?? 0),
@@ -706,16 +839,16 @@ function MaintenanceTab({ d }) {
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Gestion des contrats</p>
                         <div className="mt-3 flex items-end justify-between gap-4">
                             <div>
-                                <p className="text-4xl font-semibold text-slate-900">{d.contrats.contratsEnCours} / 214</p>
+                                <p className="text-4xl font-semibold text-slate-900">{d.contrats.contratsEnCours} / {stats.portes_total ?? 0}</p>
                                 <p className="mt-1 text-sm text-slate-500">Lots sous contrat</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-2xl font-semibold text-[#0d8ae6]">88.3%</p>
+                                <p className="text-2xl font-semibold text-[#0d8ae6]">{stats.occupation_rate ?? 0}%</p>
                                 <p className="text-xs text-slate-500">Taux d'occupation</p>
                             </div>
                         </div>
                         <div className="mt-4">
-                            <p className="text-xs text-slate-500">NOUVEAUX (JUIN)</p>
+                            <p className="text-xs text-slate-500">NOUVEAUX ({periodLabel})</p>
                             <p className="text-xl font-semibold text-emerald-600">{d.contrats.nouveauxContrats}</p>
                             <div className="mt-4 flex justify-end">
                                 <Link href="/agence/proprietes" className="text-xs font-semibold text-[#00559b]">
@@ -731,7 +864,7 @@ function MaintenanceTab({ d }) {
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Maintenance</p>
                         <div className="mt-3 flex items-end justify-between gap-4">
                             <div>
-                                <p className="text-4xl font-semibold text-slate-900">{d.maintenance.interventionsOuvertes} / 36</p>
+                                <p className="text-4xl font-semibold text-slate-900">{d.maintenance.interventionsOuvertes} / {stats.maintenances_total ?? 0}</p>
                                 <p className="mt-1 text-sm text-slate-500">Interventions actives</p>
                             </div>
                             <div className="text-right">
@@ -739,9 +872,11 @@ function MaintenanceTab({ d }) {
                                 <p className="text-xs text-slate-500">Clôturées sur la période</p>
                             </div>
                         </div>
-                        <Button className="mt-5 h-9 w-full rounded-xl bg-[#eaf4fb] text-[#00559b] hover:bg-[#deeffa]">
-                            <CalendarClock className="mr-2 h-4 w-4" />
-                            Programmer une intervention
+                        <Button asChild className="mt-5 h-9 w-full rounded-xl bg-[#eaf4fb] text-[#00559b] hover:bg-[#deeffa]">
+                            <Link href="/agence/maintenance">
+                                <CalendarClock className="mr-2 h-4 w-4" />
+                                Programmer une intervention
+                            </Link>
                         </Button>
                     </CardContent>
                 </Card>
@@ -808,6 +943,8 @@ export default function Statistiques({
     revenueSeries = [],
     salesMonthSeries = [],
     maintenanceMonthSeries = [],
+    depensesAgenceSeries = [],
+    depensesMaintenanceSeries = [],
     proprietairesMonthSeries = [],
     locatairesMonthSeries = [],
     personnelMonthSeries = [],
@@ -818,6 +955,10 @@ export default function Statistiques({
     topProperties = [],
     recentTransactions = [],
     recentMaintenances = [],
+    recentExpenses = [],
+    modesPaiementRecouvrement = [],
+    meilleursPayeurs = [],
+    mauvaisPayeurs = [],
     reversementsYearMatrix = [],
     reversementMonthLabels = [],
     year = new Date().getFullYear(),
@@ -867,6 +1008,7 @@ export default function Statistiques({
         patrimoine: {
             proprietes: Number(stats.proprietes_total ?? 0),
             lots: Number(stats.lots_total ?? 0),
+            portes: Number(stats.portes_total ?? 0),
             occupes: Number(stats.portes_occupees ?? 0),
             libres: Number(stats.portes_libres ?? 0),
         },
@@ -874,21 +1016,20 @@ export default function Statistiques({
             locatairesActifs: Number(stats.locataires_actifs ?? 0),
             proprietaires: Number(stats.proprietaires_total ?? 0),
             contratsEnCours: Number(stats.portes_occupees ?? 0),
-            contratsExpirant: 0,
             nouveauxContrats: Number(stats.locataires_ce_mois ?? 0),
         },
         finances: {
-            loyersAttendus: Number(stats.reversements_attendu ?? stats.revenu_mois ?? 0),
-            loyersEncaisses: Number(stats.revenu_mois ?? 0),
+            loyersAttendus: Number(stats.loyers_attendus ?? 0),
+            loyersEncaisses: Number(stats.loyers_recouvres ?? 0),
+            encaissementsLoyers: Number(stats.revenu_mois ?? 0),
             ventesMontant: Number(stats.ventes_montant ?? 0),
             ventesNombre: Number(stats.ventes_nombre ?? 0),
-            impayes: Math.max(Number(stats.reversements_attendu ?? 0) - Number(stats.revenu_mois ?? 0), 0),
-            locatairesRetard: 0,
-            arrieres: Number(stats.reversements_attendu ?? 0),
+            impayes: Number(stats.impayes_total ?? 0),
+            arrieres: Number(stats.impayes_total ?? 0),
         },
         tresorerie: {
-            depensesAgence: Number(stats.cout_maintenance_mois ?? 0),
-            soldeCaisse: Number(stats.total_encaisse ?? 0),
+            depensesAgence: Number(stats.depenses_total ?? 0),
+            soldeCaisse: Number(stats.total_encaisse ?? 0) - Number(stats.depenses_total ?? 0),
             encaissementsParCategorie: [
                 { label: 'Ventes', montant: Number(stats.ventes_montant ?? 0) },
                 { label: 'Loyers', montant: Number(stats.revenu_mois ?? 0) },
@@ -906,7 +1047,9 @@ export default function Statistiques({
             mois: label,
             loyers: Number(revenueSeries[index] ?? 0),
             ventes: Number(salesMonthSeries[index] ?? 0),
-            impaye: Math.max(Number(revenueSeries[index] ?? 0) * 0.12, 0),
+            impaye: Number(loyersMonthSeries[index]?.impaye ?? 0),
+            depensesAgence: Number(depensesAgenceSeries[index] ?? 0),
+            depensesMaintenance: Number(depensesMaintenanceSeries[index] ?? 0),
         })),
         topRentables: topProperties.map((item) => ({
             nom: item.propriete?.reference ?? `Propriété ${item.propriete_id ?? ''}`,
@@ -915,10 +1058,6 @@ export default function Statistiques({
         alertes: [
             {
                 texte: `${stats.reversements_en_attente ?? 0} reversements en attente`,
-                niveau: 'warning',
-            },
-            {
-                texte: `${stats.transactions_en_attente ?? 0} transactions en attente`,
                 niveau: 'warning',
             },
             {
@@ -931,18 +1070,18 @@ export default function Statistiques({
             action: `a enregistré un paiement de ${fmtF(Number(item.amount ?? 0))}`,
             temps: item.date ?? '—',
         })),
-    }), [stats, monthlyLabels, revenueSeries, salesMonthSeries, maintenanceSeries, topProperties, recentTransactions]);
+    }), [stats, monthlyLabels, revenueSeries, salesMonthSeries, loyersMonthSeries, depensesAgenceSeries, depensesMaintenanceSeries, maintenanceSeries, topProperties, recentTransactions]);
 
     const tauxOccupation = useMemo(() => {
-        const total = Number(d.patrimoine.lots || d.patrimoine.proprietes || 0);
+        const total = Number(d.patrimoine.portes || 0);
         const occupied = Number(d.patrimoine.occupes || 0);
-        return total > 0 ? Math.round((occupied / total) * 100) : 0;
+        return total > 0 ? Math.min(100, Math.round((occupied / total) * 100)) : 0;
     }, [d.patrimoine]);
 
     const tauxRecouvrement = useMemo(() => {
         const attendu = Number(d.finances.loyersAttendus || 0);
         const encaisse = Number(d.finances.loyersEncaisses || 0);
-        return attendu > 0 ? Math.round((encaisse / attendu) * 100) : 0;
+        return attendu > 0 ? Math.min(100, Math.round((encaisse / attendu) * 100)) : 0;
     }, [d.finances]);
 
     const filteredTopProperties = useMemo(() => {
@@ -1033,6 +1172,34 @@ export default function Statistiques({
             tone: 'amber',
         },
         {
+            icon: Wrench,
+            label: 'Maintenances réglées',
+            value: fmtF(Number(stats.cout_maintenance_mois ?? 0)),
+            sub: 'Sorties de caisse sur la période',
+            tone: 'red',
+        },
+        {
+            icon: ShoppingBag,
+            label: 'Dépenses agence',
+            value: fmtF(Number(stats.depenses_agence_montant ?? 0)),
+            sub: 'Charges réglées sur la période',
+            tone: 'amber',
+        },
+        {
+            icon: PiggyBank,
+            label: 'Total des dépenses',
+            value: fmtF(Number(stats.depenses_total ?? 0)),
+            sub: 'Maintenance + dépenses agence',
+            tone: 'red',
+        },
+        {
+            icon: Wallet,
+            label: 'Performance nette',
+            value: fmtF(Number(stats.total_encaisse ?? 0) - Number(stats.depenses_total ?? 0)),
+            sub: 'Encaissements et ventes moins dépenses',
+            tone: Number(stats.total_encaisse ?? 0) - Number(stats.depenses_total ?? 0) >= 0 ? 'green' : 'red',
+        },
+        {
             icon: CalendarClock,
             label: 'Personnel',
             value: `${stats.personnel_total ?? 0} agents`,
@@ -1098,7 +1265,11 @@ export default function Statistiques({
                     </div>
                 </div>
 
-                <div className="mb-6 flex flex-wrap gap-2 border-b border-[#dbe3ea]">
+                <div
+                    className="mb-6 flex w-full flex-nowrap gap-2 overflow-x-auto border-b border-[#dbe3ea] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    role="tablist"
+                    aria-label="Sections des statistiques"
+                >
                     {TABS.map((tab) => {
                         const Icon = tab.icon;
                         const active = activeTab === tab.key;
@@ -1108,8 +1279,10 @@ export default function Statistiques({
                                 key={tab.key}
                                 type="button"
                                 onClick={() => setActiveTab(tab.key)}
+                                role="tab"
+                                aria-selected={active}
                                 className={cn(
-                                    'border-b-2 px-1 py-2 text-sm font-medium transition-colors',
+                                    'shrink-0 whitespace-nowrap border-b-2 px-1 py-2 text-sm font-medium transition-colors',
                                     active ? 'border-[#00559b] text-[#00559b]' : 'border-transparent text-slate-500 hover:text-slate-700'
                                 )}
                             >
@@ -1194,6 +1367,10 @@ export default function Statistiques({
                                 </div>
                             </CardContent>
                         </Card>
+                        <div className="grid gap-6 xl:grid-cols-2">
+                            <TenantRankingCard title="Top 10 des meilleurs payeurs" subtitle="Montants de loyers encaissés sur la période" items={meilleursPayeurs} />
+                            <TenantRankingCard title="Top 10 des mauvais payeurs" subtitle="Sommes restant dues sur les échéances de la période" items={mauvaisPayeurs} tone="red" />
+                        </div>
                     </PeopleOverviewTab>
                 ) : null}
 
@@ -1215,7 +1392,17 @@ export default function Statistiques({
                     />
                 ) : null}
 
-                {activeTab === 'finances' ? <FinancesTab d={d} tauxRecouvrement={tauxRecouvrement} /> : null}
+                {activeTab === 'finances' ? <FinancesTab d={d} tauxRecouvrement={tauxRecouvrement} modesPaiement={modesPaiementRecouvrement} /> : null}
+
+                {activeTab === 'depenses' ? (
+                    <DepensesTab
+                        stats={stats}
+                        labels={monthlyLabels}
+                        agencySeries={depensesAgenceSeries}
+                        maintenanceSeries={depensesMaintenanceSeries}
+                        rows={recentExpenses}
+                    />
+                ) : null}
 
                 {activeTab === 'reversements' ? (
                     <StatisticsTabBoundary>
@@ -1223,7 +1410,7 @@ export default function Statistiques({
                     </StatisticsTabBoundary>
                 ) : null}
 
-                {activeTab === 'maintenance' ? <MaintenanceTab d={d} /> : null}
+                {activeTab === 'maintenance' ? <MaintenanceTab d={d} stats={stats} periodLabel={periodLabel} /> : null}
             </div>
         </AgenceLayout>
     );

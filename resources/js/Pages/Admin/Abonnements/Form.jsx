@@ -210,7 +210,11 @@ const normalizeModules = (tarifs = {}) => {
         ? tarifs.modules
         : asList(tarifs?.modules ?? tarifs?.plan?.modules);
 
-    return source.map((item, index) => {
+    return source.filter((item) => {
+        if (typeof item === 'string') return true;
+        const active = item?.actif ?? item?.is_active ?? item?.is_actif;
+        return active === undefined || active === null || active === true || active === 1 || active === '1';
+    }).map((item, index) => {
         if (typeof item === 'string') {
             return {
                 id: index + 1,
@@ -983,4 +987,3 @@ function EmptyState({ title, description }) {
         </div>
     );
 }
-

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { ArrowUpRight, BarChart3, CreditCard, Download, PieChart, Search, Ticket, TrendingUp } from 'lucide-react';
+import { usePoll } from '@inertiajs/react';
+import { ArrowUpRight, BarChart3, Building2, CreditCard, DoorOpen, Download, House, PieChart, Search, Ticket, TrendingUp, UserRound, Users } from 'lucide-react';
+import { Bar, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import AdminLayout from '../../../Layouts/AdminLayout';
 import { Badge } from '../../../components/ui/badge';
@@ -26,46 +28,24 @@ import {
 const formatMoney = (value) =>
     new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(value ?? 0)) + ' FCFA';
 
-export default function Index() {
-    const [tab, setTab] = useState('revenus');
-
-    const revenueRows = [
-        { mois: 'Janvier 2026', abo: 3, montant: 120000, pct: 69 },
-        { mois: 'Fevrier 2026', abo: 4, montant: 145000, pct: 83 },
-        { mois: 'Mars 2026', abo: 2, montant: 98000, pct: 57 },
-        { mois: 'Avril 2026', abo: 5, montant: 162000, pct: 93 },
-        { mois: 'Mai 2026', abo: 6, montant: 174000, pct: 100 },
-    ];
-
-    const subscriptions = [
-        { agence: 'Pros Immo Cocody', code: 'AGC-001', plan: 'Standard', debut: '01/04/2026', fin: '30/04/2026', statut: 'Actif', montant: 50000 },
-        { agence: 'Pros Immo Bingerville', code: 'AGC-004', plan: 'Standard', debut: '15/04/2026', fin: '15/05/2026', statut: 'En attente', montant: 72000 },
-        { agence: 'Pros Immo Plateau', code: 'AGC-002', plan: 'Standard', debut: '05/04/2026', fin: '05/05/2026', statut: 'Actif', montant: 52000 },
-        { agence: 'Pros Immo Yopougon', code: 'AGC-003', plan: 'Standard', debut: '01/03/2026', fin: '31/03/2026', statut: 'Expire', montant: 50000 },
-        { agence: 'Pros Immo Marcory', code: 'AGC-005', plan: 'Standard', debut: '01/04/2026', fin: '30/04/2026', statut: 'Actif', montant: 55000 },
-    ];
-
-    const agencies = [
-        { agence: 'Pros Immo Cocody', code: 'AGC-001', modules: 4, statut: 'Actif', montant: 50000, pct: 69 },
-        { agence: 'Pros Immo Bingerville', code: 'AGC-004', modules: 3, statut: 'En attente', montant: 72000, pct: 100 },
-        { agence: 'Pros Immo Plateau', code: 'AGC-002', modules: 1, statut: 'Actif', montant: 52000, pct: 72 },
-        { agence: 'Pros Immo Yopougon', code: 'AGC-003', modules: 0, statut: 'Expire', montant: 50000, pct: 69 },
-        { agence: 'Pros Immo Marcory', code: 'AGC-005', modules: 2, statut: 'Actif', montant: 55000, pct: 76 },
-    ];
-
-    const payments = [
-        { agence: 'Pros Immo Cocody', code: 'AGC-001', date: '01 avr. 2026', montant: 50000, mode: 'Mobile Money', statut: 'Paye', ref: 'PAY-0041' },
-        { agence: 'Pros Immo Plateau', code: 'AGC-002', date: '05 avr. 2026', montant: 52000, mode: 'Virement', statut: 'Paye', ref: 'PAY-0042' },
-        { agence: 'Pros Immo Bingerville', code: 'AGC-004', date: '15 avr. 2026', montant: 72000, mode: 'N/A', statut: 'En attente', ref: 'PAY-0043' },
-        { agence: 'Pros Immo Yopougon', code: 'AGC-003', date: '01 mar. 2026', montant: 50000, mode: 'Especes', statut: 'Paye', ref: 'PAY-0038' },
-        { agence: 'Pros Immo Marcory', code: 'AGC-005', date: '02 avr. 2026', montant: 55000, mode: 'Mobile Money', statut: 'Paye', ref: 'PAY-0039' },
-    ];
+export default function Index({ revenueRows = [], subscriptions = [], subscriptionMonthlyRows = [], agencies = [], agencyRankings = {}, payments = [], summary = {}, generalStats = {} }) {
+    usePoll(30000, {
+        only: ['revenueRows', 'subscriptions', 'subscriptionMonthlyRows', 'agencies', 'agencyRankings', 'payments', 'summary', 'generalStats'],
+        preserveScroll: true,
+        preserveState: true,
+    });
+    const [tab, setTab] = useState('general');
 
     const totalRevenus = revenueRows.reduce((sum, row) => sum + row.montant, 0);
-    const maxRevenue = Math.max(...revenueRows.map((row) => row.montant));
+    const maxRevenue = Math.max(1, ...revenueRows.map((row) => row.montant));
+    const currentRevenue = revenueRows.at(-1)?.montant ?? 0;
+    const averageRevenue = revenueRows.length ? totalRevenus / revenueRows.length : 0;
+    const bestRevenue = revenueRows.reduce((best, row) => row.montant > (best?.montant ?? -1) ? row : best, null);
+    const subscriptionTotalAmount = subscriptionMonthlyRows.reduce((sum, row) => sum + Number(row.montant ?? 0), 0);
+    const subscriptionTotalEvents = subscriptionMonthlyRows.reduce((sum, row) => sum + Number(row.total ?? 0), 0);
 
     const statusBadge = (status) => {
-        if (status === 'Actif' || status === 'Paye') return 'success';
+        if (status === 'Actif' || status === 'Paye' || status === 'Payé') return 'success';
         if (status === 'En attente') return 'warning';
         return 'danger';
     };
@@ -99,7 +79,8 @@ export default function Index() {
                 <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <Tabs value={tab} onValueChange={setTab} className="w-full lg:max-w-3xl">
-                            <TabsList className="grid h-auto w-full grid-cols-4 rounded-2xl bg-slate-100 p-1">
+                            <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl bg-slate-100 p-1 sm:grid-cols-5">
+                                <TabsTrigger value="general" className="rounded-xl">Vue générale</TabsTrigger>
                                 <TabsTrigger value="revenus" className="rounded-xl">Revenus</TabsTrigger>
                                 <TabsTrigger value="abonnements" className="rounded-xl">Abonnements</TabsTrigger>
                                 <TabsTrigger value="agences" className="rounded-xl">Agences</TabsTrigger>
@@ -108,26 +89,54 @@ export default function Index() {
                         </Tabs>
 
                         <div className="flex items-center gap-3">
-                            <Badge variant="outline" className="rounded-full">3 mois</Badge>
-                            <span className="text-sm text-slate-500">Derniere mise a jour: aujourd&apos;hui a 08:42</span>
+                            <Badge variant="outline" className="rounded-full">{summary.period_months ?? 0} mois</Badge>
+                            <span className="text-sm text-slate-500">Dernière mise à jour : {summary.updated_at ?? '—'}</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <Metric label="Revenu total" value={formatMoney(totalRevenus)} tone="text-[#00559b]" icon={TrendingUp} />
-                    <Metric label="Ce mois" value={formatMoney(174000)} tone="text-emerald-600" icon={ArrowUpRight} />
-                    <Metric label="Moyenne mensuelle" value={formatMoney(139800)} icon={CreditCard} />
-                    <Metric label="Meilleur mois" value="Mai 2026" note="174 000 FCFA" icon={PieChart} />
-                </div>
-
                 <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+                    <TabsContent value="general" className="m-0 space-y-6">
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <Metric label="Toutes les agences" value={generalStats.agences ?? 0} tone="text-[#00559b]" icon={Building2} />
+                            <Metric label="Tous les locataires" value={generalStats.locataires ?? 0} icon={Users} />
+                            <Metric label="Tous les utilisateurs" value={generalStats.utilisateurs ?? 0} icon={Users} />
+                            <Metric label="Tous les propriétaires" value={generalStats.proprietaires ?? 0} icon={Users} />
+                            <Metric label="Toutes les propriétés (biens)" value={generalStats.proprietes ?? 0} icon={House} />
+                            <Metric label="Toutes les portes" value={generalStats.portes ?? 0} icon={DoorOpen} />
+                            <Metric label="Portes occupées" value={generalStats.portes_occupees ?? 0} tone="text-emerald-600" icon={DoorOpen} />
+                            <Metric label="Portes non occupées" value={generalStats.portes_libres ?? 0} tone="text-amber-600" icon={DoorOpen} />
+                        </div>
+
+                        <Card className="rounded-3xl border-slate-200 shadow-sm">
+                            <CardHeader className="border-b border-slate-200">
+                                <CardTitle className="text-lg">Indicateurs complémentaires</CardTitle>
+                                <CardDescription>Vue consolidée de l'ensemble du parc immobilier.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-4">
+                                <Metric label="Taux d'occupation" value={`${generalStats.taux_occupation ?? 0}%`} icon={PieChart} />
+                                <Metric label="Bâtiments" value={generalStats.batiments ?? 0} icon={Building2} />
+                                <Metric label="Lots" value={generalStats.lots ?? 0} icon={House} />
+                                <Metric label="Contrats actifs" value={generalStats.contrats_actifs ?? 0} icon={CreditCard} />
+                                <Metric label="Tickets" value={generalStats.tickets ?? 0} icon={Ticket} />
+                                <Metric label="Tickets résolus" value={generalStats.tickets_resolus ?? 0} icon={Ticket} />
+                                <Metric label="Taux de résolution" value={`${generalStats.taux_resolution_tickets ?? 0}%`} icon={BarChart3} />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
                     <TabsContent value="revenus" className="m-0">
+                        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <Metric label="Revenu total" value={formatMoney(totalRevenus)} tone="text-[#00559b]" icon={TrendingUp} />
+                            <Metric label="Ce mois" value={formatMoney(currentRevenue)} tone="text-emerald-600" icon={ArrowUpRight} />
+                            <Metric label="Moyenne mensuelle" value={formatMoney(averageRevenue)} icon={CreditCard} />
+                            <Metric label="Meilleur mois" value={bestRevenue?.mois ?? '—'} note={bestRevenue ? formatMoney(bestRevenue.montant) : null} icon={PieChart} />
+                        </div>
                         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
                             <Card className="rounded-3xl border-slate-200 shadow-sm">
                                 <CardHeader className="border-b border-slate-200">
                                     <CardTitle className="text-lg">Evolution mensuelle des revenus</CardTitle>
-                                    <CardDescription>Janvier a mai 2026.</CardDescription>
+                                    <CardDescription>{summary.period_label ?? 'Période non disponible'}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4 p-6">
                                     {revenueRows.map((row) => (
@@ -148,20 +157,15 @@ export default function Index() {
                                     <CardDescription>Derniers evenements financiers.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-3 p-6">
-                                    {[
-                                        ['Pros Immo Marcory', 'Abonnement renouvele', 'Il y a 2h', '55 000'],
-                                        ['Pros Immo Bingerville', 'Paiement en attente', 'Il y a 5h', '72 000'],
-                                        ['Pros Immo Plateau', 'Virement recu', 'Hier', '52 000'],
-                                        ['Pros Immo Cocody', 'Mobile Money confirme', '01 avr.', '50 000'],
-                                    ].map(([agence, action, time, amount]) => (
-                                        <div key={`${agence}-${time}`} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                    {payments.slice(0, 4).map((payment) => (
+                                        <div key={payment.ref} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                                             <div className="min-w-0">
-                                                <p className="truncate text-sm font-semibold text-slate-900">{agence}</p>
-                                                <p className="text-xs text-slate-500">{action}</p>
+                                                <p className="truncate text-sm font-semibold text-slate-900">{payment.agence}</p>
+                                                <p className="text-xs text-slate-500">{payment.statut}</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-semibold text-slate-900">{amount} FCFA</p>
-                                                <p className="text-xs text-slate-500">{time}</p>
+                                                <p className="text-sm font-semibold text-slate-900">{formatMoney(payment.montant)}</p>
+                                                <p className="text-xs text-slate-500">{payment.date}</p>
                                             </div>
                                         </div>
                                     ))}
@@ -170,7 +174,52 @@ export default function Index() {
                         </div>
                     </TabsContent>
 
-                    <TabsContent value="abonnements" className="m-0">
+                    <TabsContent value="abonnements" className="m-0 space-y-6">
+                        <Card className="rounded-3xl border-slate-200 shadow-sm">
+                            <CardHeader className="border-b border-slate-200">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                    <div>
+                                        <CardTitle className="text-lg">Évolution mensuelle des abonnements</CardTitle>
+                                        <CardDescription>Nouveaux abonnements, renouvellements et montants sur les douze derniers mois.</CardDescription>
+                                    </div>
+                                    <div className="flex flex-wrap gap-3">
+                                        <div className="rounded-2xl bg-[#eef6fb] px-4 py-3">
+                                            <p className="text-xs uppercase tracking-wide text-slate-500">Abonnements</p>
+                                            <p className="mt-1 text-lg font-semibold text-[#00559b]">{subscriptionTotalEvents}</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-emerald-50 px-4 py-3">
+                                            <p className="text-xs uppercase tracking-wide text-slate-500">Montant total</p>
+                                            <p className="mt-1 text-lg font-semibold text-emerald-700">{formatMoney(subscriptionTotalAmount)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="h-[340px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <ComposedChart data={subscriptionMonthlyRows} margin={{ top: 12, right: 12, left: -12, bottom: 0 }}>
+                                            <CartesianGrid stroke="#dbe4ec" strokeDasharray="4 6" vertical={false} />
+                                            <XAxis dataKey="mois" axisLine={false} tickLine={false} tickMargin={12} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                            <YAxis yAxisId="count" allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                                            <YAxis
+                                                yAxisId="amount"
+                                                orientation="right"
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={{ fill: '#047857', fontSize: 11 }}
+                                                tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
+                                            />
+                                            <Tooltip content={<SubscriptionTooltip />} cursor={{ fill: '#eef6fb' }} />
+                                            <Legend formatter={(value) => ({ nouveaux: 'Nouveaux abonnements', renouvellements: 'Renouvellements', montant: 'Montant' }[value] ?? value)} />
+                                            <Bar yAxisId="count" dataKey="nouveaux" name="nouveaux" fill="#00559b" radius={[6, 6, 0, 0]} maxBarSize={34} />
+                                            <Bar yAxisId="count" dataKey="renouvellements" name="renouvellements" fill="#f59e0b" radius={[6, 6, 0, 0]} maxBarSize={34} />
+                                            <Line yAxisId="amount" type="monotone" dataKey="montant" name="montant" stroke="#059669" strokeWidth={3} dot={{ r: 4, fill: '#ffffff', strokeWidth: 2 }} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </CardContent>
+                        </Card>
+
                         <Card className="rounded-3xl border-slate-200 shadow-sm">
                             <CardHeader className="border-b border-slate-200">
                                 <CardTitle className="text-lg">Liste des abonnements</CardTitle>
@@ -186,7 +235,9 @@ export default function Index() {
                                                 <TableHead>Debut</TableHead>
                                                 <TableHead>Echeance</TableHead>
                                                 <TableHead>Statut</TableHead>
-                                                <TableHead className="text-right">Montant</TableHead>
+                                                <TableHead className="text-right">Montant de base</TableHead>
+                                                <TableHead className="text-right">Modules</TableHead>
+                                                <TableHead className="text-right">Total</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -204,7 +255,9 @@ export default function Index() {
                                                     <TableCell>
                                                         <Badge variant={statusBadge(row.statut)} className="rounded-full">{row.statut}</Badge>
                                                     </TableCell>
-                                                    <TableCell className="text-right font-semibold text-slate-900">{formatMoney(row.montant)}</TableCell>
+                                                    <TableCell className="text-right text-slate-600">{formatMoney(row.montant_base)}</TableCell>
+                                                    <TableCell className="text-right text-amber-600">{formatMoney(row.montant_modules)}</TableCell>
+                                                    <TableCell className="text-right font-semibold text-emerald-700">{formatMoney(row.montant_total)}</TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
@@ -215,6 +268,13 @@ export default function Index() {
                     </TabsContent>
 
                     <TabsContent value="agences" className="m-0">
+                        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <AgencyRanking title="Locataires actifs" rows={agencyRankings.locataires} icon={Users} />
+                            <AgencyRanking title="Propriétés actives" rows={agencyRankings.proprietes} icon={House} />
+                            <AgencyRanking title="Propriétaires actifs" rows={agencyRankings.proprietaires} icon={UserRound} />
+                            <AgencyRanking title="Personnel actif" rows={agencyRankings.personnel} icon={Building2} />
+                        </div>
+
                         <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                             <Card className="rounded-3xl border-slate-200 shadow-sm">
                                 <CardHeader className="border-b border-slate-200">
@@ -247,10 +307,10 @@ export default function Index() {
                                     <CardDescription>Les principaux indicateurs du parc agences.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="grid gap-4 p-6 sm:grid-cols-2">
-                                    <Metric label="Agences totales" value="8" icon={Ticket} />
-                                    <Metric label="Avec abonnement" value="6" tone="text-emerald-600" icon={TrendingUp} />
-                                    <Metric label="Sans abonnement" value="2" tone="text-amber-600" icon={Search} />
-                                    <Metric label="Revenu max / agence" value={formatMoney(72000)} icon={BarChart3} />
+                                    <Metric label="Agences totales" value={summary.total_agencies ?? 0} icon={Ticket} />
+                                    <Metric label="Avec abonnement" value={summary.subscribed_agencies ?? 0} tone="text-emerald-600" icon={TrendingUp} />
+                                    <Metric label="Sans abonnement" value={summary.unsubscribed_agencies ?? 0} tone="text-amber-600" icon={Search} />
+                                    <Metric label="Revenu max / agence" value={formatMoney(summary.max_agency_revenue ?? 0)} icon={BarChart3} />
                                 </CardContent>
                             </Card>
                         </div>
@@ -311,6 +371,59 @@ function Metric({ label, value, note, tone = 'text-slate-900', icon: Icon }) {
                 </div>
                 <p className={`mt-2 text-2xl font-semibold ${tone}`}>{value}</p>
                 {note ? <p className="mt-1 text-xs text-slate-500">{note}</p> : null}
+            </CardContent>
+        </Card>
+    );
+}
+
+function SubscriptionTooltip({ active, payload, label }) {
+    if (!active || !payload?.length) return null;
+
+    const row = payload[0]?.payload ?? {};
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-lg">
+            <p className="text-sm font-semibold text-slate-900">{label}</p>
+            <p className="mt-2 text-sm text-[#00559b]">Nouveaux : {row.nouveaux ?? 0}</p>
+            <p className="mt-1 text-sm text-amber-600">Renouvellements : {row.renouvellements ?? 0}</p>
+            <p className="mt-1 text-sm font-semibold text-emerald-700">Montant : {formatMoney(row.montant ?? 0)}</p>
+            <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-500">
+                {row.agences ?? 0} agence(s) concernée(s)
+            </p>
+        </div>
+    );
+}
+
+function AgencyRanking({ title, rows = [], icon: Icon }) {
+    const rankingRows = Array.isArray(rows) ? rows : [];
+    const maximum = Math.max(0, ...rankingRows.map((row) => Number(row.total ?? 0)));
+
+    return (
+        <Card className="rounded-3xl border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-200 pb-4">
+                <CardTitle className="flex items-center gap-2 text-base">
+                    <Icon className="h-4 w-4 text-[#00559b]" />
+                    {title}
+                </CardTitle>
+                <CardDescription>Classement décroissant par agence.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 p-4">
+                {rankingRows.map((row, index) => {
+                    const isMaximum = maximum > 0 && Number(row.total) === maximum;
+
+                    return (
+                        <div key={row.code} className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 ${isMaximum ? 'border-[#9bc4df] bg-[#eef6fb]' : 'border-slate-200 bg-slate-50'}`}>
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-900">{index + 1}. {row.agence}</p>
+                                <p className="text-xs text-slate-500">{row.code}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className={`text-lg font-bold ${isMaximum ? 'text-[#00559b]' : 'text-slate-700'}`}>{row.total}</p>
+                                {isMaximum ? <p className="text-[10px] font-semibold uppercase text-[#00559b]">Plus élevé</p> : null}
+                            </div>
+                        </div>
+                    );
+                })}
             </CardContent>
         </Card>
     );

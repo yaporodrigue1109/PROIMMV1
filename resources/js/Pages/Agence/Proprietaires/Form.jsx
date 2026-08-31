@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, Check, ChevronDown, ChevronRight, FileImage, IdCard, Home, Save, Search, ShieldCheck, UserRound } from 'lucide-react';
 import AgenceLayout from '../../../Layouts/AgenceLayout';
 import { Button } from '../../../components/ui/button';
@@ -118,12 +118,16 @@ function CountrySelect({ value, onChange, options }) {
     );
 }
 
-const PhoneInput = ({ label, required, error, value, onChange, placeholder }) => {
+const PhoneInput = ({ label, required, error, value, onChange, onCountryChange, countries, placeholder }) => {
+    const defaultCountry = usePage().props.geography?.defaultCountryCode ?? 'CI';
+
     return (
         <Field label={label} required={required} error={error}>
             <PhoneInputBase
                 international
-                defaultCountry="CI"
+                defaultCountry={defaultCountry}
+                countries={countries}
+                onCountryChange={onCountryChange}
                 countrySelectComponent={CountrySelect}
                 value={value}
                 onChange={(val) => onChange({ target: { value: val ?? '' } })}
@@ -303,6 +307,15 @@ export default function Form({ mode = 'create', proprietaire = null, genres = []
     const isEdit = mode === 'edit';
     const liaison = useMemo(() => findLiaison(proprietaire), [proprietaire]);
     const { data, setData, post, transform, processing, errors } = useForm(buildInitialData(proprietaire));
+    const { geography = {} } = usePage().props;
+    const countries = asArray(geography.countries);
+    const geographyRegions = asArray(geography.regions).length ? geography.regions : regions;
+    const geographyCities = asArray(geography.cities).length ? geography.cities : villes;
+    const initialCountryCode = countries.find((country) => asArray(geographyRegions).some((region) => toId(region.id) === toId(data.region_id) && toId(region.pays_id) === toId(country.id)))?.iso2
+        ?? geography.defaultCountryCode
+        ?? 'CI';
+    const [countryCode, setCountryCode] = useState(initialCountryCode);
+    const selectedCountry = countries.find((country) => country.iso2 === countryCode);
     const [current, setCurrent] = useState(0);
     const [completed, setCompleted] = useState([]);
     const [stepErrors, setStepErrors] = useState({});
@@ -318,13 +331,15 @@ export default function Form({ mode = 'create', proprietaire = null, genres = []
         { key: 'resume', title: 'Résumé', subtitle: 'Validation' },
     ];
 
-    const regionOptions = useMemo(() => asArray(regions).map((region) => ({ value: toId(region.id), label: region.name })), [regions]);
+    const regionOptions = useMemo(() => asArray(geographyRegions)
+        .filter((region) => !selectedCountry || toId(region.pays_id) === toId(selectedCountry.id))
+        .map((region) => ({ value: toId(region.id), label: region.name })), [geographyRegions, selectedCountry]);
     const villeOptions = useMemo(
         () =>
-            asArray(villes)
+            asArray(geographyCities)
                 .filter((ville) => !data.region_id || toId(ville.region_id) === toId(data.region_id))
                 .map((ville) => ({ value: toId(ville.id), label: ville.name })),
-        [data.region_id, villes]
+        [data.region_id, geographyCities]
     );
     const genreOptions = useMemo(() => asArray(genres).map((genre) => ({ value: toId(genre.id), label: genre.name })), [genres]);
     const typePieceOptions = useMemo(
@@ -414,7 +429,7 @@ export default function Form({ mode = 'create', proprietaire = null, genres = []
             if (!data.date_expiration_piece) {
                 localErrors.date_expiration_piece = 'La date d\'expiration est obligatoire.';
             } else if (data.date_expiration_piece <= todayDate) {
-                localErrors.date_expiration_piece = 'La date d\'expiration doit Ãªtre supérieure Ã  aujourd\'hui.';
+                localErrors.date_expiration_piece = 'La date d\'expiration doit être supérieure à aujourd\'hui.';
             }
         }
 
@@ -578,6 +593,12 @@ export default function Form({ mode = 'create', proprietaire = null, genres = []
                                 required
                                 error={fieldErrors.tel1}
                                 value={data.tel1}
+                                countries={countries.map((country) => country.iso2)}
+                                onCountryChange={(code) => {
+                                    if (!code || code === countryCode) return;
+                                    setCountryCode(code);
+                                    setData((current) => ({ ...current, region_id: '', ville_id: '' }));
+                                }}
                                 onChange={(e) => setData('tel1', e.target.value ?? '')}
                                 placeholder="07 00 00 00 00"
                             />
@@ -612,6 +633,16 @@ export default function Form({ mode = 'create', proprietaire = null, genres = []
                             </Field>
 
                           
+
+                            <Field label="Pays">
+                                <Select value={countryCode} onValueChange={(code) => {
+                                    setCountryCode(code);
+                                    setData((current) => ({ ...current, region_id: '', ville_id: '' }));
+                                }}>
+                                    <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                                    <SelectContent>{countries.map((country) => <SelectItem key={country.iso2} value={country.iso2}>{country.name} ({country.indicatif})</SelectItem>)}</SelectContent>
+                                </Select>
+                            </Field>
 
                             <Field label="Région" error={fieldErrors.region_id}>
                                 <Select

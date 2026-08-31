@@ -7,12 +7,16 @@ import {
     ChevronDown,
     HardHat,
     House,
+    CircleHelp,
+    Copy,
     KeyRound,
     LogOut,
     Menu,
     PanelLeftClose,
     MessageSquareMore,
+    Bell,
     Settings2,
+    History,
     UserRound,
     UsersRound,
     WalletCards,
@@ -99,6 +103,18 @@ const fallbackNavigation = [
         icon: Settings2,
         activeMatch: '/agence/parametrage',
     },
+    {
+        label: 'Gestion des logs',
+        href: '/agence/logs',
+        icon: History,
+        activeMatch: '/agence/logs',
+    },
+      {
+        label: 'Annonces',
+        href: '/agence/annonces',
+        icon: Bell,
+        activeMatch: '/agence/annonces',
+    },
 ];
 
 const navigationIcons = {
@@ -109,11 +125,15 @@ const navigationIcons = {
     locataires: UserRound,
     personnel: UsersRound,
     maintenance: HardHat,
+    annonce: Bell,
+    annonces: Bell,
     caisse: WalletCards,
     reversement: WalletCards,
     statistiques: BarChart3,
     support: MessageSquareMore,
     parametrage: Settings2,
+    logs: History,
+    aide: CircleHelp,
 };
 
 const subscriptionRoute = '/agence/abonnement';
@@ -157,6 +177,37 @@ function DemoModeBanner() {
     return (
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-medium text-amber-800">
             Mode démonstration — les données affichées sont fictives. Elles seront retirées lors de votre premier abonnement.
+        </div>
+    );
+}
+
+function ExpiredSubscriptionBanner() {
+    return (
+        <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-center text-xs font-medium text-red-800">
+            Abonnement expiré — l'espace est en mode consultation. Renouvelez votre abonnement pour effectuer des actions.
+        </div>
+    );
+}
+
+function AdminImpersonationBanner({ impersonation, responsibleName }) {
+    if (!impersonation?.active) return null;
+
+    return (
+        <div className="flex shrink-0 flex-col items-start justify-between gap-2 border-b border-orange-200 bg-orange-50 px-5 py-3 text-sm text-orange-900 sm:flex-row sm:items-center md:px-8">
+            <span>
+                <strong>Administrateur en consultation :</strong>{' '}
+                {impersonation.adminName ?? 'Administrateur'} consulte l’agence{' '}
+                {impersonation.agencyName ?? 'sélectionnée'} via le compte de{' '}
+                {responsibleName ?? 'son responsable'}.
+            </span>
+            <Button
+                type="button"
+                size="sm"
+                className="rounded-xl bg-orange-800 font-semibold text-white hover:bg-orange-900"
+                onClick={() => router.post(impersonation.stopUrl ?? '/agence/retour-administration')}
+            >
+                Retour à l’administration
+            </Button>
         </div>
     );
 }
@@ -242,24 +293,39 @@ function AccountFooter({ currentUser, onLogout, showAppLogo = false }) {
 
 export default function AgenceLayout({ title, children }) {
     const page = usePage();
-    const { appName, auth, flash, navigationModules } = page.props;
+    const { appName, auth, branding, flash, navigationModules, agencyImpersonation, agencyPreferences } = page.props;
     const currentPath = page.url.split('?')[0];
     const currentUser = auth?.user;
     const currentAgency = currentUser?.agence;
+    const agencyCode = String(currentAgency?.code_agence ?? '').trim();
+    const canShareAgencyCode = Boolean(agencyCode) && !currentAgency?.is_demo;
     const currentAgencyLogo = agencyLogoUrl(currentAgency?.logo);
     const hasAgencyLogo = Boolean(currentAgencyLogo);
     const brandLogo = hasAgencyLogo ? currentAgencyLogo : appLogo;
+    const favicon = currentAgencyLogo || agencyLogoUrl(branding?.logoUrl) || appLogo;
     const brandName = hasAgencyLogo ? currentAgency?.name : 'Pros Immobilier';
     const hasActiveSubscription = isActiveSubscription(currentAgency);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
     const [toast, setToast] = useState(null);
-    const navigation = Array.isArray(navigationModules)
+    const moduleNavigation = Array.isArray(navigationModules)
         ? navigationModules.map((item) => ({
             ...item,
             icon: navigationIcons[item.slug] ?? Menu,
         }))
         : fallbackNavigation;
+    const navigation = [
+        ...moduleNavigation,
+        ...(!moduleNavigation.some((item) => item.activeMatch === '/agence/logs') ? [{
+            label: 'Gestion des logs', href: '/agence/logs', icon: History, activeMatch: '/agence/logs',
+        }] : []),
+        {
+            label: 'Aide',
+            href: '/agence/aide',
+            icon: CircleHelp,
+            activeMatch: '/agence/aide',
+        },
+    ];
 
     useEffect(() => {
         const fromFlash = flash?.success
@@ -291,6 +357,37 @@ export default function AgenceLayout({ title, children }) {
     }, []);
 
     useEffect(() => {
+        if (!agencyPreferences?.doubleValidation) return undefined;
+
+        const confirmationMessage = 'Confirmation de sécurité : voulez-vous vraiment effectuer cette suppression ? Cette action peut être irréversible.';
+        const stopBeforeVisit = router.on('before', (event) => {
+            const method = String(event.detail?.visit?.method ?? '').toLowerCase();
+
+            if (method === 'delete' && !window.confirm(confirmationMessage)) {
+                event.preventDefault();
+            }
+        });
+
+        const confirmNativeDelete = (event) => {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) return;
+
+            const spoofedMethod = String(new FormData(form).get('_method') ?? form.method).toLowerCase();
+            if (spoofedMethod === 'delete' && !window.confirm(confirmationMessage)) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+            }
+        };
+
+        document.addEventListener('submit', confirmNativeDelete, true);
+
+        return () => {
+            stopBeforeVisit();
+            document.removeEventListener('submit', confirmNativeDelete, true);
+        };
+    }, [agencyPreferences?.doubleValidation]);
+
+    useEffect(() => {
         if (!toast) {
             return;
         }
@@ -307,9 +404,42 @@ export default function AgenceLayout({ title, children }) {
         setLogoutConfirmOpen(false);
     };
 
+    const handleCopyAgencyCode = async () => {
+        if (!canShareAgencyCode) return;
+
+        try {
+            if (navigator.clipboard?.writeText && window.isSecureContext) {
+                await navigator.clipboard.writeText(agencyCode);
+            } else {
+                const input = document.createElement('textarea');
+                input.value = agencyCode;
+                input.setAttribute('readonly', '');
+                input.style.position = 'fixed';
+                input.style.opacity = '0';
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                input.remove();
+            }
+
+            setToast({
+                type: 'success',
+                message: `Code agence ${agencyCode} copié.`,
+            });
+        } catch {
+            setToast({
+                type: 'error',
+                message: "Impossible de copier automatiquement le code de l'agence.",
+            });
+        }
+    };
+
     return (
         <div className="min-h-screen bg-[#f7fbfe] text-[#0f172a]">
-            <Head title={title ? `${title} - ${appName}` : appName} />
+            <Head title={title ? `${title} - ${appName}` : appName}>
+                <link rel="icon" href={favicon} />
+                <link rel="shortcut icon" href={favicon} />
+            </Head>
 
             <div className="flex min-h-screen w-full">
                 <aside className="fixed left-0 top-0 hidden h-screen w-72 flex-col border-r border-[#c8d4de] bg-white lg:flex">
@@ -438,6 +568,10 @@ export default function AgenceLayout({ title, children }) {
                 ) : null}
 
                 <main className="flex h-screen flex-1 flex-col overflow-hidden bg-[#f7fbfe] lg:ml-72">
+                    <AdminImpersonationBanner
+                        impersonation={agencyImpersonation}
+                        responsibleName={currentUser?.name}
+                    />
                     <header className="sticky top-0 z-30 flex h-[73px] shrink-0 items-center justify-between gap-4 border-b border-[#c8d4de] bg-white px-5 md:px-8">
                         <div className="flex min-w-0 items-center gap-3">
                             <Button variant="outline" size="icon" className="lg:hidden" onClick={() => setMobileMenuOpen(true)}>
@@ -450,6 +584,21 @@ export default function AgenceLayout({ title, children }) {
                                 </h1>
                             </div>
                         </div>
+
+                        <div className="flex shrink-0 items-center gap-2">
+                            {canShareAgencyCode ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-11 rounded-xl border-[#c8d4de] bg-[#f8fbfe] px-3 text-[#0f172a] hover:bg-[#eaf4fb]"
+                                    onClick={handleCopyAgencyCode}
+                                    title="Copier le code de l'agence"
+                                >
+                                    <span className="hidden text-xs text-[#5f7182] md:inline">Code agence</span>
+                                    <span className="font-mono text-sm font-bold text-[#00559b]">{agencyCode}</span>
+                                    <Copy className="h-4 w-4 text-[#00559b]" />
+                                </Button>
+                            ) : null}
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -475,6 +624,11 @@ export default function AgenceLayout({ title, children }) {
                                     )}
 
                                     <span className="hidden max-w-36 flex-col items-start leading-tight sm:flex">
+                                        {agencyImpersonation?.active ? (
+                                            <span className="mb-0.5 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-800">
+                                                Session admin
+                                            </span>
+                                        ) : null}
                                         <span className="truncate text-sm font-medium">
                                             {currentUser?.name ?? 'Agence'}
                                         </span>
@@ -537,8 +691,10 @@ export default function AgenceLayout({ title, children }) {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        </div>
                     </header>
 
+                    {currentAgency?.abonnement_expire ? <ExpiredSubscriptionBanner /> : null}
                     {currentAgency?.is_demo ? <DemoModeBanner /> : null}
 
                     <div id="agence-scroll-container" className="min-h-0 flex-1 overflow-y-auto p-6">

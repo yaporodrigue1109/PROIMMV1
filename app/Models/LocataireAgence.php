@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Models\Concerns\VisibleWithActiveProprietaire;
 
 class LocataireAgence extends Model
 {
-    use HasFactory;
+    use HasFactory, VisibleWithActiveProprietaire;
 
     protected $table = 'locataire_agence';
 
@@ -64,6 +65,11 @@ class LocataireAgence extends Model
     protected static function boot(): void
     {
         parent::boot();
+
+        // Un contrat résilié est conservé en base pour l'intégrité comptable,
+        // mais ne doit plus être exposé dans les modules de la plateforme.
+        static::addGlobalScope('active_contract', fn (Builder $query) => $query->where('locataire_agence.is_active', true));
+
         static::creating(function ($model) {
             if (empty($model->{$model->getKeyName()})) {
                 $model->{$model->getKeyName()} = (string) Str::uuid();
@@ -136,6 +142,14 @@ class LocataireAgence extends Model
     }
 
     public function agence()
+    {
+        return $this->belongsTo(Agence::class, 'agence_id', 'agence_id');
+    }
+
+    /**
+     * Relation sans collision avec la colonne monétaire `agence` du contrat.
+     */
+    public function agency()
     {
         return $this->belongsTo(Agence::class, 'agence_id', 'agence_id');
     }

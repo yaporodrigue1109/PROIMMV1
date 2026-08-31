@@ -473,7 +473,7 @@
                         <div>
                             <div class="preview-box" id="prev-logo">
                                 @if($parametrage->logo ?? false)
-                                    <img src="{{ asset('storage/'.$parametrage->logo) }}" alt="Logo agence">
+                                    <img src="{{ $parametrage->logo }}" alt="Logo agence">
                                 @else
                                     <span>Aperçu du logo</span>
                                 @endif

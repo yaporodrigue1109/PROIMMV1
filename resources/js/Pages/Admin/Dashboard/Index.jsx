@@ -6,79 +6,13 @@ import {
     TrendingUp,
     TriangleAlert,
 } from 'lucide-react';
-import { Link } from '@inertiajs/react';
+import { Link, usePoll } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { ChartArea, ChartContainer, ChartLegend } from '../../../components/ui/chart';
 import { cn } from '../../../lib/utils';
-
-const revenueSeries = [
-    { label: 'Jan', value: 120000 },
-    { label: 'Fév', value: 145000 },
-    { label: 'Mar', value: 98000 },
-    { label: 'Avr', value: 162000 },
-    { label: 'Mai', value: 174000 },
-];
-
-const alerts = [
-    {
-        tone: 'danger',
-        title: 'Pros Immo Yopougon - abonnement expiré',
-        detail: 'Expiré depuis le 31/03/2026 · 50 000 FCFA',
-        href: '/admin/abonnements/AGC-003',
-    },
-    {
-        tone: 'warning',
-        title: 'Pros Immo Bingerville - paiement à confirmer',
-        detail: 'Échéance le 15/05/2026 · 72 000 FCFA',
-        href: '/admin/abonnements/AGC-004',
-    },
-    {
-        tone: 'info',
-        title: 'Pros Immo Cocody - renouvellement dans 5 jours',
-        detail: 'Échéance le 30/04/2026 · 50 000 FCFA',
-        href: '/admin/abonnements/AGC-001',
-    },
-];
-
-const activity = [
-    {
-        agency: 'Pros Immo Cocody',
-        code: 'AGC-001',
-        action: 'Abonnement créé',
-        status: 'Actif',
-        date: "Aujourd'hui, 09:40",
-    },
-    {
-        agency: 'Pros Immo Bingerville',
-        code: 'AGC-004',
-        action: 'Paiement en attente',
-        status: 'En attente',
-        date: 'Hier, 17:15',
-    },
-    {
-        agency: 'Pros Immo Plateau',
-        code: 'AGC-002',
-        action: 'Abonnement renouvelé',
-        status: 'Actif',
-        date: '27/04/2026',
-    },
-    {
-        agency: 'Pros Immo Yopougon',
-        code: 'AGC-003',
-        action: 'Abonnement expiré',
-        status: 'Expiré',
-        date: '31/03/2026',
-    },
-];
-
-const deadlines = [
-    { agency: 'Pros Immo Cocody', code: 'AGC-001', dateFin: '30/04/2026', amount: 50000 },
-    { agency: 'Pros Immo Plateau', code: 'AGC-002', dateFin: '05/05/2026', amount: 52000 },
-    { agency: 'Pros Immo Bingerville', code: 'AGC-004', dateFin: '15/05/2026', amount: 72000 },
-];
 
 const formatMoney = (value) =>
     new Intl.NumberFormat('fr-FR', {
@@ -100,7 +34,9 @@ const alertDotStyles = {
 
 const statusStyles = {
     Actif: 'bg-[#eef8df] text-[#4d8500] border-[#c8d4de]',
+    Payé: 'bg-[#eef8df] text-[#4d8500] border-[#c8d4de]',
     'En attente': 'bg-[#fff4d9] text-[#a06500] border-[#c8d4de]',
+    Annulé: 'bg-[#fdecec] text-[#b42318] border-[#c8d4de]',
     Expiré: 'bg-[#fdecec] text-[#b42318] border-[#c8d4de]',
 };
 
@@ -150,7 +86,11 @@ function SectionHeader({ title, description, action }) {
     );
 }
 
-export default function Index({ admin, kpis = [] }) {
+export default function Index({ admin, kpis = [], revenueSeries = [], alerts = [], activity = [], deadlines = [], updatedAt }) {
+    usePoll(30000, {
+        only: ['kpis', 'revenueSeries', 'alerts', 'activity', 'deadlines', 'updatedAt'],
+        preserveScroll: true,
+    });
     const displayName = admin?.name ?? 'Administrateur';
 
     return (
@@ -167,6 +107,7 @@ export default function Index({ admin, kpis = [] }) {
                                 Voici un résumé de l'activité du mois en cours, avec les abonnements à suivre et les
                                 échéances importantes.
                             </p>
+                            <p className="mt-2 text-xs text-[#5f7182]">Actualisé automatiquement · {updatedAt ?? '—'}</p>
                         </div>
 
                         <div className="flex flex-wrap gap-3">

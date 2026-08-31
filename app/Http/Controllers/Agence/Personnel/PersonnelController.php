@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Agence\Personnel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agence\PersonnelRequest;
 use App\Models\Role;
+use App\Models\User;
 use App\Repositories\Agence\Interfaces\PersonnelRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Schema;
@@ -30,12 +31,21 @@ class PersonnelController extends Controller
             'search' => request('search'),
             'role_id' => request('role_id'),
         ]);
+        $personnel = $personnel->where('statut', '!=', 'inactif')->values();
+
+        $personnel->each(function (User $member): void {
+            $member->setAttribute(
+                'is_acces',
+                $member->is_responsable || $member->getPermissions() !== []
+            );
+        });
 
         $stats = [
             'total' => $personnel->count(),
             'actifs' => $personnel->where('statut', 'actif')->count(),
             'inactifs' => $personnel->where('statut', 'inactif')->count(),
             'suspendu' => $personnel->where('statut', 'suspendu')->count(),
+            'avec_acces' => $personnel->where('is_acces', true)->count(),
         ];
 
         return Inertia::render('Agence/Personnel/Index', [
@@ -103,6 +113,13 @@ class PersonnelController extends Controller
     public function update(PersonnelRequest $request, string $id): RedirectResponse
     {
         $data = $request->validated();
+        $personnel = $this->personnelForCurrentAgency($id);
+
+        if ($personnel->is_responsable) {
+            $data['role_id'] = $personnel->role_id;
+            $data['statut'] = $personnel->statut;
+            $data['is_responsable'] = true;
+        }
 
         if ($request->hasFile('photo')) {
             $existing = $this->personnelRepository->findById($id);
@@ -116,16 +133,9 @@ class PersonnelController extends Controller
             ->with('success', 'Membre mis à jour avec succès.');
     }
 
-    public function destroy(string $id): RedirectResponse
-    {
-        $this->personnelRepository->delete($id);
-
-        return redirect()->route('agence.personnel.index')
-            ->with('success', 'Membre supprimé avec succès.');
-    }
-
     public function activate(string $id): RedirectResponse
     {
+        $this->personnelForCurrentAgency($id);
         $this->personnelRepository->activate($id);
 
         return back()->with('success', 'Membre activé avec succès.');
@@ -133,6 +143,16 @@ class PersonnelController extends Controller
 
     public function deactivate(string $id): RedirectResponse
     {
+        $personnel = $this->personnelForCurrentAgency($id);
+
+        if ((string) $personnel->getKey() === (string) $this->userId()) {
+            return back()->with('error', "Vous ne pouvez pas désactiver votre propre compte.");
+        }
+
+        if ($personnel->is_responsable) {
+            return back()->with('error', "Le compte Responsable principal ne peut pas être désactivé.");
+        }
+
         $this->personnelRepository->deactivate($id);
 
         return back()->with('success', 'Membre désactivé avec succès.');
@@ -167,5 +187,18 @@ class PersonnelController extends Controller
             ['role_id' => 'role-comptable', 'name' => 'Comptable'],
             ['role_id' => 'role-technicien', 'name' => 'Technicien'],
         ]);
+    }
+
+    private function personnelForCurrentAgency(string $id): User
+    {
+        return User::query()
+            ->where('agence_id', getInfoAgent()->users->agence_id)
+            ->whereKey($id)
+            ->firstOrFail();
+    }
+
+    private function userId(): ?string
+    {
+        return getInfoAgent()->users->id_users ?? null;
     }
 }

@@ -11,9 +11,11 @@ use App\Models\Agence;
 use App\Models\ContactMessage;
 use App\Models\Region;
 use App\Models\Ville;
+use App\Models\Pays;
 use App\Services\AgenceService;
 use App\Services\ConfigurationTarifService;
 use App\Services\SettingService;
+use App\Services\Agence\AgencyDocumentBranding;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +33,8 @@ class WebController extends Controller
     public function __construct(
         protected ConfigurationTarifService $tarifService,
         protected AgenceService $agenceService,
-        protected SettingService $settingService
+        protected SettingService $settingService,
+        protected AgencyDocumentBranding $documentBranding,
     ) {
     }
 
@@ -102,7 +105,8 @@ class WebController extends Controller
     public function registration(): Response
     {
         return Inertia::render('Web/Registration', [
-            'regions' => Region::query()->orderBy('name')->get(['id', 'name']),
+            'pays' => Pays::query()->where('actif', true)->orderBy('name')->get(['id', 'name', 'iso2', 'indicatif']),
+            'regions' => Region::query()->orderBy('name')->get(['id', 'name', 'pays_id']),
             'villes' => Ville::query()->orderBy('name')->get(['id', 'name', 'region_id']),
         ]);
     }
@@ -116,6 +120,7 @@ class WebController extends Controller
             'email1' => ['required', 'email', 'max:255', 'unique:agences,email1'],
             'region' => ['required', 'exists:regions,id'],
             'ville_id' => ['required', 'exists:villes,id'],
+            'country_code' => ['required', 'string', 'size:2', 'exists:pays,iso2'],
             'new_responsable_name' => ['required', 'string', 'max:255'],
             'new_responsable_email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'new_responsable_tel1' => ['required', 'string', 'max:20'],
@@ -140,10 +145,19 @@ class WebController extends Controller
             'accept_terms.accepted' => 'Vous devez accepter les conditions d’utilisation.',
         ]);
 
+        $pays = Pays::query()->where('iso2', strtoupper($validated['country_code']))->firstOrFail();
+        $regionDansPays = Region::query()
+            ->whereKey($validated['region'])
+            ->where('pays_id', $pays->id)
+            ->exists();
         $villeDansRegion = Ville::query()
             ->whereKey($validated['ville_id'])
             ->where('region_id', $validated['region'])
             ->exists();
+
+        if (! $regionDansPays) {
+            return back()->withErrors(['region' => 'Cette région ne correspond pas au pays sélectionné.'])->withInput();
+        }
 
         if (! $villeDansRegion) {
             return back()->withErrors(['ville_id' => 'Cette ville ne correspond pas à la région sélectionnée.'])->withInput();
@@ -163,8 +177,8 @@ class WebController extends Controller
             $request->session()->regenerate();
 
             return redirect()
-                ->route('agence.abonnement.index')
-                ->with('success', "L’agence « {$agence->name} » a été créée. Choisissez maintenant votre abonnement.");
+                ->route('agence.dashboard')
+                ->with('success', "L’agence « {$agence->name} » a été créée avec succès.");
         } catch (\Throwable $exception) {
             Log::error('Erreur inscription publique agence', ['message' => $exception->getMessage()]);
 
@@ -174,6 +188,25 @@ class WebController extends Controller
         }
     }
     public function contact(): Response { return Inertia::render('Web/Contact'); }
+
+    public function legal(string $document): Response
+    {
+        $setting = $this->websiteSetting();
+        $documents = [
+            'politique-confidentialite' => ['title' => 'Politique de confidentialité', 'field' => 'politique_confidentialite'],
+            'conditions-generales' => ['title' => 'Conditions générales de service', 'field' => 'condition_generale'],
+            'conditions-utilisation' => ['title' => "Conditions générales d’utilisation", 'field' => 'cgu'],
+            'mentions-legales' => ['title' => 'Mentions légales', 'field' => 'mention_legale'],
+        ];
+
+        abort_unless(isset($documents[$document]), 404);
+        $definition = $documents[$document];
+
+        return Inertia::render('Web/Legal', [
+            'title' => $definition['title'],
+            'content' => $setting?->getAttribute($definition['field']),
+        ]);
+    }
     public function sendContact(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -211,6 +244,44 @@ class WebController extends Controller
             ->sortByDesc('published_at')->take($limit)->values()
             ->map(fn (array $item) => collect($item)->except('published_at')->all())
             ->all();
+    }
+
+    /**
+     * Expose le même catalogue filtré que le portail web aux autres interfaces.
+     */
+    public function catalogProperties(): array
+    {
+        return $this->listProperties(PHP_INT_MAX);
+    }
+
+    public function catalogProperty(string $listing): ?array
+    {
+        [$type, $id] = $this->parseListingId($listing);
+        $property = match ($type) {
+            'lot' => $this->availableLots()->whereKey($id)->first(),
+            'porte' => $this->availableDoors()->whereKey($id)->first(),
+            default => $this->availableWholeProperties()->whereKey($id)->first(),
+        };
+
+        if (! $property) {
+            return null;
+        }
+
+        return match ($type) {
+            'lot' => $this->mapLot($property, true),
+            'porte' => $this->mapDoor($property, true),
+            default => $this->mapProperty($property, true),
+        };
+    }
+
+    public function tenantPortalAgencyIds(): array
+    {
+        return $this->eligibleAgencyIds('Portail locataire');
+    }
+
+    public function isTenantPortalAgencyEligible(string $agencyId): bool
+    {
+        return in_array($agencyId, $this->tenantPortalAgencyIds(), true);
     }
 
     private function availableWholeProperties()
@@ -291,14 +362,20 @@ class WebController extends Controller
             return $this->portalAgencyIds;
         }
 
+        return $this->portalAgencyIds = $this->eligibleAgencyIds('Portail web');
+    }
+
+    private function eligibleAgencyIds(string $featureLabel): array
+    {
+
         $today = now()->startOfDay();
 
-        return $this->portalAgencyIds = Agence::query()
+        return Agence::query()
             ->where('statut', 'active')
             ->whereNotNull('abonnement_id')
             ->with('abonnement')
             ->get()
-            ->filter(function (Agence $agency) use ($today) {
+            ->filter(function (Agence $agency) use ($today, $featureLabel) {
                 $subscription = $agency->abonnement;
 
                 if (! $subscription || $subscription->statut !== 'actif') {
@@ -313,12 +390,12 @@ class WebController extends Controller
                     return false;
                 }
 
-                return collect($subscription->features ?? [])->contains(function ($feature) {
+                return collect($subscription->features ?? [])->contains(function ($feature) use ($featureLabel) {
                     if (! is_array($feature)) {
                         return false;
                     }
 
-                    return mb_strtolower(trim((string) ($feature['label'] ?? ''))) === 'portail web'
+                    return mb_strtolower(trim((string) ($feature['label'] ?? ''))) === mb_strtolower($featureLabel)
                         && filter_var($feature['actif'] ?? false, FILTER_VALIDATE_BOOLEAN);
                 });
             })
@@ -354,12 +431,7 @@ class WebController extends Controller
         }
 
         return array_merge($payload, [
-            'agency' => [
-                'name' => $property->agence?->name,
-                'phone' => $property->agence?->tel1,
-                'email' => $property->agence?->email1,
-                'address' => $property->agence?->adresse,
-            ],
+            'agency' => $this->mapAgency($property->agence),
             'buildings' => $property->batiments->map(fn ($building) => [
                 'id' => $building->batiment_id,
                 'name' => $building->name ?: 'Bâtiment',
@@ -461,9 +533,15 @@ class WebController extends Controller
 
     private function mapAgency($agency): array
     {
+        $agency?->loadMissing('parametrage');
+        $hasConfiguredLogo = filled($agency?->parametrage?->logo);
+
         return [
             'name' => $agency?->name, 'phone' => $agency?->tel1,
             'email' => $agency?->email1, 'address' => $agency?->adresse,
+            'logo_url' => $hasConfiguredLogo
+                ? $this->documentBranding->logoUrl($agency)
+                : null,
         ];
     }
 

@@ -34,6 +34,13 @@ class SettingsRequest extends FormRequest
             'contact2' => 'nullable|string|max:20',
             'contact3' => 'nullable|string|max:20',
 
+            // Paiement temporaire des abonnements agence
+            'subscription_manual_payment_enabled' => 'required|boolean',
+            'subscription_wave_number' => 'nullable|string|max:30',
+            'subscription_orange_money_number' => 'nullable|string|max:30',
+            'subscription_moov_money_number' => 'nullable|string|max:30',
+            'subscription_mtn_money_number' => 'nullable|string|max:30',
+
             // Web et localisation
             'site_web' => 'nullable|url|max:255',
             'langue' => 'required|in:fr,en',
@@ -107,22 +114,37 @@ class SettingsRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $normalizeUrl = static function ($value): ?string {
+            $value = trim((string) $value);
+
+            if ($value === '') {
+                return null;
+            }
+
+            return preg_match('#^https?://#i', $value) ? $value : 'https://' . $value;
+        };
+
         // Convertir les URLs vides en null
         $this->merge([
             'email2' => $this->email2 ?: null,
             'contact2' => $this->contact2 ?: null,
             'contact3' => $this->contact3 ?: null,
+            'subscription_manual_payment_enabled' => $this->boolean('subscription_manual_payment_enabled'),
+            'subscription_wave_number' => $this->subscription_wave_number ?: null,
+            'subscription_orange_money_number' => $this->subscription_orange_money_number ?: null,
+            'subscription_moov_money_number' => $this->subscription_moov_money_number ?: null,
+            'subscription_mtn_money_number' => $this->subscription_mtn_money_number ?: null,
             'boite_postal' => $this->boite_postal ?: null,
-            'site_web' => $this->site_web ?: null,
+            'site_web' => $normalizeUrl($this->site_web),
             'num_rccm' => $this->num_rccm ?: null,
             'num_cc' => $this->num_cc ?: null,
             'num_cnps' => $this->num_cnps ?: null,
             'capital' => $this->capital ?: null,
-            'facebook' => $this->facebook ?: null,
-            'instagram' => $this->instagram ?: null,
-            'linkedin' => $this->linkedin ?: null,
-            'twitter' => $this->twitter ?: null,
-            'google' => $this->google ?: null,
+            'facebook' => $normalizeUrl($this->facebook),
+            'instagram' => $normalizeUrl($this->instagram),
+            'linkedin' => $normalizeUrl($this->linkedin),
+            'twitter' => $normalizeUrl($this->twitter),
+            'google' => $normalizeUrl($this->google),
         ]);
     }
 }

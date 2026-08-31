@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { ComboboxField as SharedComboboxField } from '../../../components/ui/combobox-field';
+import { SearchableSelect } from '../../../components/ui/searchable-select';
 
 const toDateValue = (value) => {
     if (!value) return '';
@@ -476,14 +477,14 @@ export default function Form({ mode, agence = {}, regions = [], responsables = [
                                     />
                                 </Field>
                                 <Field label="Statut" error={form.errors.statut}>
-                                    <select
+                                    <SearchableSelect
                                         value={form.data.statut}
                                         onChange={(e) => form.setData('statut', e.target.value)}
                                         className={selectClassName}
                                     >
                                         <option value="en_demo">En démo</option>
                                         <option value="active">Active</option>
-                                    </select>
+                                    </SearchableSelect>
                                 </Field>
                             </div>
                         </Section>
@@ -645,7 +646,7 @@ export default function Form({ mode, agence = {}, regions = [], responsables = [
                                     />
                                 </Field>
                                 <Field label="Durée (mois)" error={form.errors.duree_mois}>
-                                    <select
+                                    <SearchableSelect
                                         value={form.data.duree_mois}
                                         onChange={(e) => form.setData('duree_mois', e.target.value)}
                                         className={selectClassName}
@@ -656,7 +657,7 @@ export default function Form({ mode, agence = {}, regions = [], responsables = [
                                                 {duree} mois
                                             </option>
                                         ))}
-                                    </select>
+                                    </SearchableSelect>
                                 </Field>
                                 <Field label="Prix mensuel de base" error={form.errors.prix_base_mensuel}>
                                     <Input

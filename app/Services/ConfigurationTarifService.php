@@ -21,7 +21,13 @@ class ConfigurationTarifService
      */
     public function getTarifsPourFormulaire(): array
     {
-            return $this->repository->getCompleteConfig();
+        $config = $this->repository->getCompleteConfig();
+        $config['modules'] = collect($config['modules'] ?? [])
+            ->filter(fn ($module) => (bool) ($module['actif'] ?? $module['is_active'] ?? $module['is_actif'] ?? false))
+            ->values()
+            ->all();
+
+        return $config;
     }
 
     /**

@@ -7,14 +7,17 @@ use App\Models\Proprietaire;
 use App\Models\ProprietaireAgence;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use App\Models\LocataireAgence;
+use DomainException;
+use App\Models\MobileApiToken;
 
 class ProprietaireRepository implements ProprietaireRepositoryInterface
 {
     public function getAllByAgence(string $agenceId, int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         $query = Proprietaire::query()
-            ->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId))
-            ->with(['agences' => fn ($q) => $q->where('agence_id', $agenceId)])
+            ->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId)->where('is_active', true))
+            ->with(['agences' => fn ($q) => $q->where('agence_id', $agenceId)->where('is_active', true)])
             ->withCount([
                 'lots' => fn ($q) => $q->where('agence_id', $agenceId),
                 'proprietes' => fn ($q) => $q->where('agence_id', $agenceId),
@@ -33,14 +36,6 @@ class ProprietaireRepository implements ProprietaireRepositoryInterface
                     ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('adresse', 'like', "%{$search}%");
             });
-        }
-
-        if (!empty($filters['status'])) {
-            if ($filters['status'] === 'active') {
-                $query->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId)->where('is_active', true));
-            } elseif ($filters['status'] === 'inactive') {
-                $query->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId)->where('is_active', false));
-            }
         }
 
         return $query->paginate($perPage);
@@ -64,7 +59,7 @@ class ProprietaireRepository implements ProprietaireRepositoryInterface
             'region',
             'ville',
         ])
-            ->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId))
+            ->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId)->where('is_active', true))
             ->find($id);
     }
 
@@ -138,34 +133,31 @@ class ProprietaireRepository implements ProprietaireRepositoryInterface
     {
         $agenceId = getInfoAgent()->users->agence_id ?? null;
 
-        $proprietaire = Proprietaire::query()
-            ->withCount([
-                'lots' => fn ($q) => $agenceId ? $q->where('agence_id', $agenceId) : $q,
-                'proprietes' => fn ($q) => $agenceId ? $q->where('agence_id', $agenceId) : $q,
-            ])
-            ->find($id);
+        $this->ensureNoActiveTenant($id, $agenceId);
 
-        if (!$proprietaire) {
+        $link = ProprietaireAgence::where(['proprietaire_id' => $id, 'agence_id' => $agenceId])->first();
+        if (!$link) {
             return false;
         }
 
-        if ((int) ($proprietaire->lots_count ?? 0) > 0 || (int) ($proprietaire->proprietes_count ?? 0) > 0) {
-            return false;
-        }
+        $link->forceFill([
+            'is_active' => false,
+            'is_mobile_visible' => false,
+            'date_desactivation' => now(),
+            'deleted_by' => getInfoAgent()->users->id_users ?? getInfoAdmin()->admin->id_admin,
+        ])->save();
 
-        return (bool) ProprietaireAgence::where(['proprietaire_id' => $id, 'agence_id' => $agenceId])
-            ->update([
-                'is_active'           => false,
+        $deleted = (bool) $link->delete();
+        $this->revokeOwnerMobileIfNoActiveLink($id);
 
-                'deleted_at'  => now(),
-                'deleted_by' => getInfoAgent()->users->id_users ?? getInfoAdmin()->admin->id_admin,
-            ]);
+        return $deleted;
 
     }
 
     public function activate(string $proprietaireAgenceId): bool
     {
         return (bool) ProprietaireAgence::where('proprietaire_agence_id', $proprietaireAgenceId)
+            ->where('agence_id', getInfoAgent()->users->agence_id)
             ->update([
                 'is_active'           => true,
                 'date_activation'     => now(),
@@ -177,13 +169,53 @@ class ProprietaireRepository implements ProprietaireRepositoryInterface
 
     public function deactivate(string $proprietaireAgenceId): bool
     {
-        return (bool) ProprietaireAgence::where('proprietaire_agence_id', $proprietaireAgenceId)
+        $link = ProprietaireAgence::where('proprietaire_agence_id', $proprietaireAgenceId)
+            ->where('agence_id', getInfoAgent()->users->agence_id)
+            ->first();
+        if (!$link) {
+            return false;
+        }
+
+        $this->ensureNoActiveTenant($link->proprietaire_id, $link->agence_id);
+
+        $deactivated = (bool) ProprietaireAgence::where('proprietaire_agence_id', $proprietaireAgenceId)
             ->update([
                 'is_active'               => false,
+                'is_mobile_visible'       => false,
                 'date_desactivation'      => now(),
                 'updated_by'  => getInfoAgent()->users->id_users ?? getInfoAdmin()->admin->id_admin,
                 'agent_desactivation_id'  => getInfoAgent()->users->id_users ?? getInfoAdmin()->admin->id_admin,
             ]);
+
+        $this->revokeOwnerMobileIfNoActiveLink($link->proprietaire_id);
+
+        return $deactivated;
+    }
+
+    private function revokeOwnerMobileIfNoActiveLink(string $proprietaireId): void
+    {
+        $hasAnotherActiveLink = ProprietaireAgence::where('proprietaire_id', $proprietaireId)
+            ->where('is_active', true)
+            ->exists();
+
+        if (! $hasAnotherActiveLink) {
+            MobileApiToken::where('actor_type', 'proprietaire')
+                ->where('actor_id', $proprietaireId)
+                ->delete();
+        }
+    }
+
+    private function ensureNoActiveTenant(string $proprietaireId, ?string $agenceId): void
+    {
+        $hasActiveTenant = LocataireAgence::withoutGlobalScope('active_proprietaire')
+            ->where('proprietaire_id', $proprietaireId)
+            ->when($agenceId, fn ($query) => $query->where('agence_id', $agenceId))
+            ->where('is_active', true)
+            ->exists();
+
+        if ($hasActiveTenant) {
+            throw new DomainException('Ce propriétaire a au moins un locataire actif. Résiliez d’abord tous les contrats actifs.');
+        }
     }
 
 

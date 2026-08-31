@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Models\Concerns\VisibleWithActiveProprietaire;
 
 class ProprietaireLot extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, VisibleWithActiveProprietaire;
 
     protected $table      = 'propietaire_lots';
     protected $primaryKey = 'propreietaire_lot_id';

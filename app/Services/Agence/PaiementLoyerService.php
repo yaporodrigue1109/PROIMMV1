@@ -98,7 +98,7 @@ class PaiementLoyerService
             $commentaire,
             $utilisateurId
         ) {
-            $params = ParametrageAgence::where('agence_id', $agenceId)->first();
+            $params = ParametrageAgence::where('agence_id', $agenceId)->lockForUpdate()->first();
 
             if (! $params) {
                 throw new PaiementLoyerException('Paramètres agence introuvables.');
@@ -116,7 +116,7 @@ class PaiementLoyerService
             }
 
             $now = Carbon::now();
-            $dateTransaction = $now->toDateString();
+            $dateTransaction = $now;
             $moisCourant = (int) $now->format('n');
             $anneeCourante = (int) $now->format('Y');
 
@@ -124,6 +124,7 @@ class PaiementLoyerService
             $moisRegles = [];
             $totalLoyerPaye = 0.0;
             $totalArrierePaye = 0.0;
+            $totalAvancePaye = 0.0;
             $arriereActuel = 0.0;
 
             // 1. Régler les factures existantes non soldées, du plus ancien au plus récent
@@ -185,8 +186,6 @@ class PaiementLoyerService
                 $montantDisponible = round($montantDisponible - $montantAAppliquer, 2);
             }
 
-            $totalAvancePaye = 0.0;
-
             // 2. S'il reste de l'argent, créer et régler les périodes manquantes.
             if ($montantDisponible > 0) {
                 $totauxPeriodesCreees = $this->payerMoisFuturs(
@@ -218,9 +217,11 @@ class PaiementLoyerService
 
             // 4. Enregistrement de la transaction agence
             $transactionId = (string) Str::uuid();
+            $numeroRecu = $params->getNextFactureNumber();
 
             DB::table('transaction_agences')->insert([
                 'transaction_agence_id' => $transactionId,
+                'numero_recu' => $numeroRecu,
                 'locataire_id' => $bail->locataire_id,
                 'agence_id' => $agenceId,
                 'proprietaire_id' => $bail->proprietaire_id,
@@ -278,6 +279,8 @@ class PaiementLoyerService
 
             return [
                 'reference' => $reference,
+                'transaction_id' => $transactionId,
+                'numero_recu' => $numeroRecu,
                 'montant_verse' => $montantVerse,
                 'commission' => $commAgence,
                 'montant_proprietaire' => $commProprietaire,

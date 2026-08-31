@@ -150,8 +150,15 @@ class SettingService
             'phone' => $setting->contact1,
             'address' => $setting->adresse,
             'site_web' => $setting->site_web,
-            'logo' => $setting->logo ? asset('storage/' . $setting->logo) : null,
-            'favicon' => $setting->flavicon ? asset('storage/' . $setting->flavicon) : null,
+            'postal_box' => $setting->boite_postal,
+            'logo' => $setting->logo_url,
+            'favicon' => $setting->favicon_url,
+            'legal' => [
+                'privacy' => $setting->politique_confidentialite,
+                'terms' => $setting->condition_generale,
+                'cgu' => $setting->cgu,
+                'legal_notice' => $setting->mention_legale,
+            ],
             'social' => [
                 'facebook' => $setting->facebook,
                 'instagram' => $setting->instagram,

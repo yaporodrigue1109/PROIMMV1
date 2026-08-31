@@ -131,6 +131,6 @@ class ProprietaireService
 
     private function uploadPhoto(\Illuminate\Http\UploadedFile $file): string
     {
-        return $file->store('proprietaires/photos', 'public');
+        return upload('proprietaires/photos', 'png', 'photo', $file);
     }
 }

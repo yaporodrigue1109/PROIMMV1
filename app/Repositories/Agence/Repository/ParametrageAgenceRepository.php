@@ -62,23 +62,23 @@ class ParametrageAgenceRepository implements ParametrageAgenceRepositoryInterfac
 
         // Upload des logos
         if (isset($files['logo'])) {
-            $this->deleteOldFile($parametrage->logo);
-            $parametrage->logo = $this->uploadFile($files['logo'], 'logos');
+          //  $this->deleteOldFile($parametrage->logo);
+            $parametrage->logo =  update( 'agence', $parametrage->logo,  'png', $data, 'logo'); //$this->uploadFile($files['logo'], 'logos');
         }
 
         if (isset($files['logo_tutelle'])) {
-            $this->deleteOldFile($parametrage->logo_tutelle);
-            $parametrage->logo_tutelle = $this->uploadFile($files['logo_tutelle'], 'logos');
+           // $this->deleteOldFile($parametrage->logo_tutelle);
+            $parametrage->logo_tutelle =   update( 'agence', $parametrage->logo_tutelle,  'png', $data, 'logo_tutelle');  //$this->uploadFile($files['logo_tutelle'], 'logos');
         }
 
         if (isset($files['logo_partenaire'])) {
-            $this->deleteOldFile($parametrage->logo_partenaire);
-            $parametrage->logo_partenaire = $this->uploadFile($files['logo_partenaire'], 'logos');
+           // $this->deleteOldFile($parametrage->logo_partenaire);
+            $parametrage->logo_partenaire =   update( 'agence', $parametrage->logo_partenaire,  'png', $data, 'logo_partenaire');  //$this->uploadFile($files['logo_partenaire'], 'logos');
         }
 
         if (isset($files['cachet'])) {
-            $this->deleteOldFile($parametrage->cachet);
-            $parametrage->cachet = $this->uploadFile($files['cachet'], 'cachets');
+          //  $this->deleteOldFile($parametrage->cachet);
+            $parametrage->cachet =   update( 'agence', $parametrage->cachet,  'png', $data, 'cachet');  //$this->uploadFile($files['cachet'], 'cachets');
         }
 
         // Mise à jour des paramètres
@@ -103,8 +103,13 @@ class ParametrageAgenceRepository implements ParametrageAgenceRepositoryInterfac
         $signatureFields = ['signature_dg', 'signature_sg', 'signature_cpt'];
         foreach ($signatureFields as $field) {
             if (isset($files[$field])) {
-                $this->deleteOldFile($parametrage->$field);
-                $parametrage->$field = $this->uploadFile($files[$field], 'signatures');
+                $parametrage->$field = update(
+                    'agence',
+                    $parametrage->$field,
+                    'png',
+                    $data,
+                    $field
+                );
             }
         }
 
@@ -140,7 +145,7 @@ class ParametrageAgenceRepository implements ParametrageAgenceRepositoryInterfac
 
     public function uploadFile(UploadedFile $file, string $path): string
     {
-        return $file->store($path, 'public');
+        return upload($path, 'png', 'file', $file);
     }
 
     protected function deleteOldFile(?string $path): void

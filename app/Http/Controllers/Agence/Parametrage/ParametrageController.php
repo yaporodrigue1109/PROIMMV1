@@ -9,6 +9,7 @@ use App\Http\Requests\Agence\UpdateParametrageLogosRequest;
 use App\Http\Requests\Agence\UpdateParametrageSignaturesRequest;
 use App\Http\Requests\Agence\UpdateParametrageNotificationsRequest;
 use App\Models\Agence;
+use App\Models\AgenceActivityLog;
 use App\Models\Region;
 use App\Models\Ville;
 use App\Models\ModePaiement;
@@ -55,6 +56,24 @@ class ParametrageController extends Controller
         $modePaiement = ModePaiement::all();
 
         $parametrage = $this->parametrageRepository->getByAgence($agenceId);
+        $activityLogs = Schema::hasTable('agence_activity_logs')
+            ? AgenceActivityLog::query()
+                ->where('agence_id', $agenceId)
+                ->latest('created_at')
+                ->paginate(25, ['*'], 'journal_page')
+                ->withQueryString()
+                ->through(fn (AgenceActivityLog $log) => [
+                    'id' => $log->id,
+                    'user_name' => $log->user_name ?: 'Utilisateur inconnu',
+                    'action' => $log->action,
+                    'description' => $log->description,
+                    'method' => $log->method,
+                    'path' => $log->path,
+                    'ip_address' => $log->ip_address,
+                    'created_at' => $log->created_at?->toIso8601String(),
+                    'created_at_label' => $log->created_at?->format('d/m/Y à H:i'),
+                ])
+            : null;
 
         return Inertia::render('Agence/Parametrage/Index', [
             'parametrage' => $parametrage,
@@ -62,6 +81,7 @@ class ParametrageController extends Controller
             'regions' => $regions,
             'villes' => $villes,
             'modePaiement' => $modePaiement,
+            'activityLogs' => $activityLogs,
             ...$this->roleConfiguration($agenceId),
         ]);
     }
@@ -284,7 +304,7 @@ class ParametrageController extends Controller
                     'description' => $role->description ?: 'Rôle du personnel de l’agence.',
                     'is_custom' => !$isPredefined,
                     'is_predefined' => $isPredefined,
-                    'is_editable' => true,
+                    'is_editable' => !($role->is_system || $role->role_id === 'role-responsable'),
                     'is_deletable' => $isCustom && !$isPredefined,
                     'is_responsable' => $role->isResponsable(),
                     'user_count' => $role->isResponsable()
@@ -384,6 +404,8 @@ class ParametrageController extends Controller
 
     private function roleAvailableForEditing(string $roleId): Role
     {
+        abort_if($roleId === 'role-responsable', 403, 'Le rôle Responsable est un rôle système non modifiable.');
+
         return Role::query()
             ->where('role_id', $roleId)
             ->where(function ($query): void {
@@ -392,6 +414,7 @@ class ParametrageController extends Controller
                     ->orWhere('agence_id', '');
             })
             ->whereNotIn('slug', ['admin', 'super-admin', 'super_admin'])
+            ->where('is_system', false)
             ->firstOrFail();
     }
 

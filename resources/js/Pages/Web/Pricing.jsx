@@ -89,10 +89,16 @@ const formatMoney = (value) =>
 export default function Pricing({ tarifs = {} }) {
     const plan = tarifs.plan ?? {};
     const modules = Array.isArray(tarifs.modules) ? tarifs.modules : [];
+    const durations = Array.isArray(tarifs.durees) ? tarifs.durees : [];
 
     const price = formatMoney(plan.prix_mensuel);
 
     const [selectedModules, setSelectedModules] = useState([]);
+    const [selectedDuration, setSelectedDuration] = useState(
+        durations.find((duration) => Number(duration.nombre_mois) === 1)?.nombre_mois
+            ?? durations[0]?.nombre_mois
+            ?? 1,
+    );
 
     const toggleModule = (moduleId) => {
         setSelectedModules((prev) =>
@@ -109,6 +115,23 @@ export default function Pricing({ tarifs = {} }) {
     }, [modules, selectedModules]);
 
     const totalMensuel = Number(plan.prix_mensuel ?? 0) + modulesTotal;
+    const duration = durations.find(
+        (item) => Number(item.nombre_mois) === Number(selectedDuration),
+    );
+    const monthCount = Number(duration?.nombre_mois ?? selectedDuration ?? 1);
+    const baseTotal = Number(duration?.prix_total ?? (Number(plan.prix_mensuel ?? 0) * monthCount));
+    const subscriptionTotal = baseTotal + (modulesTotal * monthCount);
+    const cycleLabels = {
+        mensuel: 'mensuelle',
+        trimestriel: 'trimestrielle',
+        semestriel: 'semestrielle',
+        annuel: 'annuelle',
+    };
+    const pricingGuarantees = guarantees.map((guarantee, index) => index === 0 ? {
+        ...guarantee,
+        title: `Facturation ${cycleLabels[plan.cycle] ?? plan.cycle ?? 'mensuelle'}`,
+        text: `Le cycle de facturation appliqué à cette offre est ${cycleLabels[plan.cycle] ?? plan.cycle ?? 'mensuel'}.`,
+    } : guarantee);
 
     return (
         <PublicLayout>
@@ -209,6 +232,27 @@ export default function Pricing({ tarifs = {} }) {
                 {/* FEATURES & MODULES (combined) */}
                 <section className="px-5 py-20 lg:py-28">
                     <div className="mx-auto max-w-5xl">
+                        {durations.length > 0 ? (
+                            <div className="mb-10 rounded-3xl border border-slate-200 bg-slate-50 p-6">
+                                <p className="text-sm font-bold text-[#0b1730]">Choisissez la durée de l’abonnement</p>
+                                <div className="mt-4 flex flex-wrap gap-3">
+                                    {durations.map((item) => {
+                                        const active = Number(selectedDuration) === Number(item.nombre_mois);
+                                        return (
+                                            <button
+                                                key={item.id ?? item.nombre_mois}
+                                                type="button"
+                                                onClick={() => setSelectedDuration(item.nombre_mois)}
+                                                className={`rounded-xl border px-4 py-3 text-left transition ${active ? 'border-[#00559b] bg-[#00559b] text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-[#00559b]'}`}
+                                            >
+                                                <span className="block text-sm font-bold">{item.label ?? `${item.nombre_mois} mois`}</span>
+                                                <span className={`mt-1 block text-xs ${active ? 'text-white/70' : 'text-slate-500'}`}>{formatMoney(item.prix_total)} au total</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : null}
                         <div className="mb-10 max-w-2xl">
                             <p className="text-sm font-extrabold uppercase tracking-[0.2em] text-[#76c206]">
                                 Fonctionnalités & modules
@@ -369,15 +413,15 @@ export default function Pricing({ tarifs = {} }) {
                                     </span>
 
                                     <p className="mt-4 text-sm font-semibold text-white/60">
-                                        Votre estimation
+                                        Votre estimation pour {monthCount} mois
                                     </p>
 
                                     <div className="mt-1 flex items-end gap-2">
                                         <span className="text-4xl font-extrabold text-white">
-                                            {formatMoney(totalMensuel)}
+                                            {formatMoney(subscriptionTotal)}
                                         </span>
                                         <span className="pb-1 text-sm text-white/50">
-                                            / mois
+                                            au total
                                         </span>
                                     </div>
 
@@ -412,6 +456,10 @@ export default function Pricing({ tarifs = {} }) {
                                         </div>
                                     ) : null}
 
+                                    <p className="mt-4 text-xs text-white/50">
+                                        Soit {formatMoney(totalMensuel)} par mois, modules sélectionnés inclus.
+                                    </p>
+
                                     <Link
                                         href="/inscription-agence"
                                         className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#8fd222] px-5 py-3 text-sm font-bold text-[#0b1730] transition hover:bg-[#7cc00f]"
@@ -429,7 +477,7 @@ export default function Pricing({ tarifs = {} }) {
                 <section className="px-5 py-20 lg:py-24">
                     <div className="mx-auto max-w-5xl">
                         <div className="grid gap-5 sm:grid-cols-3">
-                            {guarantees.map(
+                            {pricingGuarantees.map(
                                 ({ icon: Icon, title, text }) => (
                                     <article
                                         key={title}

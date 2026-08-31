@@ -175,6 +175,7 @@
                             $stats       = $statsFor($agence);
                             $modules     = $activeModules($agence);
                             $editUrl     = route('admin.agences.edit', $routeKey($agence));
+                            $impersonateUrl = route('admin.agences.impersonate', $routeKey($agence));
                             $basePrice   = $getBasePrice($agence);
                             $modulesPrice = $getModulesPrice($agence);
                             $agenceId    = $routeKey($agence);
@@ -213,6 +214,7 @@
                                 data-status-label="{{ $statusLabel($status) }}"
                                 data-status-class="{{ $statusClass($status) }}"
                                 data-edit-url="{{ $editUrl }}"
+                                data-impersonate-url="{{ $impersonateUrl }}"
                                 data-legal-form="{{ $get($agence, 'forme_juridique', $get($agence, 'type_entreprise', 'Non spécifié')) }}"
                                 data-reg-number="{{ $get($agence, 'numero_identification', $get($agence, 'rc_number', $get($agence, 'nif', 'Non spécifié'))) }}"
                                 data-tva="{{ $get($agence, 'tva_number', $get($agence, 'numero_tva', 'Non spécifié')) }}"
@@ -272,6 +274,10 @@
                             <h3 id="agency-detail-name">{{ $selectedName }}</h3>
                         </div>
                         <div class="agency-detail-actions">
+                            <form id="agency-impersonate-form" method="POST" action="{{ route('admin.agences.impersonate', $routeKey($selectedAgence)) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-outline btn-sm" onclick="return confirm('Accéder à l’espace de cette agence ?')">Accéder à l’espace agence</button>
+                            </form>
                             <button
                                     id="agency-toggle-status"
                                     type="button"

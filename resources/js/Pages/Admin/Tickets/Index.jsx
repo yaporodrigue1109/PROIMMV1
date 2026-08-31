@@ -523,15 +523,15 @@ export default function Tickets({ tickets: initialTickets = [], stats = {} }) {
             </div>
 
             <Card className="overflow-hidden rounded-2xl border-[#c8d4de] shadow-sm">
-                <div className="grid min-h-[560px] grid-cols-1 lg:grid-cols-[360px_1fr]">
+                <div className="grid min-h-[560px] grid-cols-1 lg:h-[calc(100vh-8rem)] lg:min-h-0 lg:grid-cols-[360px_1fr] lg:items-stretch">
                     {/* Liste */}
                     <div
                         className={cn(
-                            'flex flex-col border-[#eef3f8] lg:border-r',
+                            'flex min-h-0 flex-col overflow-hidden border-[#eef3f8] lg:border-r',
                             mobileShowConversation ? 'hidden lg:flex' : 'flex'
                         )}
                     >
-                        <CardHeader className="space-y-3 border-b border-[#eef3f8] p-4">
+                        <CardHeader className="shrink-0 space-y-3 border-b border-[#eef3f8] p-4">
                             <CardTitle className="flex items-center gap-2 text-base">
                                 <LifeBuoy className="h-4 w-4 text-[#00559b]" />
                                 Boîte de réception
@@ -582,14 +582,14 @@ export default function Tickets({ tickets: initialTickets = [], stats = {} }) {
                             </div>
                         </CardHeader>
 
-                        <div className="max-h-[460px] flex-1 overflow-y-auto">
+                        <div className="max-h-[460px] min-h-0 flex-1 overflow-y-auto overscroll-contain lg:max-h-none">
                             <TicketList tickets={filteredTickets} activeId={activeId} onSelect={handleSelect} />
                         </div>
                     </div>
 
                     {/* Conversation */}
-                    <div className={cn('min-h-[560px]', mobileShowConversation ? 'flex' : 'hidden lg:flex')}>
-                        <div className="flex w-full flex-col">
+                    <div className={cn('min-h-[560px] lg:min-h-0 lg:overflow-hidden', mobileShowConversation ? 'flex' : 'hidden lg:flex')}>
+                        <div className="flex min-h-0 w-full flex-col">
                             <Conversation
                                 ticket={activeTicket}
                                 onBack={() => setMobileShowConversation(false)}

@@ -17,9 +17,9 @@ class AgencyPortalAccessServiceTest extends TestCase
 
     public function test_it_supports_the_current_array_of_module_ids(): void
     {
-        $this->assertTrue($this->service->optionsContainPortal([1, 5, 6], 5));
-        $this->assertTrue($this->service->optionsContainPortal([1, 5, 6], 6));
-        $this->assertFalse($this->service->optionsContainPortal([1, 2, 3], 6));
+        $this->assertTrue($this->service->optionsContainPortal([1, 5, 6], 'Portail propriétaire', [5]));
+        $this->assertTrue($this->service->optionsContainPortal([1, 5, 6], 'Portail locataire', [6]));
+        $this->assertFalse($this->service->optionsContainPortal([1, 2, 3], 'Portail locataire', [6]));
     }
 
     public function test_it_supports_detailed_module_objects(): void
@@ -29,7 +29,14 @@ class AgencyPortalAccessServiceTest extends TestCase
             ['id' => 6, 'label' => 'Portail locataire', 'actif' => false],
         ];
 
-        $this->assertTrue($this->service->optionsContainPortal($options, 5));
-        $this->assertFalse($this->service->optionsContainPortal($options, 6));
+        $this->assertTrue($this->service->optionsContainPortal($options, 'Portail propriétaire', [5]));
+        $this->assertFalse($this->service->optionsContainPortal($options, 'Portail locataire', [6]));
+    }
+
+    public function test_it_supports_module_labels_when_identifiers_change(): void
+    {
+        $options = [['id' => 25, 'label' => 'Portail propriétaire', 'actif' => true]];
+
+        $this->assertTrue($this->service->optionsContainPortal($options, 'Portail propriétaire', [5]));
     }
 }

@@ -15,21 +15,7 @@ class Kernel extends ConsoleKernel
 
 protected function schedule(Schedule $schedule): void
 {
-    // Génération automatique des loyers — chaque 1er du mois à 00h05
-    $schedule->call(function () {
-        app(\App\Services\Agence\LoyerService::class)
-            ->dispatchGenerationMensuelle();
-    })
-        ->monthlyOn(1, '00:05')
-        ->withoutOverlapping()
-        ->runInBackground()
-        ->appendOutputTo(storage_path('logs/loyer_generation.log'));
-
-
-    // OU — si tu préfères appeler directement le Job sans passer par le Service :
-    // $schedule->job(new \App\Jobs\Agence\GenerateLoyerMensuel())
-    //          ->monthlyOn(1, '00:05')
-    //          ->withoutOverlapping();
+    // Les tâches sont déclarées dans routes/console.php (structure Laravel actuelle).
 }
 
     protected function commands(): void

@@ -38,6 +38,15 @@ class EquipementPropriete extends Model
         return $query->where('agence_id', $agenceId);
     }
 
+    public function scopeVisibleForAgence($query, string $agenceId)
+    {
+        return $query->where(function ($query) use ($agenceId) {
+            $query->whereNull('agence_id')
+                ->orWhere('agence_id', '')
+                ->orWhere('agence_id', $agenceId);
+        });
+    }
+
     // ─── Accesseurs ───────────────────────────────────────────────
 
     /** Alias "libelle" pour compatibilité avec les vues existantes */

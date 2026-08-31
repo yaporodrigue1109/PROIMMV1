@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Banknote, Check, CreditCard } from 'lucide-react';
+import { ArrowLeft, Banknote, Check, CreditCard, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 
 import AgenceLayout from '../../../Layouts/AgenceLayout';
@@ -22,7 +22,7 @@ function SummaryLine({ label, value, strong = false }) {
     );
 }
 
-export default function Paiement({ draft = {}, tarifs = {} }) {
+export default function Paiement({ draft = {}, tarifs = {}, payment_config = {} }) {
     const page = usePage();
     const agency = page?.props?.auth?.user?.agence ?? null;
     const subscriptionContext = draft.subscription_context ?? {};
@@ -38,6 +38,10 @@ export default function Paiement({ draft = {}, tarifs = {} }) {
             : Number(plan.prix_mensuel ?? 0) * duration;
     const modulesValue = Number(draft.prix_modules ?? 0);
     const totalValue = Number(draft.prix_total ?? draft.total ?? baseValue + modulesValue);
+    const manualPaymentEnabled = Boolean(payment_config.manual_enabled);
+    const manualPaymentNumbers = Array.isArray(payment_config.numbers)
+        ? payment_config.numbers.filter((method) => method.value)
+        : [];
     const submitTestValidation = () => {
         const chosenMethod = paymentMethods.find((method) => method.value === selectedMethod);
 
@@ -99,12 +103,52 @@ export default function Paiement({ draft = {}, tarifs = {} }) {
                 <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
                     <Card className="rounded-[1.5rem] border-[#d7e3ee] shadow-sm">
                         <CardHeader className="border-b border-slate-200">
-                            <CardTitle className="text-lg text-[#0f172a]">Moyens de paiement</CardTitle>
-                            <CardDescription>Selectionnez la methode qui vous convient le mieux.</CardDescription>
+                            <CardTitle className="text-lg text-[#0f172a]">
+                                {manualPaymentEnabled ? 'Paiement manuel temporaire' : 'Moyens de paiement'}
+                            </CardTitle>
+                            <CardDescription>
+                                {manualPaymentEnabled
+                                    ? 'Effectuez le transfert du montant total vers l’un des numéros ci-dessous.'
+                                    : 'Selectionnez la methode qui vous convient le mieux.'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="mt-4 p-6">
-                            <div className="grid gap-4 md:grid-cols-2">
-                                {paymentMethods.map((method) => {
+                            {manualPaymentEnabled ? (
+                                <div className="space-y-5">
+                                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                                        Indiquez le nom de votre agence dans le motif du transfert et conservez la preuve de paiement. L’activation sera effectuée après vérification.
+                                    </div>
+                                    {manualPaymentNumbers.length ? (
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            {manualPaymentNumbers.map((method) => (
+                                                <div key={method.name} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#f8fafc]">
+                                                            {method.image ? (
+                                                                <img src={method.image} alt={method.name} className="h-full w-full object-contain p-2" />
+                                                            ) : (
+                                                                <Smartphone className="h-5 w-5 text-[#00559b]" />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-[#0f172a]">{method.name}</p>
+                                                            <a href={`tel:${method.value}`} className="mt-1 block text-base font-bold text-[#00559b]">
+                                                                {method.value}
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                                            Aucun numéro de paiement n’est encore configuré. Veuillez contacter l’administrateur.
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    {paymentMethods.map((method) => {
                                     const Icon = method.icon;
                                     const active = selectedMethod === method.value;
 
@@ -150,8 +194,9 @@ export default function Paiement({ draft = {}, tarifs = {} }) {
                                             </div>
                                         </button>
                                     );
-                                })}
-                            </div>
+                                    })}
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -188,13 +233,19 @@ export default function Paiement({ draft = {}, tarifs = {} }) {
                                     </div>
                                 )}
                             </div>
-                            <Button
-                                type="button"
-                                onClick={submitTestValidation}
-                                className="h-11 w-full rounded-2xl bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
-                            >
-                                {subscriptionContext.button_label ?? 'Valider test'}
-                            </Button>
+                            {manualPaymentEnabled ? (
+                                <div className="rounded-2xl bg-[#eef6fb] px-4 py-3 text-sm leading-6 text-[#164e73]">
+                                    Après votre transfert, transmettez la preuve de paiement à l’administration pour validation de l’abonnement.
+                                </div>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    onClick={submitTestValidation}
+                                    className="h-11 w-full rounded-2xl bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
+                                >
+                                    {subscriptionContext.button_label ?? 'Valider test'}
+                                </Button>
+                            )}
                         </CardContent>
                     </Card>
                 </section>

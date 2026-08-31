@@ -189,9 +189,13 @@ export default function ReversementIndex({
     };
 
     const handleReset = () => {
+        const now = new Date();
+        const debut = toInputDate(new Date(now.getFullYear(), now.getMonth(), 1));
+        const fin = toInputDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+
         setProprietaireId('all');
-        setDateDebut('');
-        setDateFin('');
+        setDateDebut(debut);
+        setDateFin(fin);
         setQuickFilter('');
         router.get(window.location.pathname, {}, { preserveState: true, preserveScroll: true, replace: true });
     };
@@ -243,9 +247,23 @@ export default function ReversementIndex({
      * Jamais de valeur négative : le clamp est déjà fait par locataire en amont (backend).
      */
     const courTotals = (c) => {
+        if (c.ficheType === 'vente' && c.vente) {
+            const attendu = Number(c.vente.prixVente || 0);
+            const totalPaye = Number(c.vente.montantVersePeriode || 0);
+            const restant = Number(c.vente.montantRestant || 0);
+            return {
+                attendu,
+                totalPaye,
+                restant,
+                avance: 0,
+                pct: attendu > 0
+                    ? Math.min(100, Math.max(0, Math.round((Number(c.vente.totalVerse || 0) / attendu) * 100)))
+                    : 0,
+            };
+        }
         let attendu = 0, totalPaye = 0, restant = 0, avance = 0;
         // Détail supplémentaire utilisé par la fiche imprimable (voir FicheView)
-        let montantLoyer = 0, arrieres = 0, loyerPaye = 0, arrierePaye = 0, cautionSodeci = 0, nouvelleCautionLoc = 0;
+        let montantLoyer = 0, arrieres = 0, loyerPaye = 0, arrierePaye = 0, cautionSodeci = 0, nouvelleCautionLoc = 0, fraisDossier = 0;
         //let loyer_encaisser= 0;
 
         c.locataires?.forEach(l => {
@@ -254,23 +272,31 @@ export default function ReversementIndex({
             restant += l.restant || 0;
             avance += l.avance || 0;
 
-            montantLoyer +=  l.montantAttendu ?? 0;
+            montantLoyer += l.montantLoyer ?? 0;
             arrieres += l.arrieres || 0;
-            loyerPaye +=  l.montantLoyer ?? 0;
+            loyerPaye += l.loyerPaye ?? 0;
             arrierePaye += l.arrierePaye || 0;
             cautionSodeci += l.cautionSodeci || 0;
             nouvelleCautionLoc += l.cautionPayee || 0;
+            fraisDossier += l.fraisDossier || 0;
         });
-        const loyerEncaisser = totalPaye - (cautionSodeci +nouvelleCautionLoc);
+        const loyerEncaisser = totalPaye - (cautionSodeci + nouvelleCautionLoc + fraisDossier);
         const commission = loyerEncaisser * (c.commissionRate || 0.10);
         const apresCommission = loyerEncaisser - commission;
-        const net = apresCommission + (nouvelleCautionLoc || 0) + (cautionSodeci || 0) - (c.depenses || 0);
-        const pct = attendu > 0 ? Math.round((totalPaye / attendu) * 100) : 0;
+        const montantMaintenances = Number(c.montantMaintenances || 0);
+        const net = apresCommission + (nouvelleCautionLoc || 0) + (cautionSodeci || 0)
+            - (c.depenses || 0) - montantMaintenances;
+        // Le taux représente uniquement la dette couverte. Les cautions,
+        // frais et avances ne doivent pas produire un pourcentage supérieur.
+        const montantCouvert = Math.max(attendu - restant, 0);
+        const pct = attendu > 0
+            ? Math.min(100, Math.max(0, Math.round((montantCouvert / attendu) * 100)))
+            : 0;
 
         return {
             attendu, totalPaye, restant, avance, commission, apresCommission, net, pct,
             montantLoyer, arrieres, loyerPaye, arrierePaye, cautionSodeci, nouvelleCautionLoc,
-            loyerEncaisser
+            loyerEncaisser, montantMaintenances, fraisDossier
         };
     };
 
@@ -670,7 +696,9 @@ function ReversementList({ cours, onOpenFiche, propNom, propTel, courTotals }) {
                                         <TableCell>
                                             <div className="font-medium text-[#0f172a]">{c.nom}</div>
                                             <div className="text-xs text-[#5f7182]">
-                                                {c.locataires?.length || 0} locataire(s)
+                                                {c.ficheType === 'vente'
+                                                    ? `Vente · ${c.vente?.acheteur?.nom || 'Acheteur non renseigné'}`
+                                                    : `${c.locataires?.length || 0} locataire(s)`}
                                             </div>
                                         </TableCell>
                                         <TableCell>
@@ -743,6 +771,9 @@ function ReversementList({ cours, onOpenFiche, propNom, propTel, courTotals }) {
 // Tous sont lus avec des valeurs par défaut (0 / '—') si absents pour ne pas
 // casser l'affichage tant que le backend ne les fournit pas encore.
 function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
+    if (cour.ficheType === 'vente' && cour.vente) {
+        return <FicheVenteView cour={cour} onBack={onBack} propNom={propNom} />;
+    }
     const t = courTotals(cour);
     const readonly = cour.statut === 'reverse';
 
@@ -772,6 +803,8 @@ function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
             nouvelle_caution: t.nouvelleCautionLoc || 0,
             caution_sodeci: t.cautionSodeci || 0,
             depenses_effectuees: cour.depenses || 0,
+            frais_dossier: t.fraisDossier || 0,
+            montant_maintenances: t.montantMaintenances || 0,
             total_arriere_paye : t.arrierePaye || 0,
             total_loyer_paye: t.loyerPaye ?? t.montantAttendu ?? 0,
             total_restant: t.restant || 0,
@@ -797,6 +830,7 @@ function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
                 loyer_paye: l.loyerPaye ?? l.montantPaye ?? 0,
                 arriere_paye: l.arrierePaye || 0,
                 caution_sodeci: l.cautionSodeci || 0,
+                frais_dossier: l.fraisDossier || 0,
                 total_paye: l.montantPaye || 0,
                 restant: l.impayes || 0,
             })),
@@ -842,9 +876,9 @@ function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" className={agenceButtonStyles.outline} onClick={() => window.print()}>
+                        {/* <Button variant="outline" className={agenceButtonStyles.outline} onClick={() => window.print()}>
                             🖨️ Imprimer
-                        </Button>
+                        </Button> */}
                         {!readonly ? (
                             <Button
                                 className={agenceButtonStyles.primary}
@@ -863,7 +897,14 @@ function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
                 </div>
 
                 {/* ===================== Contenu imprimable ===================== */}
-                <div className="p-6">
+                <div className="relative isolate overflow-hidden p-6">
+                    {cour.logo_entreprise ? (
+                        <img
+                            src={cour.logo_entreprise}
+                            alt=""
+                            className="pointer-events-none absolute left-1/2 top-1/2 -z-10 max-h-[65%] w-[42%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.07]"
+                        />
+                    ) : null}
                     {/* En-tête du document */}
                     <div className="mb-4 flex items-start justify-between gap-4">
                        <div className="flex items-center gap-3">
@@ -924,9 +965,9 @@ function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
                                     const arrieres = l.arrieres || 0;
                                     const attendu = montantLoyer + arrieres;
                                     const loyerPaye = l.loyerPaye ?? l.montantPaye ?? 0;
-                                    const arrierePaye = l.restant || 0;
-                                    const totalPaye = loyerPaye + arrierePaye;
-                                    const impayes = Math.max(attendu - totalPaye, 0);
+                                    const arrierePaye = l.arrierePaye || 0;
+                                    const totalPaye = l.montantPaye ?? (loyerPaye + arrierePaye);
+                                    const impayes = l.restant ?? Math.max(attendu - (loyerPaye + arrierePaye), 0);
 
                                     return (
                                         <tr key={`${l.porte_id}-${l.locataire_id}-${idx}`} className="odd:bg-white even:bg-[#f7fbfe]">
@@ -948,7 +989,7 @@ function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
                                             <td className={cn(cell, 'text-right')}>{fmtNombre(loyerPaye)}</td>
                                             <td className={cn(cell, 'text-right')}>{fmtNombre(arrierePaye)}</td>
                                             <td className={cn(cell, 'text-right')}>{fmtNombre(l.cautionSodeci)}</td>
-                                            <td className={cn(cell, 'text-right font-semibold text-[#4d8500]')}>{fmtNombre(l.montantPaye)}</td>
+                                            <td className={cn(cell, 'text-right font-semibold text-[#4d8500]')}>{fmtNombre(totalPaye)}</td>
                                             <td className={cn(cell, 'text-right font-semibold', impayes > 0 ? 'text-[#b42318]' : 'text-[#5f7182]')}>
                                                 {fmtNombre(impayes)}
                                             </td>
@@ -960,19 +1001,18 @@ function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
                             </tbody>
                             <tfoot>
                                 <tr className="bg-[#eef3f7] font-semibold text-[#0f172a]">
-                                    <td colSpan={2} className={cell}>TOTAUX</td>
-                                    <td className={cell} colSpan={2}></td>
-                                    <td className={cell}></td>
+                                    <td colSpan={5} className={cell}>TOTAUX</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.montantLoyer)}</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.arrieres)}</td>
-                                    <td className={cn(cell, 'text-right')}>{fmtNombre(t.montantLoyer + t.arrieres)}</td>
-                                    <td className={cell} colSpan={2}></td>
+                                    <td className={cn(cell, 'text-right')}>{fmtNombre(t.attendu)}</td>
+                                    <td className={cell}></td>
+                                    <td className={cn(cell, 'text-right')}>{fmtNombre(t.avance)}</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.nouvelleCautionLoc)}</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.loyerPaye)}</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.arrierePaye)}</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.cautionSodeci)}</td>
                                     <td className={cn(cell, 'text-right')}>{fmtNombre(t.totalPaye)}</td>
-                                    <td className={cn(cell, 'text-right')}>{fmtNombre(Math.max((t.montantLoyer + t.arrieres) - (t.loyerPaye + t.arrierePaye), 0))}</td>
+                                    <td className={cn(cell, 'text-right')}>{fmtNombre(t.restant)}</td>
                                     <td className={cell} colSpan={2}></td>
                                 </tr>
                             </tfoot>
@@ -1027,6 +1067,14 @@ function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
                                         </td>
                                     </tr>
                                     <tr className="border-b border-[#0f172a]">
+                                        <td className="px-3 py-2 font-medium text-[#0f172a]">FRAIS DE DOSSIER (NON REVERSÉS)</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-[#d97706]">{fmtNombre(t.fraisDossier)} FCFA</td>
+                                    </tr>
+                                    <tr className="border-b border-[#0f172a]">
+                                        <td className="px-3 py-2 font-medium text-[#0f172a]">MAINTENANCES — MONTANT VERSÉ SUR LA PÉRIODE</td>
+                                        <td className="px-3 py-2 text-right font-semibold text-[#b42318]">{fmtNombre(t.montantMaintenances)} FCFA</td>
+                                    </tr>
+                                    <tr className="border-b border-[#0f172a]">
                                         <td className="px-3 py-2 font-medium text-[#0f172a]">DEPENSES EFFECTUEES</td>
                                         <td className="px-3 py-2 text-right">
                                             <input
@@ -1078,4 +1126,103 @@ function FicheView({ cour, onBack, onUpdateCour, courTotals, propNom }) {
             </Card>
         </div>
     );
+}
+
+export function FicheVenteView({ cour, onBack, propNom, readonly = false }) {
+    const vente = cour.vente;
+    const lot = cour.lot || {};
+    const cell = 'border border-[#dbe3ea] px-3 py-2 text-sm';
+    const headCell = cn(cell, 'bg-[#f1f5f9] font-semibold text-[#0f172a]');
+    const handleReversement = () => {
+        if (!Number(vente.montantVersePeriode || 0)) return;
+        if (!confirm(`Confirmez-vous le reversement net de ${currency(vente.netProprietairePeriode)} au propriétaire, après la commission de l’agence ?`)) return;
+        router.post(`/agence/reversement/ventes/${vente.id}/marquer-reverse`, {
+            periode_debut: cour.periode?.debut,
+            periode_fin: cour.periode?.fin,
+        }, { preserveScroll: true });
+    };
+
+    return (
+        <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6">
+            <Button variant="outline" className="w-fit gap-2 border-[#c8d4de] print:hidden" onClick={onBack}>
+                ← Retour au tableau de bord
+            </Button>
+            <Card className="relative isolate overflow-hidden rounded-2xl border-[#c8d4de] bg-white p-7 shadow-sm print:border-0 print:shadow-none">
+                {cour.logo_entreprise ? <img src={cour.logo_entreprise} alt="" className="pointer-events-none absolute left-1/2 top-1/2 -z-10 w-[42%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-[0.06]" /> : null}
+
+                <div className="mb-6 flex items-start justify-between gap-5 border-b border-[#dbe3ea] pb-5">
+                    <div className="flex items-center gap-3">
+                        {cour.logo_entreprise ? <img src={cour.logo_entreprise} alt="Logo" className="h-14 w-14 object-contain" /> : null}
+                        <div><div className="font-semibold text-[#0f172a]">{cour.name_entreprise}</div><div className="text-xs text-[#5f7182]">Fiche financière</div></div>
+                    </div>
+                    <div className="text-center">
+                        <h2 className="text-xl font-bold text-[#0f172a]">Fiche de reversement — Vente d’un lot</h2>
+                        <p className="mt-1 text-sm text-[#5f7182]">Période du {fmtDate(cour.periode?.debut)} au {fmtDate(cour.periode?.fin)}</p>
+                    </div>
+                    <div className="flex gap-2 print:hidden">
+                        {readonly && cour.id ? (
+                            <Button variant="outline" asChild>
+                                <a href={`/agence/reversement/pdf/${cour.id}/${cour.periode?.debut}/${cour.periode?.fin}`}>📄 Télécharger le PDF</a>
+                            </Button>
+                        ) : null}
+                        {!readonly ? (
+                            <Button className={agenceButtonStyles.primary} disabled={!Number(vente.montantVersePeriode || 0)} onClick={handleReversement}>
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Reverser au propriétaire
+                            </Button>
+                        ) : null}
+                    </div>
+                </div>
+
+                <div className="mb-6 grid gap-4 md:grid-cols-3">
+                    <InfoTile label="Propriétaire" value={propNom(cour.proprietaireId)} />
+                    <InfoTile label="Acheteur" value={vente.acheteur?.nom || '—'} detail={vente.acheteur?.telephone || vente.acheteur?.email} />
+                    <InfoTile label="Référence de la vente" value={vente.reference || '—'} detail={vente.dateAccord ? `Accord du ${fmtDate(vente.dateAccord)}` : ''} />
+                    <InfoTile label="Lot" value={lot.nom || cour.nom} detail={[lot.ilot && `Îlot ${lot.ilot}`, lot.numero && `Lot ${lot.numero}`].filter(Boolean).join(' · ')} />
+                    <InfoTile label="Adresse" value={lot.adresse || '—'} />
+                    <InfoTile label="Mode de règlement" value={(vente.typePaiement || '—').replaceAll('_', ' ')} />
+                </div>
+
+                <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <AmountTile label="Montant initial du lot" value={vente.prixVente} />
+                    <AmountTile label="Versé sur la période" value={vente.montantVersePeriode} accent="text-[#4d8500]" />
+                    <AmountTile label="Total versé" value={vente.totalVerse} accent="text-[#00559b]" />
+                    <AmountTile label="Reste à payer" value={vente.montantRestant} accent="text-[#b42318]" />
+                    <AmountTile label={`Commission agence (${Number(vente.tauxAgence || 0).toLocaleString('fr-FR')} %)`} value={vente.commissionAgencePeriode} accent="text-[#d97706]" />
+                    <AmountTile label="Net à reverser au propriétaire" value={vente.netProprietairePeriode} accent="text-[#4d8500]" />
+                </div>
+                {!readonly && !Number(vente.montantVersePeriode || 0) ? (
+                    <div className="mb-5 rounded-lg bg-[#eef3f7] px-4 py-3 text-sm text-[#5f7182]">
+                        Aucun versement non reversé n’est disponible sur cette période.
+                    </div>
+                ) : null}
+
+                <h3 className="mb-3 font-semibold text-[#0f172a]">Versements effectués pendant la période</h3>
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                        <thead><tr><th className={headCell}>Rang</th><th className={headCell}>Date du versement</th><th className={headCell}>N° reçu</th><th className={cn(headCell, 'text-right')}>Montant versé</th><th className={cn(headCell, 'text-right')}>Reste après versement</th></tr></thead>
+                        <tbody>
+                            {vente.versements?.length ? vente.versements.map((versement, index) => (
+                                <tr key={versement.id}><td className={cell}>{index + 1}</td><td className={cell}>{fmtDate(versement.date)}</td><td className={cell}>{versement.numeroRecu || '—'}</td><td className={cn(cell, 'text-right font-semibold')}>{currency(versement.montant)}</td><td className={cn(cell, 'text-right font-semibold text-[#b42318]')}>{currency(versement.resteApresVersement)}</td></tr>
+                            )) : <tr><td colSpan={5} className={cn(cell, 'py-8 text-center text-[#5f7182]')}>Aucun versement enregistré pendant cette période.</td></tr>}
+                        </tbody>
+                        <tfoot>
+                            <tr><td colSpan={4} className={cn(headCell, 'text-right')}>TOTAL VERSÉ SUR LA PÉRIODE</td><td className={cn(headCell, 'text-right')}>{currency(vente.montantVersePeriode)}</td></tr>
+                            <tr><td colSpan={4} className={cn(headCell, 'text-right')}>POURCENTAGE DE L’AGENCE APPLIQUÉ AU TOTAL</td><td className={cn(headCell, 'text-right')}>{Number(vente.tauxAgence || 0).toLocaleString('fr-FR')} %</td></tr>
+                            <tr><td colSpan={4} className={cn(headCell, 'text-right')}>COMMISSION DE L’AGENCE SUR LE TOTAL</td><td className={cn(headCell, 'text-right text-[#d97706]')}>{currency(vente.commissionAgencePeriode)}</td></tr>
+                            <tr><td colSpan={4} className={cn(headCell, 'text-right')}>NET À REVERSER AU PROPRIÉTAIRE</td><td className={cn(headCell, 'text-right text-[#4d8500]')}>{currency(vente.netProprietairePeriode)}</td></tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </Card>
+        </div>
+    );
+}
+
+function InfoTile({ label, value, detail }) {
+    return <div className="rounded-xl border border-[#dbe3ea] bg-[#f8fafc] p-4"><div className="text-xs font-medium uppercase tracking-wide text-[#5f7182]">{label}</div><div className="mt-1 font-semibold text-[#0f172a]">{value}</div>{detail ? <div className="mt-1 text-xs text-[#5f7182]">{detail}</div> : null}</div>;
+}
+
+function AmountTile({ label, value, accent = 'text-[#0f172a]' }) {
+    return <div className="rounded-xl border border-[#c8d4de] bg-white p-4"><div className="text-xs font-medium text-[#5f7182]">{label}</div><div className={cn('mt-2 text-xl font-bold', accent)}>{currency(value)}</div></div>;
 }

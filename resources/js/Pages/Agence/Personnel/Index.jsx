@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     BriefcaseBusiness,
     Eye,
@@ -138,12 +138,16 @@ function normalizePersonnel(personnel) {
                 ? Boolean(personnel.is_active)
                 : personnel?.actif !== undefined
                     ? Boolean(personnel.actif)
-                    : true,
+                    : personnel?.statut
+                        ? personnel.statut === 'actif'
+                        : true,
 
         is_acces:
             personnel?.is_acces !== undefined
                 ? Boolean(personnel.is_acces)
                 : false,
+
+        is_responsable: Boolean(personnel?.is_responsable),
     };
 }
 
@@ -242,6 +246,7 @@ export default function Index({
     roles = [],
     filters = {},
 }) {
+    const currentUserId = String(usePage().props.auth?.user?.id_users ?? '');
     const [search, setSearch] = useState(filters.search ?? '');
 
     const [roleId, setRoleId] = useState(
@@ -366,13 +371,6 @@ export default function Index({
             icon: UserCheck,
             accent: COLORS.greenDark,
             tint: '#eef8df',
-        },
-        {
-            label: 'Personnel inactif',
-            value: number(stats.inactifs ?? rows.filter((item) => !item.is_active).length),
-            icon: UserX,
-            accent: COLORS.red,
-            tint: '#fff4f4',
         },
         {
             label: 'Personnel suspendu',
@@ -633,29 +631,32 @@ export default function Index({
                                 </Link>
                             </Button>
 
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className={
-                                    personnelItem.is_active
-                                        ? agenceButtonStyles.actionRedIcon
-                                        : agenceButtonStyles.actionGreenIcon
-                                }
-                                onClick={() => handleToggleStatus(personnelItem)}
-                            >
-                                {personnelItem.is_active ? (
-                                    <UserX className="h-4 w-4" />
-                                ) : (
-                                    <UserCheck className="h-4 w-4" />
-                                )}
-                            </Button>
+                            {String(personnelItem.id) !== currentUserId && !personnelItem.is_responsable ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    title={personnelItem.is_active ? 'Désactiver' : 'Activer'}
+                                    className={
+                                        personnelItem.is_active
+                                            ? agenceButtonStyles.actionRedIcon
+                                            : agenceButtonStyles.actionGreenIcon
+                                    }
+                                    onClick={() => handleToggleStatus(personnelItem)}
+                                >
+                                    {personnelItem.is_active ? (
+                                        <UserX className="h-4 w-4" />
+                                    ) : (
+                                        <UserCheck className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            ) : null}
                         </div>
                     );
                 },
             },
         ],
-        [handleToggleStatus]
+        [currentUserId, handleToggleStatus]
     );
 
     const pageLinks =
@@ -757,10 +758,6 @@ export default function Index({
 
                                     <SelectItem value="actif">
                                         Actifs
-                                    </SelectItem>
-
-                                    <SelectItem value="inactif">
-                                        Inactifs
                                     </SelectItem>
 
                                     <SelectItem value="suspendu">

@@ -3,14 +3,11 @@
 namespace App\Services\Mobile;
 
 use App\Models\Agence;
-use App\Models\ConfigurationTarifModule;
-use App\Models\Transaction;
 
 class AgencyPortalAccessService
 {
-    public const OWNER_PORTAL_ID = 5;
-
-    public const TENANT_PORTAL_ID = 6;
+    public const OWNER_PORTAL_LABEL = 'Portail propriétaire';
+    public const TENANT_PORTAL_LABEL = 'Portail locataire';
 
     private array $cache = [];
 
@@ -21,22 +18,31 @@ class AgencyPortalAccessService
             return false;
         }
 
-        $portalId = $role === 'proprietaire' ? self::OWNER_PORTAL_ID : self::TENANT_PORTAL_ID;
-        $cacheKey = $agency->getKey().':'.$portalId;
+        $portalLabel = $role === 'proprietaire'
+            ? self::OWNER_PORTAL_LABEL
+            : self::TENANT_PORTAL_LABEL;
+        $cacheKey = $agency->getKey().':'.$portalLabel;
 
-        return $this->cache[$cacheKey] ??= $this->resolve($agency, $portalId);
+        return $this->cache[$cacheKey] ??= $this->resolve($agency, $portalLabel);
     }
 
-    public function optionsContainPortal(array $options, int $portalId): bool
+    public function optionsContainPortal(array $options, string $portalLabel, array $portalIds = []): bool
     {
         foreach ($options as $option) {
-            if (is_scalar($option) && (int) $option === $portalId) {
+            if (is_scalar($option) && in_array((int) $option, $portalIds, true)) {
                 return true;
             }
 
-            if (is_array($option)
-                && (int) ($option['id'] ?? 0) === $portalId
-                && filter_var($option['actif'] ?? true, FILTER_VALIDATE_BOOL)) {
+            if (! is_array($option)
+                || ! filter_var($option['actif'] ?? true, FILTER_VALIDATE_BOOL)) {
+                continue;
+            }
+
+            $hasMatchingId = in_array((int) ($option['id'] ?? 0), $portalIds, true);
+            $hasMatchingLabel = mb_strtolower(trim((string) ($option['label'] ?? '')))
+                === mb_strtolower($portalLabel);
+
+            if ($hasMatchingId || $hasMatchingLabel) {
                 return true;
             }
         }
@@ -44,31 +50,24 @@ class AgencyPortalAccessService
         return false;
     }
 
-    private function resolve(Agence $agency, int $portalId): bool
+    private function resolve(Agence $agency, string $portalLabel): bool
     {
+        $today = today();
+        $subscription = $agency->relationLoaded('abonnement')
+            ? $agency->abonnement
+            : $agency->abonnement()->first();
+
         if ($agency->statut !== 'active'
-            || ! $agency->abonnement_start
+            || ! $subscription
+            || $subscription->statut !== 'actif'
             || ! $agency->abonnement_end
-            || $agency->abonnement_start->isFuture()
-            || $agency->abonnement_end->isPast()) {
+            || $agency->abonnement_end->startOfDay()->isBefore($today)) {
             return false;
         }
 
-        $moduleIsAvailable = ConfigurationTarifModule::whereKey($portalId)
-            ->where('actif', true)
-            ->exists();
-        if (! $moduleIsAvailable) {
-            return false;
-        }
-
-        $subscription = Transaction::where('agence_id', $agency->getKey())
-            ->whereNotIn('statut', ['echouee', 'remboursee', 'annulee'])
-            ->whereDate('periode_debut', '<=', today())
-            ->whereDate('periode_fin', '>=', today())
-            ->latest('transaction_id')
-            ->first();
-
-        return $subscription
-            && $this->optionsContainPortal($subscription->options_souscrites ?? [], $portalId);
+        return $this->optionsContainPortal(
+            $subscription->features ?? [],
+            $portalLabel
+        );
     }
 }

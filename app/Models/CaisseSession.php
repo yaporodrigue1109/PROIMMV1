@@ -27,4 +27,14 @@ class CaisseSession extends Model
             $session->caisse_session_id ??= (string) Str::uuid();
         });
     }
+
+    public function opener()
+    {
+        return $this->belongsTo(User::class, 'opened_by', 'id_users');
+    }
+
+    public function closer()
+    {
+        return $this->belongsTo(User::class, 'closed_by', 'id_users');
+    }
 }

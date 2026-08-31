@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import GeographySelects from '../../../components/geography-selects';
 import {
     ArrowLeft,
     Building2,
@@ -1031,46 +1032,12 @@ export default function Show({ proprietaire, liaison = null, lots = [], propriet
                                     />
                                 </Field>
 
-                                <Field label="Région">
-                                    <Select
-                                        value={lotForm.region_id}
-                                        onValueChange={(value) =>
-                                            setLotForm((current) => ({ ...current, region_id: value, ville_id: '' }))
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Sélectionner" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="">Aucune</SelectItem>
-                                            {regionOptions.map((region) => (
-                                                <SelectItem key={region.value} value={region.value}>
-                                                    {region.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </Field>
-
-                                <Field label="Ville">
-                                    <Select
-                                        value={lotForm.ville_id}
-                                        onValueChange={(value) => setLotForm((current) => ({ ...current, ville_id: value }))}
-                                        disabled={!lotForm.region_id}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={lotForm.region_id ? 'Sélectionner' : "Sélectionnez d'abord une région"} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="">Aucune</SelectItem>
-                                            {villeOptions.map((ville) => (
-                                                <SelectItem key={ville.value} value={ville.value}>
-                                                    {ville.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </Field>
+                                <GeographySelects
+                                    regionId={lotForm.region_id}
+                                    cityId={lotForm.ville_id}
+                                    onRegionChange={(value) => setLotForm((current) => ({ ...current, region_id: value, ville_id: '' }))}
+                                    onCityChange={(value) => setLotForm((current) => ({ ...current, ville_id: value }))}
+                                />
                                 <label className="flex items-center gap-3 rounded-xl border border-[#c8d4de] p-3 md:col-span-2">
                                     <input
                                         type="checkbox"

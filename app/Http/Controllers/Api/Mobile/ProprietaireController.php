@@ -6,23 +6,32 @@ use App\Http\Controllers\Controller;
 use App\Models\Agence;
 use App\Models\LocataireAgence;
 use App\Models\Loyer;
+use App\Models\Maintenance;
+use App\Models\Porte;
 use App\Models\ProprietaireAgence;
 use App\Models\Propriete;
-use App\Models\TransactionAgence;
+use App\Models\Reversement;
 use App\Services\Mobile\AgencyPortalAccessService;
+use App\Services\Agence\ReversementPdfService;
+use App\Services\Agence\AgencyDocumentBranding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 
 class ProprietaireController extends Controller
 {
-    public function __construct(private readonly AgencyPortalAccessService $portalAccess) {}
+    public function __construct(
+        private readonly AgencyPortalAccessService $portalAccess,
+        private readonly ReversementPdfService $pdfService,
+        private readonly AgencyDocumentBranding $documentBranding,
+    ) {}
 
     public function agencies(Request $request): JsonResponse
     {
         $ownerId = $request->attributes->get('mobile_actor')->getKey();
-        $links = ProprietaireAgence::with(['agence.ville', 'agence.region'])
+        $links = ProprietaireAgence::with(['agence.ville', 'agence.region', 'agence.parametrage'])
             ->where('proprietaire_id', $ownerId)
             ->where('is_mobile_visible', true)
             ->active()->get()
@@ -33,19 +42,30 @@ class ProprietaireController extends Controller
 
     public function attachAgency(Request $request): JsonResponse
     {
+
+
         $data = $request->validate(['code' => ['required', 'string', 'max:150']]);
         $ownerId = $request->attributes->get('mobile_actor')->getKey();
+
+
         $agency = Agence::where('code_agence', trim($data['code']))->first();
+
+
 
         if (! $agency) {
             throw ValidationException::withMessages(['code' => "Ce code d'agence est invalide."]);
         }
+
+
+
 
         if (! $this->portalAccess->enabled($agency, 'proprietaire')) {
             throw ValidationException::withMessages([
                 'code' => "Le portail propriétaire n'est pas actif dans l'abonnement de cette agence.",
             ]);
         }
+
+
 
         $link = ProprietaireAgence::where('proprietaire_id', $ownerId)
             ->where('agence_id', $agency->getKey())->active()->first();
@@ -83,23 +103,63 @@ class ProprietaireController extends Controller
             ->where('annee_paiement', $year)
             ->when($month, fn ($q, $value) => $q->where('mois_paiement', $value));
 
-        $monthly = Loyer::query()
-            ->selectRaw('mois_paiement as month, SUM(montant_proprio) as amount')
-            ->where('proprietaire_id', $ownerId)->where('agence_id', $agency)
-            ->where('annee_paiement', $year)->groupBy('mois_paiement')
-            ->orderBy('mois_paiement')->get()
-            ->map(fn ($row) => ['month' => (int) $row->month, 'amount' => (int) $row->amount]);
+        $monthlyReversements = Reversement::query()
+            ->where('proprietaire_id', $ownerId)
+            ->where('agence_id', $agency)
+            ->reverse()
+            ->whereNotNull('date_reversement')
+            ->whereYear('date_reversement', $year)
+            ->get(['date_reversement', 'net_a_reverser', 'total_restant'])
+            ->groupBy(fn ($reversement) => (int) $reversement->date_reversement->format('n'));
+
+        $monthlyPayouts = $monthlyReversements
+            ->map(fn ($reversements, $month) => [
+                'month' => (int) $month,
+                'amount' => (int) $reversements->sum('net_a_reverser'),
+            ])
+            ->sortBy('month')
+            ->values();
+
+        $monthlyArrears = $monthlyReversements
+            ->map(fn ($reversements, $month) => [
+                'month' => (int) $month,
+                'amount' => (int) $reversements->sum('total_restant'),
+            ])
+            ->sortBy('month')
+            ->values();
+
+        $expected = Porte::query()
+            ->where('agence_id', $agency)
+            ->where('is_occupe', true)
+            ->whereHas('locatairesAgence', function ($query) use ($ownerId, $agency) {
+                $query->where('proprietaire_id', $ownerId)
+                    ->where('agence_id', $agency)
+                    ->where('is_active', true);
+            })
+            ->sum('mt_loyer');
+
+        $arrears = Loyer::query()
+            ->where('proprietaire_id', $ownerId)
+            ->where('agence_id', $agency)
+            ->impayesOuPartiels()
+            ->sum('montant_restant');
 
         return response()->json(['data' => [
             'period' => ['year' => (int) $year, 'month' => $month ? (int) $month : null],
             'summary' => [
-                'expected' => (int) (clone $loyers)->sum('montant_a_payer'),
+                'expected' => (int) $expected,
                 'received' => (int) (clone $loyers)->sum('montant_payer'),
                 'owner_share' => (int) (clone $loyers)->sum('montant_proprio'),
-                'arrears' => (int) (clone $loyers)->sum('montant_restant'),
+                'arrears' => (int) $arrears,
                 'properties' => Propriete::where('proprietaire_id', $ownerId)->where('agence_id', $agency)->count(),
+                'tenants' => LocataireAgence::where('proprietaire_id', $ownerId)
+                    ->where('agence_id', $agency)
+                    ->where('is_active', true)
+                    ->distinct('locataire_id')
+                    ->count('locataire_id'),
             ],
-            'monthly_received' => $monthly,
+            'monthly_payouts' => $monthlyPayouts,
+            'monthly_arrears' => $monthlyArrears,
         ]]);
     }
 
@@ -121,9 +181,12 @@ class ProprietaireController extends Controller
         $item = $this->ownedProperty($ownerId, $agency, $property);
 
         $rent = Loyer::where('proprietaire_id', $ownerId)->where('agence_id', $agency)->where('propriete_id', $property);
-        $lastPayout = TransactionAgence::where('proprietaire_id', $ownerId)
-            ->where('agence_id', $agency)->where('propriete_id', $property)
-            ->where('is_reversement', true)->orderByDesc('date_transaction')->first();
+        $lastPayout = Reversement::where('proprietaire_id', $ownerId)
+            ->where('agence_id', $agency)
+            ->where('lot_id', $item->lot_id)
+            ->reverse()
+            ->orderByDesc('date_reversement')
+            ->first();
 
         return response()->json(['data' => $this->propertyData($item, $ownerId, $agency) + [
             'expected' => (int) (clone $rent)->sum('montant_a_payer'),
@@ -150,7 +213,9 @@ class ProprietaireController extends Controller
                 'tenant_id' => $contract->locataire_id,
                 'name' => $contract->locataire?->name,
                 'phone' => $contract->locataire?->tel1,
-                'photo_url' => $contract->locataire?->photo ? url($contract->locataire->photo) : null,
+                'photo_url' => $contract->locataire?->photo
+                    ? request()->root().'/'.ltrim(parse_url($contract->locataire->photo, PHP_URL_PATH) ?: $contract->locataire->photo, '/')
+                    : null,
                 'building' => $contract->batiment?->name,
                 'door' => $contract->porte?->numero_porte,
                 'monthly_rent' => (int) ($contract->loyer_net ?: $contract->porte?->mt_loyer),
@@ -173,32 +238,114 @@ class ProprietaireController extends Controller
     public function payouts(Request $request, string $agency, string $property): JsonResponse
     {
         $ownerId = $request->attributes->get('mobile_actor')->getKey();
-        $this->ownedProperty($ownerId, $agency, $property);
+        $ownedProperty = $this->ownedProperty($ownerId, $agency, $property);
         $data = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date', 'after_or_equal:from'],
             'per_page' => ['nullable', 'integer', 'between:1,100'],
         ]);
 
-        $page = TransactionAgence::with('modePaiement')
-            ->where('proprietaire_id', $ownerId)->where('agence_id', $agency)
-            ->where('propriete_id', $property)->where('is_reversement', true)
-            ->when($data['from'] ?? null, fn ($q, $date) => $q->whereDate('date_transaction', '>=', $date))
-            ->when($data['to'] ?? null, fn ($q, $date) => $q->whereDate('date_transaction', '<=', $date))
-            ->orderByDesc('date_transaction')->paginate($data['per_page'] ?? 20);
-        $page->through(fn ($transaction) => $this->payoutData($transaction));
+        $page = Reversement::query()
+            ->where('proprietaire_id', $ownerId)
+            ->where('agence_id', $agency)
+            ->where('lot_id', $ownedProperty->lot_id)
+            ->reverse()
+            ->when($data['from'] ?? null, fn ($q, $date) => $q->whereDate('date_reversement', '>=', $date))
+            ->when($data['to'] ?? null, fn ($q, $date) => $q->whereDate('date_reversement', '<=', $date))
+            ->orderByDesc('date_reversement')
+            ->paginate($data['per_page'] ?? 10);
+        $page->through(fn ($reversement) => $this->payoutData($reversement));
 
         return response()->json($page);
+    }
+
+    public function maintenances(Request $request, string $agency, string $property): JsonResponse
+    {
+        $ownerId = $request->attributes->get('mobile_actor')->getKey();
+        $ownedProperty = $this->ownedProperty($ownerId, $agency, $property);
+        $data = $request->validate([
+            'per_page' => ['nullable', 'integer', 'between:1,100'],
+        ]);
+
+        $page = Maintenance::with([
+            'batiment',
+            'porte',
+            'details.typeIntervention',
+            'details.maintenancier',
+        ])
+            ->where('proprietaire_id', $ownerId)
+            ->where('agence_id', $agency)
+            ->where('lot_id', $ownedProperty->lot_id)
+            ->orderByDesc('created_at')
+            ->paginate($data['per_page'] ?? 10);
+
+        $page->through(fn (Maintenance $maintenance) => [
+            'id' => $maintenance->getKey(),
+            'title' => $maintenance->titre,
+            'description' => $maintenance->description,
+            'status' => $maintenance->statut,
+            'amount' => (int) $maintenance->montant_global,
+            'covered_by' => $maintenance->prise_en_charge_par,
+            'building' => $maintenance->batiment?->name,
+            'door' => $maintenance->porte?->numero_porte,
+            'created_at' => optional($maintenance->created_at)->toIso8601String(),
+            'updated_at' => optional($maintenance->updated_at)->toIso8601String(),
+            'details' => $maintenance->details->map(fn ($detail) => [
+                'id' => $detail->getKey(),
+                'type' => $detail->typeIntervention?->name,
+                'technician' => $detail->maintenancier?->name,
+                'technician_phone' => $detail->maintenancier?->tel1,
+                'status' => $detail->statut,
+                'priority' => $detail->priorite,
+                'amount' => (int) $detail->montant,
+                'start_date' => optional($detail->date_debut)->toDateString(),
+                'end_date' => optional($detail->date_fin)->toDateString(),
+                'note' => $detail->note,
+            ])->values(),
+        ]);
+
+        return response()->json($page);
+    }
+
+    public function downloadPayout(Request $request, Reversement $reversement)
+    {
+        abort_unless($request->hasValidSignature(false), 403);
+        abort_unless(
+            hash_equals((string) $reversement->proprietaire_id, (string) $request->query('owner'))
+                && $reversement->statut === 'reverse',
+            404
+        );
+
+        $reversement->loadMissing([
+            'agence.parametrage',
+            'proprietaire',
+            'lot',
+            'details.locataire',
+            'details.porte',
+        ]);
+
+        $documentLogo = $this->documentBranding->logoUrl($reversement->agence);
+
+        return view('agence.reversement.mobile', compact('reversement', 'documentLogo'));
     }
 
     private function propertyData(Propriete $property, string $ownerId, string $agencyId): array
     {
         $doors = $property->batiments->flatMap->portes;
         $rent = Loyer::where('proprietaire_id', $ownerId)->where('agence_id', $agencyId)->where('propriete_id', $property->getKey());
+        $lot = $property->lot;
+        $lotDetails = collect([
+            filled($lot?->num_ilot) ? 'Îlot '.$lot->num_ilot : null,
+            filled($lot?->num_lot) ? 'Lot '.$lot->num_lot : null,
+        ])->filter()->implode(' • ');
+        $title = collect([
+            filled($lot?->name) ? $lot->name : 'Lot',
+            $lotDetails ?: null,
+        ])->filter()->implode(' — ');
 
         return [
             'id' => $property->getKey(),
-            'title' => $property->reference,
+            'title' => $title,
             'description' => $property->description,
             'type' => $property->typePropriete?->name,
             'location' => $property->adresse_complete ?: $property->lot?->adresse,
@@ -213,14 +360,20 @@ class ProprietaireController extends Controller
         ];
     }
 
-    private function payoutData(TransactionAgence $transaction): array
+    private function payoutData(Reversement $reversement): array
     {
         return [
-            'id' => $transaction->getKey(),
-            'reference' => 'REV-'.strtoupper(substr($transaction->getKey(), 0, 8)),
-            'amount' => (int) $transaction->montant_global_verser,
-            'payment_method' => $transaction->modePaiement?->name,
-            'date' => optional($transaction->date_transaction)->toIso8601String(),
+            'id' => $reversement->getKey(),
+            'reference' => $reversement->reference_paiement,
+            'amount' => (int) $reversement->net_a_reverser,
+            'payment_method' => $reversement->mode_paiement,
+            'date' => optional($reversement->date_reversement)->toIso8601String(),
+            'download_url' => URL::temporarySignedRoute(
+                'mobile.proprietaire.reversements.pdf',
+                now()->addHours(2),
+                ['reversement' => $reversement->getKey(), 'owner' => $reversement->proprietaire_id],
+                false
+            ),
         ];
     }
 
@@ -248,6 +401,8 @@ class ProprietaireController extends Controller
     private function agencyData(?Agence $agency): array
     {
         abort_if(! $agency, 404);
+        $agency->loadMissing('parametrage');
+        $hasConfiguredLogo = filled($agency->parametrage?->logo);
 
         return [
             'id' => $agency->getKey(),
@@ -260,6 +415,9 @@ class ProprietaireController extends Controller
             'region' => $agency->region?->name,
             'website' => $agency->site_web,
             'status' => $agency->statut,
+            'logo_url' => $hasConfiguredLogo
+                ? $this->documentBranding->logoUrl($agency)
+                : null,
         ];
     }
 }

@@ -133,7 +133,7 @@ class GenerateLoyerMensuel implements ShouldQueue
                 'propriete_id'           => $bail->propriete_id,
                 'batiment_id'            => $bail->batiment_id,
                 'porte_id'               => $bail->porte_id,
-                'statut'                 => 'Paiement en cours',
+                'statut'                 => Loyer::STATUT_EN_COURS,
                 'montant_a_payer'        => $montants['montant_a_payer'],
                 'montant_payer'          => 0,
                 'montant_restant'        => $montants['montant_a_payer'],
@@ -147,7 +147,7 @@ class GenerateLoyerMensuel implements ShouldQueue
                 'mois_paiement'          => $target->month,
                 'annee_paiement'         => $target->year,
                 'date_limit_paiement'    => $dateLimite,
-                'creaeted_by'            => 'system',
+                'created_by'             => 'system',
             ]);
            // dd($loyer);
         });

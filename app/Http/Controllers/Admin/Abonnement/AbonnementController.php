@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Abonnement;
 use App\Http\Controllers\Controller;
 use App\Models\Abonnement;
 use App\Models\AbonnementHistorique;
+use App\Models\Agence;
 use App\Services\AgenceService;
 use App\Services\ConfigurationTarifService;
 use App\Repositories\Interfaces\AbonnementRepositoryInterface;
@@ -38,11 +39,19 @@ class AbonnementController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $agencyKey = $request->string('agence')->toString();
+        $selectedAgency = $agencyKey !== ''
+            ? Agence::query()
+                ->where('agence_id', $agencyKey)
+                ->orWhere('code_agence', $agencyKey)
+                ->first()
+            : null;
+
         return Inertia::render('Admin/Abonnements/Form', [
             'mode' => 'create',
-            'agence' => null,
+            'agence' => $selectedAgency,
             'agences' => $this->getAgencesForSubscription(),
             'tarifs' => $this->tarifService->getTarifsPourFormulaire(),
         ]);
@@ -108,9 +117,14 @@ class AbonnementController extends Controller
             ->where('type', 'subscription')
             ->with(['nouvelAbonnement'])
             ->where('agence_id', $agence->agence_id)
+            ->latest('created_at')
             ->first();
 
-        return $this->mapSubscriptionItem($agence, $snapshot);
+        return $this->mapSubscriptionItem(
+            $agence,
+            $snapshot,
+            $this->buildHistory($agence->agence_id)
+        );
     }
 
     private function saveSubscription(Request $request, bool $isUpdate, ?string $codeAgence = null): RedirectResponse
@@ -160,18 +174,29 @@ class AbonnementController extends Controller
         $snapshots = Abonnement::query()
             ->where('type', 'subscription')
             ->with(['nouvelAbonnement'])
+            ->latest('created_at')
             ->get()
+            ->unique('agence_id')
             ->keyBy('agence_id');
+        $histories = AbonnementHistorique::query()
+            ->whereIn('agence_id', $agences->pluck('agence_id')->filter())
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('agence_id');
 
         $items = $agences
             ->filter(fn ($agence) => !empty($agence->abonnement_start) || !empty($agence->abonnement_end) || !empty($agence->abonnement_id))
-            ->map(fn ($agence) => $this->mapSubscriptionItem($agence, $snapshots->get($agence->agence_id)))
+            ->map(fn ($agence) => $this->mapSubscriptionItem(
+                $agence,
+                $snapshots->get($agence->agence_id),
+                $this->mapHistoryRows($histories->get($agence->agence_id, collect()))
+            ))
             ->values();
 
         return $items;
     }
 
-    private function mapSubscriptionItem(object $agence, ?Abonnement $snapshot = null): array
+    private function mapSubscriptionItem(object $agence, ?Abonnement $snapshot = null, array $history = []): array
     {
         $plan = $snapshot?->nouvelAbonnement ?? $agence->abonnement;
         $start = $snapshot?->nouvelle_date_debut ?? $agence->abonnement_start ?? null;
@@ -194,6 +219,7 @@ class AbonnementController extends Controller
             'statut' => $this->resolveStatus($start, $end),
             'paiement' => $this->resolvePaymentStatus($start, $end),
             'modules' => $this->extractModules($plan?->features ?? []),
+            'history' => $history,
             'notes' => $notes,
             'created_at' => optional($snapshot?->created_at ?? $agence->created_at)?->format('Y-m-d H:i:s'),
         ];
@@ -236,11 +262,19 @@ class AbonnementController extends Controller
             return [];
         }
 
-        return AbonnementHistorique::query()
+        $histories = AbonnementHistorique::query()
             ->where('agence_id', $agenceId)
             ->orderByDesc('created_at')
             ->take(12)
-            ->get()
+            ->get();
+
+        return $this->mapHistoryRows($histories);
+    }
+
+    private function mapHistoryRows($histories): array
+    {
+        return collect($histories)
+            ->take(12)
             ->map(function (AbonnementHistorique $historique) {
                 $periode = trim(
                     $this->formatDateValue($historique->nouvelle_date_debut) .

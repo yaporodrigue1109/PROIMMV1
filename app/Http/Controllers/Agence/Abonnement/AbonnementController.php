@@ -7,10 +7,13 @@ use App\Models\Agence;
 use App\Models\Transaction;
 use App\Services\AgenceService;
 use App\Services\ConfigurationTarifService;
+use App\Services\SettingService;
+use App\Services\Agence\AgencyDocumentBranding;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -20,7 +23,9 @@ class AbonnementController extends Controller
 {
     public function __construct(
         protected ConfigurationTarifService $tarifService,
-        protected AgenceService $agenceService
+        protected AgenceService $agenceService,
+        protected AgencyDocumentBranding $documentBranding,
+        protected SettingService $settingService,
     ) {
     }
 
@@ -123,9 +128,20 @@ class AbonnementController extends Controller
                 ->with('error', 'Commencez par choisir votre formule.');
         }
 
+        $setting = $this->settingService->getSetting();
+
         return Inertia::render('Agence/Abonnement/Paiement', [
             'draft' => $draft,
             'tarifs' => $this->tarifService->getTarifsPublics(),
+            'payment_config' => [
+                'manual_enabled' => (bool) $setting->subscription_manual_payment_enabled,
+                'numbers' => [
+                    ['name' => 'Wave', 'value' => $setting->subscription_wave_number, 'image' => '/admin/assets/images/paiement/wave.png'],
+                    ['name' => 'Orange Money', 'value' => $setting->subscription_orange_money_number, 'image' => '/admin/assets/images/paiement/orange.png'],
+                    ['name' => 'Moov Money', 'value' => $setting->subscription_moov_money_number, 'image' => null],
+                    ['name' => 'MTN Money', 'value' => $setting->subscription_mtn_money_number, 'image' => null],
+                ],
+            ],
         ]);
     }
 
@@ -151,12 +167,12 @@ class AbonnementController extends Controller
             'mode_paiement' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $this->agenceService->validateSubscriptionDraft(
+        DB::transaction(fn () => $this->agenceService->validateSubscriptionDraft(
             $agence,
             $draft,
             (string) ($user?->id_users ?? 'system'),
             $validated['mode_paiement'] ?? 'test'
-        );
+        ));
 
         session()->forget('agence_subscription_draft');
 
@@ -461,8 +477,16 @@ class AbonnementController extends Controller
     {
         $pdf = new \FPDF('P', 'mm', 'A4');
         $pdf->SetAutoPageBreak(true, 16);
-        $pdf->AddPage();
         $pdf->SetMargins(15, 15, 15);
+        $pdf->AddPage();
+
+        $agence = $transaction->agence;
+        if ($watermark = $this->documentBranding->watermarkPath($agence)) {
+            $pdf->Image($watermark, 55, 86, 100, 0, 'PNG');
+        }
+        if ($logo = $this->documentBranding->localLogoPath($agence)) {
+            $pdf->Image($logo, 15, 12, 28, 0);
+        }
 
         $pdf->SetFont('Arial', 'B', 16);
         $pdf->Cell(0, 10, $this->pdfText(company_name()), 0, 1, 'C');

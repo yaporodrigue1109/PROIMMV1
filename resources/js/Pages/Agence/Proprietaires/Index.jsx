@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import { Eye, Mail, MapPin, Pencil, Phone, Plus, Power, Trash2, UserRound, X } from 'lucide-react';
+import { Eye, Mail, MapPin, Pencil, Phone, Plus, Power, Trash2, UserRound } from 'lucide-react';
 import AgenceLayout from '../../../Layouts/AgenceLayout';
 import { Avatar, AvatarFallback } from '../../../components/ui/avatar';
 import { Badge } from '../../../components/ui/badge';
@@ -8,7 +8,6 @@ import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { DataTable } from '../../../components/ui/data-table';
 import { DataTableColumnHeader } from '../../../components/ui/data-table-column-header';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { agenceButtonStyles } from '../../../lib/buttonStyles';
 import { cn } from '../../../lib/utils';
 
@@ -96,7 +95,6 @@ function EmptyState({ title, desc, onReset, compact = false }) {
 export default function Index({ proprietaires = null, stats = {}, filters = {}, abilities = {} }) {
     const canActivate = Boolean(abilities.activate);
     const [search, setSearch] = useState(filters.search ?? '');
-    const [status, setStatus] = useState(filters.status ?? 'all');
     const didMountRef = useRef(false);
 
     const rows = useMemo(
@@ -104,10 +102,7 @@ export default function Index({ proprietaires = null, stats = {}, filters = {}, 
         [proprietaires?.data]
     );
 
-    const selectedStatusLabel =
-        status === 'active' ? 'Actifs' : status === 'inactive' ? 'Inactifs' : 'Tous les statuts';
-
-    const activeFilters = [search.trim() ? `"${search.trim()}"` : null, status !== 'all' ? selectedStatusLabel : null].filter(Boolean);
+    const activeFilters = [search.trim() ? `"${search.trim()}"` : null].filter(Boolean);
 
     useEffect(() => {
         if (!didMountRef.current) {
@@ -120,7 +115,6 @@ export default function Index({ proprietaires = null, stats = {}, filters = {}, 
             const trimmedSearch = search.trim();
 
             if (trimmedSearch) query.search = trimmedSearch;
-            if (status !== 'all') query.status = status;
 
             router.get('/agence/proprietaire', query, {
                 preserveScroll: true,
@@ -130,11 +124,10 @@ export default function Index({ proprietaires = null, stats = {}, filters = {}, 
         }, 300);
 
         return () => window.clearTimeout(timeoutId);
-    }, [search, status]);
+    }, [search]);
 
     const resetFilters = () => {
         setSearch('');
-        setStatus('all');
 
         router.get('/agence/proprietaire', {}, {
             preserveScroll: true,
@@ -339,8 +332,6 @@ export default function Index({ proprietaires = null, stats = {}, filters = {}, 
                 cell: ({ row }) => {
                     const proprietaire = row.original;
                     const liaison = proprietaire.liaison;
-                    const canDelete = proprietaire.lotsCount === 0 && proprietaire.proprietesCount === 0;
-
                     return (
                         <div className="flex justify-end gap-1.5">
                             <Button asChild variant="outline" size="icon" className={agenceButtonStyles.actionBlueIcon}>
@@ -372,13 +363,8 @@ export default function Index({ proprietaires = null, stats = {}, filters = {}, 
                                 variant="outline"
                                 size="icon"
                                 className={agenceButtonStyles.actionRedIcon}
-                                onClick={canDelete ? () => handleDelete(proprietaire) : undefined}
-                                disabled={!canDelete}
-                                title={
-                                    canDelete
-                                        ? 'Supprimer le propriétaire'
-                                        : 'Impossible de supprimer ce propriétaire tant qu’il a des lots ou des propriétés rattachés'
-                                }
+                                onClick={() => handleDelete(proprietaire)}
+                                title="Supprimer le propriétaire"
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
@@ -411,10 +397,9 @@ export default function Index({ proprietaires = null, stats = {}, filters = {}, 
                     </Button>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <StatCard icon={UserRound} label="Total propriétaires" value={number(stats.total ?? proprietaires?.total ?? 0)} />
                     <StatCard icon={Power} label="Comptes actifs" value={number(stats.actifs ?? 0)} accent={COLORS.greenDark} tint="#eef8df" />
-                    <StatCard icon={X} label="Comptes inactifs" value={number(stats.inactifs ?? 0)} accent="#b42318" tint="#fff4f4" />
                     <StatCard icon={MapPin} label="Ce mois" value={number(stats.ce_mois ?? 0)} accent={COLORS.amber} tint="#fffbeb" />
                 </div>
 
@@ -428,20 +413,6 @@ export default function Index({ proprietaires = null, stats = {}, filters = {}, 
                     searchValue={search}
                     onSearchChange={setSearch}
                     searchPlaceholder="Nom, code, téléphone, email, adresse..."
-                    filtersSlot={
-                        <div className="flex items-center gap-2">
-                            <Select value={status} onValueChange={setStatus}>
-                                <SelectTrigger className="h-9 w-full rounded-xl md:w-[180px]">
-                                    <SelectValue placeholder="Tous les statuts" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Tous les statuts</SelectItem>
-                                    <SelectItem value="active">Actifs</SelectItem>
-                                    <SelectItem value="inactive">Inactifs</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    }
                     onResetFilters={resetFilters}
                     emptyState={
                         <EmptyState

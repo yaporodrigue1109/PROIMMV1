@@ -83,6 +83,8 @@ class ProprieteController extends Controller
                     'id' => $type->getKey(),
                     'name' => $type->name,
                     'description' => $type->description,
+                    'is_global' => blank($type->agence_id),
+                    'editable' => $type->agence_id === $this->agenceId(),
                 ];
             })->values();
         }
@@ -93,6 +95,8 @@ class ProprieteController extends Controller
                     'id' => $equipement->getKey(),
                     'name' => $equipement->name,
                     'description' => $equipement->description,
+                    'is_global' => blank($equipement->agence_id),
+                    'editable' => $equipement->agence_id === $this->agenceId(),
                 ];
             })->values();
         }
@@ -103,6 +107,8 @@ class ProprieteController extends Controller
                     'id' => $proximite->getKey(),
                     'name' => $proximite->name,
                     'description' => $proximite->description,
+                    'is_global' => blank($proximite->agence_id),
+                    'editable' => $proximite->agence_id === $this->agenceId(),
                 ];
             })->values();
         }
@@ -182,7 +188,6 @@ class ProprieteController extends Controller
         if ($selectedLot->is_for_sale) {
             return back()->withInput()->withErrors(['lot_id' => 'Ce lot est en vente et ne peut pas recevoir de propriété.']);
         }
-
         try {
 
             DB::transaction(function () use ($request) {
@@ -277,7 +282,6 @@ class ProprieteController extends Controller
         if ($selectedLot->is_for_sale) {
             return back()->withInput()->withErrors(['lot_id' => 'Ce lot est en vente et ne peut pas recevoir de propriété.']);
         }
-
         try {
             DB::transaction(function () use ($request, $propriete) {
                 $data = $request->validated();
@@ -427,6 +431,8 @@ class ProprieteController extends Controller
                     'id' => (string) $proximite->getKey(),
                     'name' => $proximite->name,
                     'description' => $proximite->description,
+                    'is_global' => blank($proximite->agence_id),
+                    'editable' => $proximite->agence_id === $this->agenceId(),
                 ];
             })->values();
         }
@@ -546,6 +552,19 @@ class ProprieteController extends Controller
             return;
         }
 
+        if ($saleType === 'none') {
+            foreach ($batimentsData as &$building) {
+                foreach ($building['portes'] ?? [] as &$door) {
+                    $door['is_allocation'] = true;
+                    if (isset($door['tarif'])) {
+                        $door['tarif']['mt_vente'] = 0;
+                    }
+                }
+                unset($door);
+            }
+            unset($building);
+        }
+
         $data['is_allocation'] = $saleType === 'none'
             ? true
             : $this->resolvePropertyAllocation($batimentsData);
@@ -560,6 +579,8 @@ class ProprieteController extends Controller
                     'id' => $type->getKey(),
                     'name' => $type->name,
                     'description' => $type->description,
+                    'is_global' => blank($type->agence_id),
+                    'editable' => $type->agence_id === $this->agenceId(),
                 ];
             })->values();
         }
@@ -629,6 +650,8 @@ class ProprieteController extends Controller
                     'id' => $equipement->getKey(),
                     'name' => $equipement->name,
                     'description' => $equipement->description,
+                    'is_global' => blank($equipement->agence_id),
+                    'editable' => $equipement->agence_id === $this->agenceId(),
                 ];
             })->values();
         }

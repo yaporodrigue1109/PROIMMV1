@@ -36,6 +36,10 @@ class AuthController extends Controller
                 ['email' => $request->email, 'password' => $request->password],
                 $request->boolean('remember')
             )) {
+                // Une connexion administrative normale ne doit jamais conserver
+                // l'identité d'un utilisateur d'agence dans la même session.
+                Auth::guard('user')->logout();
+                $request->session()->forget('admin_agency_impersonation');
                 $request->session()->regenerate();
                 $admin = Auth::guard('admin')->user();
 

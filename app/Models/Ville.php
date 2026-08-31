@@ -12,9 +12,15 @@ class Ville extends Model
 
     protected  $table= 'villes';
 
-    public function regions()
+    public function region()
     {
         return $this->belongsTo(Region::class, 'region_id');
+    }
+
+    /** Compatibilité avec l'ancien nom de relation. */
+    public function regions()
+    {
+        return $this->region();
     }
 
 }

@@ -6,13 +6,19 @@ use App\Http\Controllers\preferenceController;
 use App\Http\Controllers\Admin\Auth\AuthController;
 use App\Http\Controllers\Admin\Dashboard\DashboardController;
 use App\Http\Controllers\Admin\Agence\AgenceController;
+use App\Http\Controllers\Admin\Agence\AgencyImpersonationController;
 use App\Http\Controllers\Admin\Abonnement\AbonnementController;
 use App\Http\Controllers\Admin\Profile\ProfileController;
+use App\Http\Controllers\Admin\Administrateur\AdministrateurController;
 use App\Http\Controllers\Admin\Module\ModuleController;
 use App\Http\Controllers\Admin\Ticket\TicketController;
 use App\Http\Controllers\Admin\Settings\SettingsController;
 use App\Http\Controllers\Admin\Statistique\StatistiqueController;
 use App\Http\Controllers\Admin\Contact\ContactMessageController;
+use App\Http\Controllers\Admin\Proximite\ProximiteController;
+use App\Http\Controllers\Admin\TypePropriete\TypeProprieteController as AdminTypeProprieteController;
+use App\Http\Controllers\Admin\EquipementPropriete\EquipementProprieteController as AdminEquipementProprieteController;
+use Inertia\Inertia;
 
 
 Route::prefix('list')->controller(preferenceController::class)->group(function () {
@@ -42,6 +48,20 @@ Route::controller(AuthController::class)->group(function () {
 Route::middleware(['admin'])->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::get('/aide', function () {
+        return Inertia::render('Help/Index', [
+            'area' => 'admin',
+            'captureBaseUrl' => url('/guide/captures'),
+        ]);
+    })->name('aide');
+
+    Route::resource('proximites', ProximiteController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('types-proprietes', AdminTypeProprieteController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
+    Route::resource('equipements-proprietes', AdminEquipementProprieteController::class)
+        ->only(['index', 'store', 'update', 'destroy']);
 
     Route::match(['get', 'post'], '/deploy/build-assets', function () {
         try {
@@ -78,6 +98,13 @@ Route::middleware(['admin'])->group(function () {
         Route::get('/', [ProfileController::class, 'show'])
 
             ->name('profile');
+        Route::patch('/', [ProfileController::class, 'update'])->name('profile.update');
+        Route::patch('/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+    });
+
+    Route::prefix('administrateurs')->name('administrateurs.')->group(function () {
+        Route::get('/', [AdministrateurController::class, 'index'])->name('index');
+        Route::post('/', [AdministrateurController::class, 'store'])->name('store');
     });
 
     /*
@@ -100,6 +127,12 @@ Route::middleware(['admin'])->group(function () {
         Route::put('/update/{agence}', [AgenceController::class, 'update'])
 
             ->name('update');
+
+        Route::patch('/{agence}/statut', [AgenceController::class, 'changerStatut'])
+            ->name('statut');
+
+        Route::post('/{agence}/acceder', [AgencyImpersonationController::class, 'start'])
+            ->name('impersonate');
 
         Route::get('/abonnement', [AgenceController::class, 'abonnementAgence'])
 

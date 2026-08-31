@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, router } from '@inertiajs/react';
-import { Building2, Search } from 'lucide-react';
+import { Building2, LogIn, Search } from 'lucide-react';
 
 import AdminLayout from '../../../Layouts/AdminLayout';
 
@@ -22,12 +22,14 @@ const statusLabel = {
     active: 'Active',
     en_demo: 'En démo',
     desactive: 'Désactivée',
+    fin_abonnement: "Fin d'abonnement",
 };
 
 const statusVariant = {
     active: 'default',
     en_demo: 'secondary',
     desactive: 'destructive',
+    fin_abonnement: 'secondary',
 };
 
 const formatMoney = (value) =>
@@ -66,6 +68,8 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
     const [query, setQuery] = useState('');
     const [status, setStatus] = useState('tous');
     const [selectedAgence, setSelectedAgence] = useState(items[0] ?? null);
+    const [statusUpdating, setStatusUpdating] = useState(false);
+    const [impersonating, setImpersonating] = useState(false);
     const currentSubscription = selectedAgence?.subscription ?? selectedAgence?.abonnement ?? null;
 
     useEffect(() => {
@@ -190,9 +194,9 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
                     />
                 </div>
 
-                <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-                    <Card className="rounded-3xl border-slate-200 shadow-sm">
-                        <CardHeader className="space-y-4 border-b border-slate-200">
+                <div className="grid gap-6 xl:h-[calc(100vh-8rem)] xl:min-h-0 xl:grid-cols-[360px_1fr] xl:items-stretch">
+                    <Card className="rounded-3xl border-slate-200 shadow-sm xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden">
+                        <CardHeader className="shrink-0 space-y-4 border-b border-slate-200">
                             <CardTitle className="text-base">
                                 Agences{' '}
                                 <span className="text-slate-400">
@@ -232,8 +236,8 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
                             </div>
                         </CardHeader>
 
-                        <CardContent className="p-3">
-                            <ScrollArea className="h-[650px]">
+                        <CardContent className="p-3 xl:min-h-0 xl:flex-1 xl:overflow-hidden">
+                            <ScrollArea className="h-[650px] xl:h-full">
                                 <div className="space-y-2 pr-3">
                                     {filteredItems.map((agence) => {
                                         const isSelected =
@@ -306,7 +310,7 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
                         </CardContent>
                     </Card>
 
-                    <Card className="min-h-[calc(100vh-260px)] rounded-3xl border-slate-200 shadow-sm">
+                    <Card className="min-h-[calc(100vh-260px)] rounded-3xl border-slate-200 shadow-sm xl:h-full xl:min-h-0 xl:overflow-y-auto xl:overscroll-contain">
                         {selectedAgence ? (
                             <>
                                 <CardHeader className="flex flex-col gap-4 border-b border-slate-200 lg:flex-row lg:items-start lg:justify-between">
@@ -321,11 +325,75 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
                                         </CardTitle>
                                     </div>
 
-                                    <div className="flex gap-2">
-                                        <Button variant="outline" className="rounded-xl">
-                                            {selectedAgence.statut === 'active'
-                                                ? 'Désactiver'
-                                                : 'Activer'}
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            disabled={impersonating || selectedAgence.statut === 'desactive'}
+                                            title={selectedAgence.statut === 'desactive'
+                                                ? "Réactivez d'abord l'agence pour accéder à son espace."
+                                                : "Accéder à l'espace de cette agence"}
+                                            onClick={() => {
+                                                const agenceId = getAgenceRouteId(selectedAgence);
+                                                if (!agenceId || selectedAgence.statut === 'desactive') return;
+
+                                                if (!window.confirm(`Accéder à l'espace de l'agence « ${selectedAgence.name} » ?`)) return;
+
+                                                router.post(
+                                                    `/admin/agences/${agenceId}/acceder`,
+                                                    {},
+                                                    {
+                                                        onStart: () => setImpersonating(true),
+                                                        onFinish: () => setImpersonating(false),
+                                                    }
+                                                );
+                                            }}
+                                            className="rounded-xl border-orange-200 text-orange-700 hover:bg-orange-50"
+                                        >
+                                            <LogIn className="mr-2 h-4 w-4" />
+                                            {impersonating ? 'Ouverture…' : "Accéder à l’espace agence"}
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            disabled={statusUpdating}
+                                            onClick={() => {
+                                                const agenceId = selectedAgence.agence_id;
+                                                if (!agenceId) return;
+
+                                                if (selectedAgence.statut === 'en_demo') {
+                                                    router.get('/admin/abonnements/create', { agence: agenceId });
+                                                    return;
+                                                }
+
+                                                const activate = selectedAgence.statut !== 'active';
+                                                const action = activate ? 'activer' : 'désactiver';
+                                                if (!window.confirm(`Voulez-vous vraiment ${action} l'agence « ${selectedAgence.name} » ?`)) return;
+
+                                                router.patch(
+                                                    `/admin/agences/${agenceId}/statut`,
+                                                    { statut: activate ? 'active' : 'desactive' },
+                                                    {
+                                                        preserveScroll: true,
+                                                        onStart: () => setStatusUpdating(true),
+                                                        onFinish: () => setStatusUpdating(false),
+                                                    }
+                                                );
+                                            }}
+                                            className={selectedAgence.statut === 'active'
+                                                ? 'rounded-xl border-red-200 text-red-700 hover:bg-red-50'
+                                                : selectedAgence.statut === 'en_demo'
+                                                    ? 'rounded-xl border-blue-200 text-[#00559b] hover:bg-blue-50'
+                                                    : 'rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-50'}
+                                        >
+                                            {statusUpdating
+                                                ? 'Mise à jour…'
+                                                : selectedAgence.statut === 'active'
+                                                    ? 'Désactiver'
+                                                    : selectedAgence.statut === 'en_demo'
+                                                        ? 'Abonnement'
+                                                        : 'Activer'}
                                         </Button>
 
                                         <Button
@@ -555,7 +623,7 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
                                                     </h4>
 
                                                     <p className="mt-2 text-sm text-slate-500">
-                                                        {currentSubscription?.description ??
+                                                        {currentSubscription?.description_text ??
                                                             "Cette agence n'a pas encore souscrit à un abonnement."}
                                                     </p>
 
@@ -573,7 +641,7 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
                                                 </CardContent>
                                             </Card>
 
-                                            <div className="grid gap-4 md:grid-cols-4">
+                                            <div className="grid gap-4 md:grid-cols-3">
                                                 <MiniStat
                                                     label="Total facturé"
                                                     value={formatMoney(
@@ -582,7 +650,7 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
                                                 />
                                                 <MiniStat
                                                     label="Modules actifs"
-                                                    value="0 / 4"
+                                                    value={`${currentSubscription?.modules_count ?? selectedAgence.modules_payants?.length ?? 0} / ${currentSubscription?.modules_available ?? 0}`}
                                                 />
                                                 <MiniStat
                                                     label="Période en cours"
@@ -591,10 +659,6 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
                                                     )} → ${formatDate(
                                                         selectedAgence.abonnement_end
                                                     )}`}
-                                                />
-                                                <MiniStat
-                                                    label="Paiements réussis"
-                                                    value="—"
                                                 />
                                             </div>
                                         </CardContent>
@@ -648,12 +712,6 @@ export default function Index({ agences, agenceStats = {}, selectedAgenceId = ''
                                                 />
                                             </div>
 
-                                            <Card className=" rounded-2xl border-slate-200">
-                                                <CardContent className="mt-4 p-6 text-center text-sm text-slate-500">
-                                                    Cliquez sur “Actualiser” pour charger
-                                                    les activités.
-                                                </CardContent>
-                                            </Card>
                                         </CardContent>
                                     </TabsContent>
                                 </Tabs>

@@ -24,6 +24,7 @@ use App\Models\TransactionAgence;
 use App\Models\Reversement;
 use App\Models\Agence;
 use  App\Repositories\Agence\Repository\LotRepository;
+use DomainException;
 
 class ProprietaireController extends Controller
 {
@@ -78,7 +79,7 @@ class ProprietaireController extends Controller
     public function index(Request $request): Response
     {
         $agenceId = getInfoAgent()->users->agence_id ?? null;
-        $filters = $request->only(['search', 'status']);
+        $filters = $request->only(['search']);
 
         $proprietaires = $this->proprietaireService->getPaginated(
             $agenceId,
@@ -87,19 +88,17 @@ class ProprietaireController extends Controller
         );
         $proprietaires->appends(array_filter($filters, fn ($value) => $value !== null && $value !== ''));
 
-        $baseQuery = Proprietaire::query()->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId));
+        $baseQuery = Proprietaire::query()->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId)->where('is_active', true));
 
         return Inertia::render('Agence/Proprietaires/Index', [
             'proprietaires' => $proprietaires,
             'stats' => [
                 'total' => (clone $baseQuery)->count(),
                 'actifs' => (clone $baseQuery)->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId)->where('is_active', true))->count(),
-                'inactifs' => (clone $baseQuery)->whereHas('agences', fn ($q) => $q->where('agence_id', $agenceId)->where('is_active', false))->count(),
                 'ce_mois' => (clone $baseQuery)->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count(),
             ],
             'filters' => [
                 'search' => $filters['search'] ?? '',
-                'status' => $filters['status'] ?? 'all',
             ],
             'abilities' => [
                 'activate' => Auth::guard('user')->user()?->canPerform('proprietaires', 'activate') ?? false,
@@ -262,10 +261,14 @@ class ProprietaireController extends Controller
      */
     public function destroy(string $id): RedirectResponse
     {
-        $deleted = $this->proprietaireService->destroy($id);
+        try {
+            $deleted = $this->proprietaireService->destroy($id);
+        } catch (DomainException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
 
         if (!$deleted) {
-            return back()->with('error', 'Ce propriétaire ne peut pas être supprimé tant qu’il a des lots ou des propriétés rattachés.');
+            return back()->with('error', 'Propriétaire introuvable dans cette agence.');
         }
 
         return redirect()
@@ -288,7 +291,15 @@ class ProprietaireController extends Controller
      */
     public function deactivate(string $proprietaireAgenceId): RedirectResponse
     {
-        $this->proprietaireService->deactivate($proprietaireAgenceId);
+        try {
+            $deactivated = $this->proprietaireService->deactivate($proprietaireAgenceId);
+        } catch (DomainException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        if (!$deactivated) {
+            return back()->with('error', 'Propriétaire introuvable dans cette agence.');
+        }
 
         return back()->with('success', 'Propriétaire désactivé avec succès.');
     }

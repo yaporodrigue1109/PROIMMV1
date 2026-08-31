@@ -1,10 +1,10 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ArrowRight, ArrowUpRight, BarChart3, Building2, CalendarClock, Check, DoorOpen, FileCheck2, Headphones, Home as HomeIcon, Inbox, KeyRound, LayoutDashboard, Plus, Search, ShieldCheck, Star, UsersRound, WalletCards, Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import ownerMobileApp from '../../assets/app-mobile-proprietaire.png';
 import tenantMobileApp from '../../assets/app-mobile-locataire.png';
 import PublicLayout from './PublicLayout';
-import logo from '../../../../admin/logo/playstore-icon-revised.png';
+import defaultLogo from '../../../../admin/logo/playstore-icon-revised.png';
 
 const services = [
     { icon: KeyRound, title: 'Gestion locative', text: 'Loyers, contrats et reversements suivis automatiquement, sans tableur ni papier.' },
@@ -62,6 +62,9 @@ const dashboardRows = [
 ];
 
 export default function Home({ tarifs = {}, appLinks = {} }) {
+    const config = usePage().props.siteConfig ?? {};
+    const logo = config.logoUrl || defaultLogo;
+    const companyName = config.name || 'Pros Immobilier';
     const [activeHeroTab, setActiveHeroTab] = useState(0);
     const plan = tarifs.plan ?? {};
     const complementaryModules = Array.isArray(tarifs.modules) ? tarifs.modules : [];
@@ -125,7 +128,7 @@ export default function Home({ tarifs = {}, appLinks = {} }) {
                     <div className="absolute inset-0 opacity-40 [background-image:url('data:image/svg+xml,%3Csvg_viewBox=%220_0_180_180%22_xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter_id=%22n%22%3E%3CfeTurbulence_type=%22fractalNoise%22_baseFrequency=%22.9%22_numOctaves=%223%22_stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect_width=%22100%25%22_height=%22100%25%22_filter=%22url(%23n)%22_opacity=%22.35%22/%3E%3C/svg%3E')]" />
 
                     <div className="relative mx-auto max-w-6xl rounded-xl border border-white/70 bg-white/90 p-2 shadow-[0_25px_80px_rgba(15,23,42,0.28)] backdrop-blur-sm sm:p-3">
-                        <DashboardPreview activeModule={activeHeroTab} />
+                        <DashboardPreview activeModule={activeHeroTab} logo={logo} companyName={companyName} />
                     </div>
                 </div>
             </section>
@@ -488,7 +491,7 @@ function AppleLogo({ className }) {
     );
 }
 
-function DashboardPreview({ activeModule }) {
+function DashboardPreview({ activeModule, logo, companyName }) {
     const stats = [
         { label: 'Propriétés', value: '48', hint: '41 occupées · 7 libres', icon: Building2, green: true },
         { label: 'Personnel', value: '12', hint: 'Membres de l’agence', icon: UsersRound },
@@ -501,9 +504,9 @@ function DashboardPreview({ activeModule }) {
             <div className="grid h-full grid-cols-1 sm:grid-cols-[175px_1fr] lg:grid-cols-[215px_1fr]">
                 <aside className="hidden border-r border-[#c8d4de] bg-white sm:block">
                     <div className="flex h-14 items-center gap-2.5 border-b border-[#c8d4de] px-3 lg:px-4">
-                        <img src={logo} alt="Pros Immobilier" className="h-8 w-8 rounded-xl object-contain shadow-sm ring-1 ring-[#c8d4de]" />
+                        <img src={logo} alt={companyName} className="h-8 w-8 rounded-xl object-contain shadow-sm ring-1 ring-[#c8d4de]" />
                         <div>
-                            <p className="text-[10px] font-semibold">Pros Immobilier</p>
+                            <p className="text-[10px] font-semibold">{companyName}</p>
                             <p className="text-[8px] text-[#5f7182]">Espace agence</p>
                         </div>
                     </div>

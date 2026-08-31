@@ -98,7 +98,7 @@ if (!function_exists('company_logo')) {
      */
     function company_logo(): ?string
     {
-        return setting('logo') ? asset('storage/' . setting('logo')) : null;
+        return setting()?->logo_url;
     }
 }
 
@@ -108,7 +108,7 @@ if (!function_exists('company_favicon')) {
      */
     function company_favicon(): ?string
     {
-        return setting('flavicon') ? asset('storage/' . setting('flavicon')) : null;
+        return setting()?->favicon_url;
     }
 }
 
@@ -147,7 +147,7 @@ function upload($dir, $format, $names, $image = null)
         $extension = strtolower($uploadedFile->getClientOriginalExtension() ?: $format);
 
         //Tableau des extensions que l'on accepte
-        $extensions = ['jpg', 'png', 'jpeg', 'gif','pdf','docx','avif'];
+        $extensions = ['jpg', 'png', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'ico', 'x-icon', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
         //Taille max que l'on accepte
         $maxSize = 10000000;
         $size = $uploadedFile->getSize();
@@ -157,7 +157,7 @@ function upload($dir, $format, $names, $image = null)
             //uniqid génère quelque chose comme ca : 5f586bf96dcd38.73540086
             // $file = $uniqueName.".".$format;
             $file = $uniqueName.".".$extension;
-            $file_path = 'admin/assets/images/'.$dir;
+            $file_path = public_path('admin/assets/images/'.trim($dir, '/'));
             if (!file_exists($file_path)) {
                 // Create a new file or direcotry
                 mkdir($file_path, 0777, true);
@@ -236,36 +236,12 @@ function delete( $dir, $old_image)
 }
 if (!function_exists('doc_upload')) {
 function doc_upload( $dir,  $format, $image = null)
-{ //dd($image->getClientOriginalName());
-
-    $test = explode('/',$dir);
-
-    // dd($test);
-
-    if ($image != null) {
-        $tabExtension = explode('.', $image->getClientOriginalName());
-        $extension = strtolower(end($tabExtension));
-        //  dd( $extension);
-        $imageName = Carbon::now()->toDateString() . "-" . uniqid() . "." . $extension;
-        if (!Storage::disk('public')->exists($dir)) {
-            Storage::disk('public')->makeDirectory($dir);
-        }
-        // dd($dir);
-        if(count($test)>1)
-        {
-            $autre=$test[1];
-            Storage::disk('public')->put($dir.'/'.$autre . $imageName, file_get_contents($image));
-        }
-        else{
-            Storage::disk('public')->put($dir .'/'. $imageName, file_get_contents($image));
-        }
-
-
-    } else {
-        $imageName = 'def.png';
+{
+    if (!$image instanceof \Illuminate\Http\UploadedFile) {
+        return null;
     }
 
-    return rtrim(config('app.url'), '/').'/'.$dir.'/'.$imageName;
+    return upload($dir, $format, 'document', $image);
 }
 }
 

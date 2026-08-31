@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Agence\Proprietaire;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Agence\LotRequest;
 use App\Repositories\Agence\Interfaces\LotRepositoryInterface;
+use App\Models\ProprietaireLot;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class LotController extends Controller
 {
@@ -24,6 +26,7 @@ class LotController extends Controller
             'agence_id'       => $this->agenceId(),
         ]);
         $data['sale_price'] = ($data['is_for_sale'] ?? false) ? $data['sale_price'] : null;
+        $this->ensureLotIsUnique($data);
 
         $lot = $this->lotRepository->create($data);
 
@@ -39,6 +42,11 @@ class LotController extends Controller
         $existingLot = $this->lotRepository->findById($id);
         $data = $request->validated();
         $data['sale_price'] = ($data['is_for_sale'] ?? false) ? $data['sale_price'] : null;
+        $this->ensureLotIsUnique([
+            ...$data,
+            'proprietaire_id' => $existingLot->proprietaire_id,
+            'agence_id' => $existingLot->agence_id,
+        ], $existingLot->propreietaire_lot_id);
 
         if (($data['is_for_sale'] ?? false) && $existingLot->proprietes()->exists()) {
             return response()->json([
@@ -93,5 +101,35 @@ class LotController extends Controller
     private function userId(): string
     {
         return getInfoAgent()->users->id ?? 'system';
+    }
+
+    private function ensureLotIsUnique(array $data, ?string $exceptLotId = null): void
+    {
+        $ownerId = (string) ($data['proprietaire_id'] ?? '');
+        $agencyId = (string) ($data['agence_id'] ?? $this->agenceId());
+        $lotNumber = trim((string) ($data['num_lot'] ?? ''));
+        $blockNumber = trim((string) ($data['num_ilot'] ?? ''));
+        $address = trim((string) ($data['adresse'] ?? ''));
+
+        $baseQuery = fn () => ProprietaireLot::query()
+            ->where('proprietaire_id', $ownerId)
+            ->where('agence_id', $agencyId)
+            ->when($exceptLotId, fn ($query) => $query->where('propreietaire_lot_id', '!=', $exceptLotId));
+
+        if ($lotNumber !== '' && $blockNumber !== '' && $address !== '') {
+            $sameLot = $baseQuery()
+                ->whereRaw('LOWER(TRIM(num_lot)) = ?', [mb_strtolower($lotNumber)])
+                ->whereRaw('LOWER(TRIM(num_ilot)) = ?', [mb_strtolower($blockNumber)])
+                ->whereRaw('LOWER(TRIM(adresse)) = ?', [mb_strtolower($address)])
+                ->exists();
+
+            if ($sameLot) {
+                throw ValidationException::withMessages([
+                    'num_lot' => 'Ce propriétaire possède déjà ce même lot à cette adresse.',
+                    'num_ilot' => 'Cette combinaison propriétaire, îlot, lot et adresse existe déjà.',
+                    'adresse' => 'Cette combinaison propriétaire, îlot, lot et adresse existe déjà.',
+                ]);
+            }
+        }
     }
 }

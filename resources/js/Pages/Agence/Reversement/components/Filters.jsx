@@ -1,4 +1,5 @@
 import React from 'react';
+import { SearchableSelect } from '../../../../components/ui/searchable-select';
 
 export default function Filters({
     proprietaires,
@@ -11,7 +12,7 @@ export default function Filters({
             <div className="filters-grid">
                 <div className="field">
                     <label>Propriétaire</label>
-                    <select 
+                    <SearchableSelect
                         value={filterProprietaire}
                         onChange={(e) => onFilterPropChange(e.target.value)}
                     >
@@ -21,7 +22,7 @@ export default function Filters({
                                 {p.nom}
                             </option>
                         ))}
-                    </select>
+                    </SearchableSelect>
                 </div>
                 <div className="field">
                     <label>Date début</label>

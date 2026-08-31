@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
+use App\Models\Concerns\VisibleWithActiveProprietaire;
+use App\Models\Concerns\VisibleWithActiveLocataire;
 
 class Maintenance extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, VisibleWithActiveProprietaire, VisibleWithActiveLocataire;
 
     protected $table = 'maintenance';
     protected $primaryKey = 'maintenance_id';
@@ -19,6 +21,7 @@ class Maintenance extends Model
 
     protected $fillable = [
         'agence_id',
+        'locataire_id',
         'proprietaire_id',
         'lot_id',
         'propriete_id',

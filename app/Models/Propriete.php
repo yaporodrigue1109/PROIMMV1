@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
+use App\Models\Concerns\VisibleWithActiveProprietaire;
 
 class Propriete extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, VisibleWithActiveProprietaire;
 
     protected $table = 'propriete';
     protected $primaryKey = 'propriete_id';

@@ -1,1 +1,0 @@
-ALTER TABLE `transaction_agences` ADD `reference` VARCHAR(150) NULL AFTER `montant_avance_payer`;

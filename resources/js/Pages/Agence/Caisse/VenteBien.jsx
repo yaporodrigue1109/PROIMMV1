@@ -24,6 +24,8 @@ import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
+import { PhoneInput } from '../../../components/ui/phone-input';
+import { SearchableSelect } from '../../../components/ui/searchable-select';
 import { agenceButtonStyles } from '../../../lib/buttonStyles';
 import { cn } from '../../../lib/utils';
 import { ComboboxField as SharedComboboxField } from '../../../components/ui/combobox-field';
@@ -42,7 +44,7 @@ const shortcuts = [
     { title: 'Vente de biens', href: '/agence/caisse/vente-bien', icon: Tags, active: true },
 ];
 
-const paymentModes = ['Espèces', 'Wave', 'Orange Money', 'Virement bancaire', 'Chèque'];
+const paymentModes = ['Espèces', 'Wave', 'Orange Money', 'MOOV Money', 'MTN Money', 'Chèque'];
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -82,8 +84,8 @@ function PropertyCard({ property, active, onClick }) {
                     <strong className="block truncate text-sm text-[#0f172a]">{property.title}</strong>
                     <span className="mt-1 block text-xs text-[#5f7182]">{property.location}</span>
                 </div>
-                <Badge variant={property.badge === 'Réservé' ? 'warning' : 'success'} className="rounded-full px-2.5 py-1 text-[11px]">
-                    {property.badge}
+                <Badge variant={property.saleInProgress ? 'warning' : property.badge === 'Réservé' ? 'warning' : 'success'} className="rounded-full px-2.5 py-1 text-[11px]">
+                    {property.saleInProgress ? 'Vente en cours' : property.badge}
                 </Badge>
             </div>
 
@@ -91,6 +93,11 @@ function PropertyCard({ property, active, onClick }) {
                 <span className="text-xs text-[#5f7182]">{property.type}</span>
                 <strong className="text-sm text-[#4d8500]">{currency(property.price)}</strong>
             </div>
+            {property.saleInProgress ? (
+                <div className="mt-3 rounded-xl bg-[#fff2e6] px-3 py-2 text-xs text-[#c2410c]">
+                    Déjà payé : {currency(property.ongoingSale.paid)} · Reste : {currency(property.ongoingSale.remaining)}
+                </div>
+            ) : null}
         </button>
     );
 }
@@ -218,10 +225,11 @@ function ScheduleLine({ line, onChange, onRemove, showRemove = true }) {
             </label>
 
             <label className="space-y-1">
-                <span className="text-xs text-[#5f7182]">Montant</span>
+                <span className="text-xs text-[#5f7182]"><span className="mr-1 font-semibold text-[#b42318]">*</span>Montant encaissé</span>
                 <Input
                     type="number"
-                    min="0"
+                    min="1"
+                    required
                     value={line.amount}
                     onChange={(e) => onChange({ ...line, amount: e.target.value })}
                     className="h-11 rounded-xl border-[#c8d4de]"
@@ -234,8 +242,8 @@ function ScheduleLine({ line, onChange, onRemove, showRemove = true }) {
             </label>
 
             <label className="space-y-1">
-                <span className="text-xs text-[#5f7182]">Mode</span>
-                <select
+                <span className="text-xs text-[#5f7182]"><span className="mr-1 font-semibold text-[#b42318]">*</span>Mode de règlement</span>
+                <SearchableSelect
                     value={line.mode}
                     onChange={(e) => onChange({ ...line, mode: e.target.value })}
                     className="h-11 w-full rounded-xl border border-[#c8d4de] bg-white px-3 text-sm text-[#0f172a] outline-none focus:border-[#00559b]"
@@ -245,7 +253,7 @@ function ScheduleLine({ line, onChange, onRemove, showRemove = true }) {
                             {mode}
                         </option>
                     ))}
-                </select>
+                </SearchableSelect>
             </label>
 
             {showRemove ? (
@@ -259,7 +267,7 @@ function ScheduleLine({ line, onChange, onRemove, showRemove = true }) {
     );
 }
 
-export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
+export default function VenteBien({ caisseOuverte = true, saleOwners = [], typePieces = [], ongoingSales = [] }) {
     const [ownerValue, setOwnerValue] = useState('');
     const [ownerSearch, setOwnerSearch] = useState('');
     const [ownerOpen, setOwnerOpen] = useState(false);
@@ -267,6 +275,10 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
     const [modalOpen, setModalOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [flash, setFlash] = useState(null);
+    const [lastInvoice, setLastInvoice] = useState(null);
+    const [salesInProgress, setSalesInProgress] = useState(ongoingSales);
+    const [paymentDrafts, setPaymentDrafts] = useState({});
+    const [payingSale, setPayingSale] = useState(null);
     const [paymentPlan, setPaymentPlan] = useState('complete');
     const [saleDate, setSaleDate] = useState(today());
     const [buyerForm, setBuyerForm] = useState({
@@ -274,10 +286,14 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
         phone: '',
         email: '',
         address: '',
-        idType: 'CNI',
+        idType: '',
         idNumber: '',
     });
     const [completePayment, setCompletePayment] = useState({
+        amount: '',
+        mode: 'Espèces',
+    });
+    const [initialPayment, setInitialPayment] = useState({
         amount: '',
         mode: 'Espèces',
     });
@@ -289,7 +305,6 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
         { id: makeLineId('custom'), label: 'Paiement prévu', amount: '', date: '', mode: 'Espèces' },
     ]);
     const [monthly, setMonthly] = useState({
-        deposit: 0,
         count: 6,
         firstDate: '',
     });
@@ -301,10 +316,20 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
         [ownerValue, saleEligibleOwners]
     );
 
+    const selectedOwnerSales = useMemo(
+        () => ownerValue ? salesInProgress.filter((sale) => String(sale.owner_id) === String(ownerValue)) : [],
+        [ownerValue, salesInProgress]
+    );
+
     const saleProperties = useMemo(() => {
         if (!selectedOwner) return [];
-        return selectedOwner.properties.filter(hasSaleEligibleItems);
-    }, [selectedOwner]);
+        return selectedOwner.properties.filter(hasSaleEligibleItems).map((property) => {
+            const ongoingSale = selectedOwnerSales.find((sale) => sale.target === property.id);
+            return ongoingSale
+                ? { ...property, saleInProgress: true, ongoingSale, buyer: ongoingSale.buyer, status: 'Paiement partiel', badge: 'Vente en cours' }
+                : property;
+        });
+    }, [selectedOwner, selectedOwnerSales]);
 
     const emptyProperty = useMemo(
         () => ({
@@ -357,10 +382,11 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
             phone: '',
             email: '',
             address: '',
-            idType: 'CNI',
+            idType: '',
             idNumber: '',
         });
         setCompletePayment((current) => ({ ...current, amount: selectedProperty.price.toString() }));
+        setInitialPayment((current) => ({ ...current, amount: '' }));
         setMonthly((current) => ({ ...current, firstDate: current.firstDate || today() }));
     }, [selectedProperty]);
 
@@ -377,16 +403,16 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
         if (paymentPlan === 'complete') return Number(completePayment.amount || 0);
         if (paymentPlan === 'monthly') return selectedProperty.price;
         if (paymentPlan === 'tranches') {
-            return tranches.reduce((sum, line) => sum + Number(line.amount || 0), 0);
+            return Number(initialPayment.amount || 0) + tranches.reduce((sum, line) => sum + Number(line.amount || 0), 0);
         }
-        return customPayments.reduce((sum, line) => sum + Number(line.amount || 0), 0);
-    }, [completePayment.amount, customPayments, paymentPlan, selectedProperty, tranches]);
+        return Number(initialPayment.amount || 0) + customPayments.reduce((sum, line) => sum + Number(line.amount || 0), 0);
+    }, [completePayment.amount, customPayments, initialPayment.amount, paymentPlan, selectedProperty, tranches]);
 
     const remaining = Math.max((selectedProperty?.price || 0) - plannedTotal, 0);
     const commission = selectedProperty?.commission || 0;
     const ownerAmount = selectedProperty?.ownerAmount || 0;
     const monthlyAmount = Math.max(
-        Math.ceil(Math.max((selectedProperty?.price || 0) - Number(monthly.deposit || 0), 0) / Math.max(Number(monthly.count || 1), 1)),
+        Math.ceil(Math.max((selectedProperty?.price || 0) - Number(initialPayment.amount || 0), 0) / Math.max(Number(monthly.count || 1), 1)),
         0
     );
 
@@ -410,11 +436,111 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
         setFlash(null);
 
         try {
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            setFlash({ type: 'success', message: 'Accord de vente enregistré en statique.' });
+            if (!buyerForm.name.trim() || !buyerForm.phone.trim() || !buyerForm.address.trim() || !buyerForm.idType || !buyerForm.idNumber.trim()) {
+                throw new Error('Renseignez toutes les informations obligatoires de l’acheteur. Seul l’e-mail est facultatif.');
+            }
+            const paidAmount = paymentPlan === 'complete'
+                ? Number(completePayment.amount || 0)
+                : Number(initialPayment.amount || 0);
+            const paymentMode = paymentPlan === 'complete'
+                ? completePayment.mode
+                : initialPayment.mode;
+            if (!Number.isFinite(paidAmount) || paidAmount <= 0) {
+                throw new Error('Le montant encaissé est obligatoire et doit être supérieur à zéro.');
+            }
+            if (paymentPlan === 'complete' && paidAmount !== Number(selectedProperty.price)) {
+                throw new Error('Un paiement complet doit correspondre au prix total du bien.');
+            }
+            if (paymentPlan !== 'complete' && paidAmount >= Number(selectedProperty.price)) {
+                throw new Error('Le premier versement doit être inférieur au prix du bien afin de laisser un solde à échelonner.');
+            }
+            if (!paymentMode) {
+                throw new Error('Le mode de règlement est obligatoire.');
+            }
+            const response = await fetch('/agence/caisse/vente-bien', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
+                },
+                body: JSON.stringify({
+                    target: selectedProperty.id,
+                    proprietaire_id: selectedOwner.id,
+                    date_accord: saleDate,
+                    prix_vente: selectedProperty.price,
+                    montant_paye: paidAmount,
+                    type_paiement: paymentPlan,
+                    mode_paiement: paymentMode,
+                    nombre_mensualites: paymentPlan === 'monthly' ? Number(monthly.count) : null,
+                    date_premiere_mensualite: paymentPlan === 'monthly' ? monthly.firstDate : null,
+                    echeances: paymentPlan === 'tranches'
+                        ? tranches.map((line) => ({ label: line.label, amount: Number(line.amount || 0), date: line.date, mode: line.mode }))
+                        : paymentPlan === 'custom'
+                            ? customPayments.map((line) => ({ label: line.label, amount: Number(line.amount || 0), date: line.date, mode: line.mode }))
+                            : [],
+                    acheteur: {
+                        name: buyerForm.name,
+                        phone: buyerForm.phone,
+                        email: buyerForm.email || null,
+                        address: buyerForm.address || null,
+                        id_type: buyerForm.idType,
+                        id_number: buyerForm.idNumber || null,
+                    },
+                }),
+            });
+            const payload = await response.json().catch(() => null);
+            if (!response.ok || !payload?.success) {
+                const errors = payload?.errors ? Object.values(payload.errors).flat().join(' ') : '';
+                throw new Error(errors || payload?.message || 'La vente n’a pas pu être enregistrée.');
+            }
+            setFlash({ type: 'success', message: payload.message });
+            setLastInvoice({ url: payload.invoice_url, number: payload.invoice_number });
             setModalOpen(false);
+        } catch (error) {
+            setFlash({ type: 'error', message: error.message || 'Erreur lors de la vente.' });
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const payExistingSale = async (sale) => {
+        const draft = paymentDrafts[sale.id] || { amount: '', mode: 'Espèces' };
+        const amount = Number(draft.amount || 0);
+        if (amount <= 0) {
+            setFlash({ type: 'error', message: 'Saisissez un montant supérieur à zéro.' });
+            return;
+        }
+        setPayingSale(sale.id);
+        setFlash(null);
+        try {
+            const response = await fetch(`/agence/caisse/vente-bien/${sale.id}/paiement`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
+                },
+                body: JSON.stringify({ montant: amount, mode_paiement: draft.mode }),
+            });
+            const payload = await response.json().catch(() => null);
+            if (!response.ok || !payload?.success) {
+                const errors = payload?.errors ? Object.values(payload.errors).flat().join(' ') : '';
+                throw new Error(errors || payload?.message || 'Le versement n’a pas pu être enregistré.');
+            }
+            const newRemaining = Math.max(Number(sale.remaining) - amount, 0);
+            setSalesInProgress((current) => current
+                .map((item) => item.id === sale.id
+                    ? { ...item, paid: Number(item.paid) + amount, remaining: newRemaining }
+                    : item)
+                .filter((item) => item.id !== sale.id || newRemaining > 0));
+            setPaymentDrafts((current) => ({ ...current, [sale.id]: { amount: '', mode: draft.mode } }));
+            setLastInvoice({ url: payload.invoice_url, number: payload.invoice_number });
+            setFlash({ type: 'success', message: payload.message });
+        } catch (error) {
+            setFlash({ type: 'error', message: error.message || 'Erreur lors du versement.' });
+        } finally {
+            setPayingSale(null);
         }
     };
 
@@ -475,6 +601,75 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
                     </div>
                 ) : null}
 
+                {ownerValue && selectedOwnerSales.length ? (
+                    <section className="rounded-2xl border border-[#c8d4de] bg-white p-5 shadow-sm">
+                        <div className="mb-4">
+                            <h3 className="text-base font-semibold text-[#0f172a]">Ventes en cours de règlement</h3>
+                            <p className="text-sm text-[#5f7182]">Retrouvez le premier versement et enregistrez les paiements suivants sur le même bien.</p>
+                        </div>
+                        <div className="space-y-4">
+                            {selectedOwnerSales.map((sale) => {
+                                const draft = paymentDrafts[sale.id] || { amount: '', mode: 'Espèces' };
+                                return (
+                                    <div key={sale.id} className="rounded-2xl border border-[#dbe7ee] bg-[#f8fafc] p-4">
+                                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                            <InfoTile label="Acheteur" value={sale.buyer} />
+                                            <InfoTile label="Bien" value={sale.property} />
+                                            <InfoTile label="Prix de vente" value={currency(sale.price)} />
+                                            <InfoTile label="Déjà payé" value={currency(sale.paid)} accent="text-[#4d8500]" />
+                                            <InfoTile label="Reste à payer" value={currency(sale.remaining)} accent="text-[#b42318]" />
+                                        </div>
+                                        <div className="mt-4 rounded-xl border border-[#e2e8f0] bg-white p-3">
+                                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#5f7182]">Historique des versements</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {sale.payments.map((payment) => (
+                                                    <a key={payment.id} href={payment.invoice_url} target="_blank" rel="noreferrer" className="rounded-lg border border-[#c8d4de] px-3 py-2 text-xs text-[#00559b] hover:bg-[#eaf4fb]">
+                                                        {payment.date} · {currency(payment.amount)} · {payment.receipt_number}
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {sale.schedule?.length ? (
+                                            <div className="mt-3 rounded-xl border border-[#e2e8f0] bg-white p-3">
+                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#5f7182]">Échéancier enregistré</p>
+                                                <div className="space-y-2">
+                                                    {sale.schedule.map((due) => (
+                                                        <div key={due.id} className={cn('grid gap-2 rounded-lg px-3 py-2 text-xs md:grid-cols-6', due.overdue ? 'bg-[#fdecec] text-[#b42318]' : 'bg-[#f8fafc] text-[#0f172a]')}>
+                                                            <strong>{due.label}</strong>
+                                                            <span>{due.date}</span>
+                                                            <span>{currency(due.amount)}</span>
+                                                            <span>Payé : {currency(due.paid)}</span>
+                                                            <span>Amende : {currency(due.penalty)}</span>
+                                                            <span>{due.overdue ? 'En retard' : due.status}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                                            <Input type="number" min="1" max={sale.remaining} placeholder="Nouveau montant encaissé" value={draft.amount} onChange={(e) => setPaymentDrafts((current) => ({ ...current, [sale.id]: { ...draft, amount: e.target.value } }))} className="h-11 rounded-xl border-[#c8d4de]" />
+                                            <SearchableSelect value={draft.mode} onChange={(e) => setPaymentDrafts((current) => ({ ...current, [sale.id]: { ...draft, mode: e.target.value } }))} className="h-11 rounded-xl border border-[#c8d4de] bg-white px-3 text-sm">
+                                                {paymentModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+                                            </SearchableSelect>
+                                            <Button type="button" disabled={payingSale === sale.id || !caisseOuverte} onClick={() => payExistingSale(sale)} className={agenceButtonStyles.primary}>
+                                                {payingSale === sale.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />}
+                                                Enregistrer le versement
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+                ) : null}
+
+                {lastInvoice?.url ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b7d7ef] bg-[#eaf4fb] px-4 py-3 text-sm text-[#0f4f7a]">
+                        <span>Facture <strong>{lastInvoice.number}</strong> générée pour cette vente.</span>
+                        <a href={lastInvoice.url} download className={agenceButtonStyles.primary}>Télécharger la facture PDF</a>
+                    </div>
+                ) : null}
+
                 <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
                     <CardContent className="mt-6 p-6">
                         <SharedComboboxField
@@ -526,8 +721,8 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
                                                 {selectedProperty.location}
                                             </p>
                                         </div>
-                                        <Badge variant={selectedProperty.badge === 'Réservé' ? 'warning' : 'success'} className="rounded-full px-3 py-1 text-[11px]">
-                                            {selectedProperty.badge}
+                                        <Badge variant={selectedProperty.saleInProgress ? 'warning' : selectedProperty.badge === 'Réservé' ? 'warning' : 'success'} className="rounded-full px-3 py-1 text-[11px]">
+                                            {selectedProperty.saleInProgress ? 'Vente en cours' : selectedProperty.badge}
                                         </Badge>
                                     </div>
 
@@ -559,8 +754,8 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
                                     </div>
 
                                     <div className="mt-5 flex justify-end">
-                                        <Button type="button" className={agenceButtonStyles.primary} onClick={() => setModalOpen(true)}>
-                                            Créer l’accord de vente
+                                        <Button type="button" disabled={selectedProperty.saleInProgress} className={agenceButtonStyles.primary} onClick={() => setModalOpen(true)}>
+                                            {selectedProperty.saleInProgress ? 'Accord déjà en cours' : 'Créer l’accord de vente'}
                                         </Button>
                                     </div>
                                 </div>
@@ -646,13 +841,13 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
 
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <label className="space-y-1.5">
-                                            <span className="block text-sm font-medium text-[#0f172a]">Nom complet *</span>
-                                            <Input value={buyerForm.name} onChange={(e) => setBuyerForm((current) => ({ ...current, name: e.target.value }))} placeholder="Nom complet de l’acheteur" className="h-11 rounded-xl border-[#c8d4de]" />
+                                            <span className="block text-sm font-medium text-[#0f172a]">Nom complet<span className="mr-1 text-[#b42318]">*</span></span>
+                                            <Input required value={buyerForm.name} onChange={(e) => setBuyerForm((current) => ({ ...current, name: e.target.value }))} placeholder="Nom complet de l’acheteur" className="h-11 rounded-xl border-[#c8d4de]" />
                                         </label>
 
                                         <label className="space-y-1.5">
-                                            <span className="block text-sm font-medium text-[#0f172a]">Téléphone *</span>
-                                            <Input value={buyerForm.phone} onChange={(e) => setBuyerForm((current) => ({ ...current, phone: e.target.value }))} placeholder="Numéro de téléphone" className="h-11 rounded-xl border-[#c8d4de]" />
+                                            <span className="block text-sm font-medium text-[#0f172a]">Téléphone<span className="mr-1 text-[#b42318]">*</span></span>
+                                            <PhoneInput value={buyerForm.phone} onChange={(value) => setBuyerForm((current) => ({ ...current, phone: value }))} placeholder="Numéro de téléphone" className="h-11 rounded-xl" />
                                         </label>
 
                                         <label className="space-y-1.5">
@@ -661,28 +856,27 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
                                         </label>
 
                                         <label className="space-y-1.5">
-                                            <span className="block text-sm font-medium text-[#0f172a]">Adresse</span>
-                                            <Input value={buyerForm.address} onChange={(e) => setBuyerForm((current) => ({ ...current, address: e.target.value }))} placeholder="Adresse de résidence" className="h-11 rounded-xl border-[#c8d4de]" />
+                                            <span className="block text-sm font-medium text-[#0f172a]">Adresse<span className="mr-1 text-[#b42318]">*</span></span>
+                                            <Input required value={buyerForm.address} onChange={(e) => setBuyerForm((current) => ({ ...current, address: e.target.value }))} placeholder="Adresse de résidence" className="h-11 rounded-xl border-[#c8d4de]" />
                                         </label>
 
                                         <label className="space-y-1.5">
-                                            <span className="block text-sm font-medium text-[#0f172a]">Type de pièce</span>
-                                            <select
+                                            <span className="block text-sm font-medium text-[#0f172a]">Type de pièce<span className="mr-1 text-[#b42318]">*</span></span>
+                                            <SearchableSelect
                                                 value={buyerForm.idType}
                                                 onChange={(e) => setBuyerForm((current) => ({ ...current, idType: e.target.value }))}
                                                 className="h-11 w-full rounded-xl border border-[#c8d4de] bg-white px-3 text-sm text-[#0f172a] outline-none focus:border-[#00559b]"
                                             >
-                                                <option>CNI</option>
-                                                <option>Passeport</option>
-                                                <option>Permis de conduire</option>
-                                                <option>Carte consulaire</option>
-                                                <option>Autre</option>
-                                            </select>
+                                                <option value="">Sélectionner</option>
+                                                {typePieces.map((type) => (
+                                                    <option key={type.type_pieces_id} value={type.type_pieces_id}>{type.name}</option>
+                                                ))}
+                                            </SearchableSelect>
                                         </label>
 
                                         <label className="space-y-1.5">
-                                            <span className="block text-sm font-medium text-[#0f172a]">Numéro de pièce</span>
-                                            <Input value={buyerForm.idNumber} onChange={(e) => setBuyerForm((current) => ({ ...current, idNumber: e.target.value }))} placeholder="Numéro de la pièce" className="h-11 rounded-xl border-[#c8d4de]" />
+                                            <span className="block text-sm font-medium text-[#0f172a]">Numéro de pièce<span className="mr-1 text-[#b42318]">*</span></span>
+                                            <Input required value={buyerForm.idNumber} onChange={(e) => setBuyerForm((current) => ({ ...current, idNumber: e.target.value }))} placeholder="Numéro de la pièce" className="h-11 rounded-xl border-[#c8d4de]" />
                                         </label>
                                     </div>
                                 </section>
@@ -726,10 +920,11 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
 
                                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             <label className="space-y-1.5">
-                                                <span className="block text-sm font-medium text-[#0f172a]">Montant encaissé</span>
+                                                <span className="block text-sm font-medium text-[#0f172a]"><span className="mr-1 text-[#b42318]">*</span>Montant encaissé</span>
                                                 <Input
                                                     type="number"
-                                                    min="0"
+                                                    min="1"
+                                                    required
                                                     value={completePayment.amount}
                                                     onChange={(e) => setCompletePayment((current) => ({ ...current, amount: e.target.value }))}
                                                     className="h-11 rounded-xl border-[#c8d4de]"
@@ -737,8 +932,8 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
                                             </label>
 
                                             <label className="space-y-1.5">
-                                                <span className="block text-sm font-medium text-[#0f172a]">Mode de paiement</span>
-                                                <select
+                                                <span className="block text-sm font-medium text-[#0f172a]"><span className="mr-1 text-[#b42318]">*</span>Mode de paiement</span>
+                                                <SearchableSelect
                                                     value={completePayment.mode}
                                                     onChange={(e) => setCompletePayment((current) => ({ ...current, mode: e.target.value }))}
                                                     className="h-11 w-full rounded-xl border border-[#c8d4de] bg-white px-3 text-sm text-[#0f172a] outline-none focus:border-[#00559b]"
@@ -746,7 +941,28 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
                                                     {paymentModes.map((mode) => (
                                                         <option key={mode}>{mode}</option>
                                                     ))}
-                                                </select>
+                                                </SearchableSelect>
+                                            </label>
+                                        </div>
+                                    </section>
+                                ) : null}
+
+                                {paymentPlan !== 'complete' ? (
+                                    <section className="rounded-2xl border border-[#f2c078] bg-[#fff8ed] p-5">
+                                        <div className="mb-4">
+                                            <h4 className="text-sm font-semibold text-[#0f172a]">Premier versement encaissé</h4>
+                                            <p className="text-sm text-[#5f7182]">Ce montant est payé immédiatement. Seul le solde restant sera échelonné.</p>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <label className="space-y-1.5">
+                                                <span className="block text-sm font-medium text-[#0f172a]"><span className="mr-1 text-[#b42318]">*</span>Montant du premier versement</span>
+                                                <Input type="number" min="1" required value={initialPayment.amount} onChange={(e) => setInitialPayment((current) => ({ ...current, amount: e.target.value }))} className="h-11 rounded-xl border-[#c8d4de]" />
+                                            </label>
+                                            <label className="space-y-1.5">
+                                                <span className="block text-sm font-medium text-[#0f172a]"><span className="mr-1 text-[#b42318]">*</span>Mode de règlement</span>
+                                                <SearchableSelect value={initialPayment.mode} onChange={(e) => setInitialPayment((current) => ({ ...current, mode: e.target.value }))} className="h-11 w-full rounded-xl border border-[#c8d4de] bg-white px-3 text-sm text-[#0f172a] outline-none focus:border-[#00559b]">
+                                                    {paymentModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+                                                </SearchableSelect>
                                             </label>
                                         </div>
                                     </section>
@@ -784,18 +1000,7 @@ export default function VenteBien({ caisseOuverte = true, saleOwners = [] }) {
                                             <h4 className="text-sm font-semibold text-[#0f172a]">Paiement mensuel</h4>
                                         </div>
 
-                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                            <label className="space-y-1.5">
-                                                <span className="block text-sm font-medium text-[#0f172a]">Acompte</span>
-                                                <Input
-                                                    type="number"
-                                                    min="0"
-                                                    value={monthly.deposit}
-                                                    onChange={(e) => setMonthly((current) => ({ ...current, deposit: e.target.value }))}
-                                                    className="h-11 rounded-xl border-[#c8d4de]"
-                                                />
-                                            </label>
-
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             <label className="space-y-1.5">
                                                 <span className="block text-sm font-medium text-[#0f172a]">Nombre de mensualités</span>
                                                 <Input

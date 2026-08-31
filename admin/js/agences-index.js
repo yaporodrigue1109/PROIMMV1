@@ -170,6 +170,11 @@ function selectAgency(row) {
     const editLink = document.getElementById('agency-edit-link');
     if (editLink) editLink.setAttribute('href', row.dataset.editUrl);
 
+    const impersonateForm = document.getElementById('agency-impersonate-form');
+    if (impersonateForm && row.dataset.impersonateUrl) {
+        impersonateForm.setAttribute('action', row.dataset.impersonateUrl);
+    }
+
     // Stocker ID agence
     window.currentAgencyId = row.dataset.agencyId || row.dataset.code;
 

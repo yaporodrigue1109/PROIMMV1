@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { isValidPhoneNumber } from 'react-phone-number-input';
 import {
     ArrowLeft,
     BadgeCheck,
@@ -14,6 +15,7 @@ import AgenceLayout from '../../../Layouts/AgenceLayout';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
+import { PhoneInput } from '../../../components/ui/phone-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { agenceButtonStyles } from '../../../lib/buttonStyles';
 import { cn } from '../../../lib/utils';
@@ -202,7 +204,14 @@ export default function Form({ mode = 'create', personnel = null, roles = [] }) 
         if (index === 0) {
             if (!data.name.trim()) localErrors.name = 'Le nom du membre est obligatoire.';
             if (!data.adresse.trim()) localErrors.adresse = 'L\'adresse est obligatoire.';
-            if (!data.tel1.trim()) localErrors.tel1 = 'Le contact principal est obligatoire.';
+            if (!data.tel1.trim()) {
+                localErrors.tel1 = 'Le contact principal est obligatoire.';
+            } else if (!isValidPhoneNumber(data.tel1)) {
+                localErrors.tel1 = 'Saisissez un numéro de téléphone valide avec son indicatif pays.';
+            }
+            if (data.tel2.trim() && !isValidPhoneNumber(data.tel2)) {
+                localErrors.tel2 = 'Saisissez un numéro de téléphone valide avec son indicatif pays.';
+            }
         }
 
         if (index === 1) {
@@ -268,7 +277,7 @@ export default function Form({ mode = 'create', personnel = null, roles = [] }) 
                         </h1>
                         <p className="text-sm text-[#5f7182]">
                             {isEdit
-                                ? 'Mettez à  jour les informations du membre.'
+                                ? 'Mettez à jour les informations du membre.'
                                 : 'Renseignez les informations du membre.'}
                         </p>
                     </div>
@@ -284,11 +293,14 @@ export default function Form({ mode = 'create', personnel = null, roles = [] }) 
                     <Card className="rounded-2xl border-[#f5c2c7] bg-[#fff5f5] shadow-sm">
                         <CardContent className="p-4">
                             <p className="mb-2 text-sm font-semibold text-[#b42318]">Veuillez corriger les erreurs ci-dessous.</p>
-                            <ul className="space-y-1 text-sm text-[#7f1d1d]">
+                            <ul className="space-y-1.5 text-sm leading-5 text-[#7f1d1d]">
                                 {Object.values(fieldErrors)
                                     .slice(0, 8)
                                     .map((message, index) => (
-                                        <li key={`${message}-${index}`}>â€¢ {message}</li>
+                                        <li key={`${message}-${index}`} className="flex items-start gap-2">
+                                            <span className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[#b42318]" aria-hidden="true" />
+                                            <span>{message}</span>
+                                        </li>
                                     ))}
                             </ul>
                         </CardContent>
@@ -321,18 +333,21 @@ export default function Form({ mode = 'create', personnel = null, roles = [] }) 
                             </Field>
 
                             <Field label="Téléphone 1" required error={fieldErrors.tel1}>
-                                <Input
+                                <PhoneInput
+                                    required
                                     value={data.tel1}
-                                    onChange={(e) => setData('tel1', e.target.value)}
-                                    placeholder="+225 07 01 23 45 67"
+                                    onChange={(value) => setData('tel1', value)}
+                                    placeholder="07 01 23 45 67"
+                                    className={fieldErrors.tel1 ? 'border-[#b42318]' : ''}
                                 />
                             </Field>
 
                             <Field label="Téléphone 2" error={fieldErrors.tel2}>
-                                <Input
+                                <PhoneInput
                                     value={data.tel2}
-                                    onChange={(e) => setData('tel2', e.target.value)}
-                                    placeholder="+225 05 44 78 12 99"
+                                    onChange={(value) => setData('tel2', value)}
+                                    placeholder="05 44 78 12 99"
+                                    className={fieldErrors.tel2 ? 'border-[#b42318]' : ''}
                                 />
                             </Field>
 

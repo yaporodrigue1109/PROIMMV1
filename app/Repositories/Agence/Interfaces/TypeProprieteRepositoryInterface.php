@@ -11,7 +11,7 @@ interface TypeProprieteRepositoryInterface
 
     public function findById(int $id): ?TypePropriete;
 
-    public function findByName(string $name, int $agenceId): ?TypePropriete;
+    public function findByName(string $name, string $agenceId): ?TypePropriete;
 
     public function create(array $data): TypePropriete;
 

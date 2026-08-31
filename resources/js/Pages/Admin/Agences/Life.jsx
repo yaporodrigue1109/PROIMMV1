@@ -1,10 +1,14 @@
-import { Link } from '@inertiajs/react';
+import { Link, router, usePoll } from '@inertiajs/react';
 import { RefreshCw } from 'lucide-react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 
 export default function Life({ agence, activities = [], stats = {} }) {
+    usePoll(30000, {
+        only: ['agence', 'activities', 'stats'],
+        preserveScroll: true,
+    });
     const counters = [
         ['Locataires', stats.nb_locataires ?? 0],
         ['Propriétaires', stats.nb_proprietaires ?? 0],
@@ -69,7 +73,11 @@ export default function Life({ agence, activities = [], stats = {} }) {
                                 <CardTitle className="text-xl text-slate-900">Activités récentes</CardTitle>
                                 <CardDescription className="text-slate-500">Chronologie des événements de l'agence</CardDescription>
                             </div>
-                            <Button variant="outline" className="h-10 rounded-xl border-slate-200 px-4 text-slate-900">
+                            <Button
+                                variant="outline"
+                                className="h-10 rounded-xl border-slate-200 px-4 text-slate-900"
+                                onClick={() => router.reload({ only: ['agence', 'activities', 'stats'], preserveScroll: true })}
+                            >
                                 <RefreshCw className="h-4 w-4" />
                                 Actualiser
                             </Button>

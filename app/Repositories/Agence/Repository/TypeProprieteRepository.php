@@ -5,12 +5,14 @@ namespace App\Repositories\Agence\Repository;
 use App\Models\TypePropriete;
 use App\Repositories\Agence\Interfaces\TypeProprieteRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class TypeProprieteRepository implements TypeProprieteRepositoryInterface
 {
     public function getAllByAgence(string $agenceId): Collection
     {
-        return TypePropriete::where('agence_id', $agenceId)
+        return TypePropriete::visibleForAgence($agenceId)
+            ->orderByRaw('agence_id IS NOT NULL')
             ->orderBy('name')
             ->get();
     }
@@ -20,7 +22,7 @@ class TypeProprieteRepository implements TypeProprieteRepositoryInterface
         return TypePropriete::find($id);
     }
 
-    public function findByName(string $name, int $agenceId): ?TypePropriete
+    public function findByName(string $name, string $agenceId): ?TypePropriete
     {
         return TypePropriete::where('name', $name)
             ->where('agence_id', $agenceId)
@@ -39,14 +41,11 @@ class TypeProprieteRepository implements TypeProprieteRepositoryInterface
         return $type->fresh();
     }
 
-    public function delete( $id): bool
+    public function delete(TypePropriete $type): bool
     {
-        $type = $this->findOrFail($id);
-//        if ($this->isUsed($type)) {
-//            throw new \Exception(
-//                "Impossible de supprimer « {$type->name} » : {$this->countProprietes($type)} propriété(s) l'utilisent."
-//            );
-//        }
+        if ($type->agence_id !== $this->agenceId()) {
+            throw new ModelNotFoundException('Ce type global est géré uniquement par l’administrateur.');
+        }
 
         return $type->delete();
     }
@@ -70,7 +69,7 @@ class TypeProprieteRepository implements TypeProprieteRepositoryInterface
         $type = $this->findById($id);
 
         if (!$type || $type->agence_id !== $this->agenceId()) {
-            throw new ModelNotFoundException("Type de propriété #$id introuvable.");
+            throw new ModelNotFoundException("Type de propriété #$id introuvable ou non modifiable.");
         }
 
         return $type;

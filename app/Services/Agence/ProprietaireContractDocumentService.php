@@ -11,6 +11,10 @@ class ProprietaireContractDocumentService
     /** @var array<int, string> */
     private array $temporaryFiles = [];
 
+    public function __construct(private readonly AgencyDocumentApproval $approval)
+    {
+    }
+
     public function generate(
         string $type,
         Agence $agence,
@@ -25,11 +29,13 @@ class ProprietaireContractDocumentService
             public function Footer(): void
             {
                 $this->SetY(-14);
-                $this->SetDrawColor(100, 100, 100);
+                $this->SetDrawColor(0, 85, 155);
                 $this->Line(15, $this->GetY(), 195, $this->GetY());
                 $this->SetY(-11);
+                $this->SetTextColor(95, 113, 130);
                 $this->SetFont('Times', '', 7);
                 $this->Cell(0, 4, $this->footerText . ' - Page ' . $this->PageNo(), 0, 0, 'C');
+                $this->SetTextColor(0, 0, 0);
             }
         };
 
@@ -44,6 +50,8 @@ class ProprietaireContractDocumentService
             } else {
                 $this->renderProcuration($pdf, $agence, $proprietaire);
             }
+
+            $this->approval->applyToFpdf($pdf, $agence);
 
             return $pdf->Output('S');
         } finally {
@@ -148,7 +156,11 @@ class ProprietaireContractDocumentService
         $pdf->MultiCell(95, 8, $this->encode("RÉPUBLIQUE DE CÔTE D’IVOIRE\nUNION - DISCIPLINE - TRAVAIL"), 1, 'C');
         $pdf->Ln(18);
         $pdf->SetFont('Times', 'B', 18);
-        $pdf->Cell(0, 10, $this->encode('PROCURATION'), 1, 1, 'C');
+        $pdf->SetDrawColor(0, 85, 155);
+        $pdf->SetFillColor(0, 85, 155);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->Cell(0, 11, $this->encode('PROCURATION'), 1, 1, 'C', true);
+        $pdf->SetTextColor(15, 23, 42);
         $this->space($pdf, 10);
         $this->line($pdf, 'Je soussigné(e) : ' . $owner->name, false, 12);
         $this->line($pdf, 'Né(e) le : ' . $this->date($owner->date_naiss) . ' à : ' . $this->value($owner->lieu_naiss), false, 12);
@@ -174,7 +186,11 @@ class ProprietaireContractDocumentService
         $this->logo($pdf, $agence);
         $pdf->SetXY(55, 18);
         $pdf->SetFont('Times', 'B', 16);
-        $pdf->Cell(140, 12, $this->encode($title), 1, 1, 'C');
+        $pdf->SetDrawColor(0, 85, 155);
+        $pdf->SetFillColor(0, 85, 155);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->Cell(140, 12, $this->encode($title), 1, 1, 'C', true);
+        $pdf->SetTextColor(15, 23, 42);
         $pdf->SetY(43);
     }
 
@@ -224,25 +240,7 @@ class ProprietaireContractDocumentService
 
     private function logoPath(Agence $agence): ?string
     {
-        $logo = trim((string) ($agence->parametrage?->logo ?? ''));
-        if ($logo === '' || str_starts_with($logo, 'http://') || str_starts_with($logo, 'https://')) {
-            return null;
-        }
-
-        $relative = ltrim(preg_replace('#^/?storage/#', '', $logo), '/');
-        $candidates = [
-            storage_path('app/public/' . $relative),
-            public_path($logo),
-            public_path('storage/' . $relative),
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (is_file($candidate) && is_readable($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return null;
+        return app(AgencyDocumentBranding::class)->localLogoPath($agence);
     }
 
     private function createTransparentLogo(string $sourcePath): ?string
@@ -328,8 +326,11 @@ class ProprietaireContractDocumentService
 
     private function heading(\FPDF $pdf, string $text): void
     {
+        $pdf->SetFillColor(234, 244, 251);
+        $pdf->SetTextColor(0, 85, 155);
         $pdf->SetFont('Times', 'B', 11);
-        $pdf->MultiCell(0, 6, $this->encode($text));
+        $pdf->MultiCell(0, 7, $this->encode($text), 0, 'L', true);
+        $pdf->SetTextColor(15, 23, 42);
         $pdf->Ln(1);
     }
 

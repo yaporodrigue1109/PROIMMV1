@@ -3,6 +3,7 @@ import { MapPin, Search, X } from 'lucide-react';
 
 import PublicLayout from './PublicLayout';
 import PropertyCards from './PropertyCards';
+import { SearchableSelect } from '../../components/ui/searchable-select';
 
 const normalize = (value) => String(value ?? '')
     .normalize('NFD')
@@ -54,7 +55,7 @@ export default function Properties({ properties = [], mode = '' }) {
                             </button>
                         ) : null}
                     </div>
-                    <select
+                    <SearchableSelect
                         value={propertyType}
                         onChange={(event) => setPropertyType(event.target.value)}
                         aria-label="Filtrer par type de bien"
@@ -62,7 +63,7 @@ export default function Properties({ properties = [], mode = '' }) {
                     >
                         <option value="all">Tous les types de biens</option>
                         {propertyTypes.map((item) => <option key={item} value={item}>{item}</option>)}
-                    </select>
+                    </SearchableSelect>
                     <div className="flex flex-wrap gap-2 md:col-span-2 lg:col-span-1 lg:flex-nowrap">
                         {[['all', 'Tous'], ['location', 'À louer'], ['vente', 'À vendre']].map(([value, label]) => (
                             <button key={value} type="button" onClick={() => setType(value)} className={`whitespace-nowrap rounded-lg px-3.5 py-3 text-sm font-semibold transition ${type === value ? 'bg-[#00559b] text-white' : 'border border-slate-200 bg-white text-slate-600 hover:border-[#00559b] hover:text-[#00559b]'}`}>

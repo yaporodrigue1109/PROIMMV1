@@ -1,4 +1,5 @@
 import React from 'react';
+import { SearchableSelect } from '../../../../components/ui/searchable-select';
 
 export default function ReversementList({
     cours,
@@ -13,9 +14,9 @@ export default function ReversementList({
     return (
         <>
             <div className="table-toolbar">
-                <select style={{ width: '80px' }}>
+                <SearchableSelect style={{ width: '80px' }}>
                     <option>25</option>
-                </select>
+                </SearchableSelect>
                 <input
                     type="text"
                     placeholder="Rechercher..."

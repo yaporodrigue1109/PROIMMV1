@@ -12,6 +12,10 @@ class LocataireContractDocumentService
     /** @var array<int, string> */
     private array $temporaryFiles = [];
 
+    public function __construct(private readonly AgencyDocumentApproval $approval)
+    {
+    }
+
     public const TYPES = [
         'avis-locataire',
         'contrat-bail',
@@ -29,11 +33,13 @@ class LocataireContractDocumentService
             public function Footer(): void
             {
                 $this->SetY(-14);
-                $this->SetDrawColor(110, 110, 110);
+                $this->SetDrawColor(0, 85, 155);
                 $this->Line(15, $this->GetY(), $this->GetPageWidth() - 15, $this->GetY());
                 $this->SetY(-11);
+                $this->SetTextColor(95, 113, 130);
                 $this->SetFont('Times', '', 7);
                 $this->Cell(0, 4, $this->footerText . ' - Page ' . $this->PageNo(), 0, 0, 'C');
+                $this->SetTextColor(0, 0, 0);
             }
         };
 
@@ -51,6 +57,8 @@ class LocataireContractDocumentService
                 'procuration' => $this->renderProcuration($pdf, $agence, $locataire, $contrat),
                 default => throw new \InvalidArgumentException('Type de document locataire invalide.'),
             };
+
+            $this->approval->applyToFpdf($pdf, $agence);
 
             return $pdf->Output('S');
         } finally {
@@ -261,8 +269,23 @@ class LocataireContractDocumentService
         if ($title) {
             $pdf->SetX(52);
             $pdf->SetFont('Times', 'B', 15);
-            $pdf->Cell(143, 12, $this->encode($title), 1, 1, 'C');
+            $pdf->SetDrawColor(0, 85, 155);
+            $pdf->SetFillColor(0, 85, 155);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->Cell(143, 12, $this->encode($title), 1, 1, 'C', true);
+            $pdf->SetTextColor(15, 23, 42);
             $pdf->SetY(43);
+        } else {
+            $pdf->SetXY(52, 16);
+            $pdf->SetTextColor(0, 85, 155);
+            $pdf->SetFont('Times', 'B', 12);
+            $pdf->Cell(143, 7, $this->encode(mb_strtoupper($agence->name)), 0, 1, 'R');
+            $pdf->SetX(52);
+            $pdf->SetTextColor(95, 113, 130);
+            $pdf->SetFont('Times', '', 8);
+            $pdf->Cell(143, 5, $this->encode($this->value($agence->adresse)), 0, 1, 'R');
+            $pdf->SetTextColor(15, 23, 42);
+            $pdf->SetY(40);
         }
     }
 
@@ -387,8 +410,11 @@ class LocataireContractDocumentService
 
     private function heading(\FPDF $pdf, string $text): void
     {
+        $pdf->SetFillColor(234, 244, 251);
+        $pdf->SetTextColor(0, 85, 155);
         $pdf->SetFont('Times', 'B', 10.5);
-        $pdf->MultiCell(0, 6, $this->encode($text));
+        $pdf->MultiCell(0, 7, $this->encode($text), 0, 'L', true);
+        $pdf->SetTextColor(15, 23, 42);
         $pdf->Ln(1);
     }
 
@@ -534,13 +560,7 @@ class LocataireContractDocumentService
 
     private function logoPath(Agence $agence): ?string
     {
-        $logo = trim((string) ($agence->parametrage?->logo ?? ''));
-        if ($logo === '' || str_starts_with($logo, 'http')) return null;
-        $relative = ltrim(preg_replace('#^/?storage/#', '', $logo), '/');
-        foreach ([storage_path('app/public/' . $relative), public_path($logo), public_path('storage/' . $relative)] as $path) {
-            if (is_file($path) && is_readable($path)) return $path;
-        }
-        return null;
+        return app(AgencyDocumentBranding::class)->localLogoPath($agence);
     }
 
     private function transparentLogo(string $sourcePath): ?string

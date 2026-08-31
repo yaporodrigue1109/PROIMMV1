@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import GeographySelects from '../../../components/geography-selects';
 import {
     ArrowLeft,
     Building2,
@@ -474,13 +475,14 @@ function PorteBlock({
     canRemove,
     nbreEtages = 0,
     structuralOnly = false,
+    locationOnly = false,
 }) {
     const [showDetails, setShowDetails] = useState(false);
     const setPorte = (patch) => onChange({ ...porte, ...patch });
     const setTarif = (patch) => onChange({ ...porte, tarif: { ...porte.tarif, ...patch } });
     const totalEtages = Number(nbreEtages ?? 0);
     const etageValue = Number(porte.etage ?? 0);
-    const isLocation = porte.is_allocation !== false;
+    const isLocation = locationOnly || porte.is_allocation !== false;
     const prixFieldKey = isLocation ? 'mt_loyer' : 'mt_vente';
     const prixFieldLabel = isLocation ? 'Loyer' : 'Prix de vente';
     const prixFieldPlaceholder = isLocation ? '0' : 'Ex: 35000000';
@@ -580,7 +582,13 @@ function PorteBlock({
         if (totalEtages > 0 && etageValue > totalEtages) {
             setPorte({ etage: 0 });
         }
-    }, [etageValue, setPorte, totalEtages]);
+    }, [etageValue, totalEtages]);
+
+    useEffect(() => {
+        if (locationOnly && porte.is_allocation !== true) {
+            setPorte({ is_allocation: true, tarif: { ...porte.tarif, mt_vente: '' } });
+        }
+    }, [locationOnly, porte.is_allocation]);
 
     const etageOptions = useMemo(
         () =>
@@ -641,7 +649,11 @@ function PorteBlock({
 
 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 
-    {!structuralOnly ? <Field
+    {locationOnly ? (
+        <div className="rounded-xl border border-[#cfe2f3] bg-[#eaf4fb] px-3 py-2 text-sm text-[#00559b] md:col-span-3">
+            Location uniquement — cette porte sera disponible à la location.
+        </div>
+    ) : !structuralOnly ? <Field
                             label="Mode de mise en marché"
                             required
                             error={errors?.[`${errorKey}.is_allocation`]}
@@ -818,7 +830,7 @@ function PorteBlock({
 // Batiment block
 // ─────────────────────────────────────────────────────────────
 
-function BatimentBlock({ index, batiment, typesPorte, equipements, errors, onChange, onRemove, canRemove, mode = 'full', structuralOnly = false }) {
+function BatimentBlock({ index, batiment, typesPorte, equipements, errors, onChange, onRemove, canRemove, mode = 'full', structuralOnly = false, locationOnly = false }) {
     const setBatiment = (patch) => onChange({ ...batiment, ...patch });
     const [showStructureOptions, setShowStructureOptions] = useState(false);
 
@@ -951,6 +963,7 @@ function BatimentBlock({ index, batiment, typesPorte, equipements, errors, onCha
                                     canRemove={true}
                                     nbreEtages={batiment.nbre_etages}
                                     structuralOnly={structuralOnly}
+                                    locationOnly={locationOnly}
                                 />
                             ))}
                         </div>
@@ -1231,7 +1244,11 @@ export default function Form({
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
                 },
-                body: JSON.stringify(lotForm),
+                body: JSON.stringify({
+                    ...lotForm,
+                    is_for_sale: data.sale_type === 'none' ? false : lotForm.is_for_sale,
+                    sale_price: data.sale_type === 'none' ? '' : lotForm.sale_price,
+                }),
             });
 
             const payload = await response.json().catch(() => ({}));
@@ -1539,10 +1556,16 @@ export default function Form({
                                 />
                             
 
-                           <Field
+                            <SharedComboboxField
                                 label="Lot"
                                 required
+                                value={toId(data.lot_id)}
+                                placeholder={selectedProprietaireId ? 'Choisir un lot' : "Choisissez d'abord un propriétaire"}
+                                options={availableLotOptions}
+                                onSelect={handleLotChange}
+                                disabled={!selectedProprietaireId}
                                 error={mergedErrors.lot_id}
+                                emptyLabel="Aucun lot trouvé."
                                 action={
                                     <Button
                                         type="button"
@@ -1559,30 +1582,7 @@ export default function Form({
                                         Nouveau lot
                                     </Button>
                                 }
-                            >
-                                <Select
-                                    className="w-full"
-                                    value={toId(data.lot_id)}
-                                    onValueChange={handleLotChange}
-                                    disabled={!selectedProprietaireId}
-                                >
-                                    <SelectTrigger disabled={!selectedProprietaireId}>
-                                        <SelectValue placeholder="Choisir" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {availableLotOptions.map((lot) => (
-                                            <SelectItem key={lot.value} value={lot.value}>
-                                                {lot.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {!selectedProprietaireId ? (
-                                    <p className="text-xs text-[#94a3b8]">
-                                        Choisissez d'abord un propriétaire pour afficher ses lots.
-                                    </p>
-                                ) : null}
-                            </Field>
+                            />
 
                             <Field label="Mode de commercialisation" required error={mergedErrors.sale_type} className="md:col-span-2">
                                 <Select
@@ -1590,6 +1590,17 @@ export default function Form({
                                     onValueChange={(value) => {
                                         setData('sale_type', value);
                                         if (value !== 'whole') setData('sale_price', '');
+                                        if (value === 'none') {
+                                            setData('batiments', data.batiments.map((batiment) => ({
+                                                ...batiment,
+                                                portes: batiment.portes.map((porte) => ({
+                                                    ...porte,
+                                                    is_allocation: true,
+                                                    tarif: { ...porte.tarif, mt_vente: '' },
+                                                })),
+                                            })));
+                                            setLotForm((current) => ({ ...current, is_for_sale: false, sale_price: '' }));
+                                        }
                                     }}
                                 >
                                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -1711,9 +1722,9 @@ export default function Form({
                         </div>
 
                        
-                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
-                            <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
-                                <CardHeader className="border-b border-[#e2e8f0] py-4">
+                        <div className="grid grid-cols-1 gap-6 lg:h-[calc(100vh-8rem)] lg:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] lg:items-stretch">
+                            <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm lg:sticky lg:top-0 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:self-start lg:overflow-hidden">
+                                <CardHeader className="shrink-0 border-b border-[#e2e8f0] py-4">
                                     <CardTitle className="flex items-center gap-2 text-sm text-[#0f172a]">
                                         <Building2 className="h-4 w-4 text-[#00559b]" />
                                         Bâtiments
@@ -1722,8 +1733,8 @@ export default function Form({
                                         Sélectionne un bâtiment pour afficher ses portes.
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="mt-4 p-4">
-                                    <ScrollArea className="max-h-[70vh] pr-1">
+                                <CardContent className="mt-4 p-4 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+                                    <ScrollArea className="max-h-[70vh] pr-1 lg:h-full lg:max-h-none">
                                         <div className="space-y-2">
                                             {data.batiments.map((batiment, index) => {
                                                 const isSelected = index === selectedBatimentIndex;
@@ -1783,7 +1794,7 @@ export default function Form({
                                 </CardContent>
                             </Card>
 
-                            <div className="space-y-4">
+                            <div className="space-y-4 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-2">
                                 {selectedBatiment ? (
                                     <BatimentBlock
                                         key={selectedBatiment.batiment_id ?? `batiment-doors-${selectedBatimentIndex}`}
@@ -1797,6 +1808,7 @@ export default function Form({
                                         canRemove={data.batiments.length > 1}
                                         mode="doors"
                                         structuralOnly={data.sale_type === 'whole'}
+                                        locationOnly={data.sale_type === 'none'}
                                     />
                                 ) : (
                                     <Card className="rounded-2xl border-[#c8d4de] bg-white shadow-sm">
@@ -1966,44 +1978,13 @@ export default function Form({
                                         />
                                     </Field>
 
-                                    <Field label="Région" error={lotErrors.region_id}>
-                                        <Select
-                                            value={toId(lotForm.region_id)}
-                                            onValueChange={(value) =>
-                                                setLotForm((current) => ({
-                                                    ...current,
-                                                    region_id: value,
-                                                    ville_id: '',
-                                                }))
-                                            }
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Sélectionner" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {regionOptions.map((region) => (
-                                                    <SelectItem key={region.value} value={region.value}>
-                                                        {region.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </Field>
-
-                                    <Field label="Ville" error={lotErrors.ville_id}>
-                                        <Select value={toId(lotForm.ville_id)} onValueChange={(value) => setLotForm((current) => ({ ...current, ville_id: value }))} disabled={!lotForm.region_id}>
-                                            <SelectTrigger disabled={!lotForm.region_id}>
-                                                <SelectValue placeholder="Sélectionner" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {villeOptions.map((ville) => (
-                                                    <SelectItem key={ville.value} value={ville.value}>
-                                                        {ville.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </Field>
+                                    <GeographySelects
+                                        regionId={toId(lotForm.region_id)}
+                                        cityId={toId(lotForm.ville_id)}
+                                        onRegionChange={(value) => setLotForm((current) => ({ ...current, region_id: value, ville_id: '' }))}
+                                        onCityChange={(value) => setLotForm((current) => ({ ...current, ville_id: value }))}
+                                        errors={lotErrors}
+                                    />
 
                                     <Field label="N° lot" error={lotErrors.num_lot}>
                                         <Input
@@ -2031,7 +2012,7 @@ export default function Form({
                                         />
                                     </Field>
 
-                                    <label className="flex items-center gap-3 rounded-xl border border-[#c8d4de] p-3 md:col-span-2">
+                                    {data.sale_type !== 'none' ? <label className="flex items-center gap-3 rounded-xl border border-[#c8d4de] p-3 md:col-span-2">
                                         <input
                                             type="checkbox"
                                             checked={lotForm.is_for_sale}
@@ -2039,9 +2020,9 @@ export default function Form({
                                             className="h-4 w-4 accent-[#00559b]"
                                         />
                                         <span className="text-sm font-medium text-[#0f172a]">Mettre ce lot entier en vente</span>
-                                    </label>
+                                    </label> : null}
 
-                                    {lotForm.is_for_sale ? (
+                                    {data.sale_type !== 'none' && lotForm.is_for_sale ? (
                                         <Field label="Prix de vente du lot" required error={lotErrors.sale_price} className="md:col-span-2">
                                             <Input
                                                 type="text"

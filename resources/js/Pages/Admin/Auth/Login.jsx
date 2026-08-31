@@ -1,6 +1,6 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import { LockKeyhole, Mail, ShieldCheck } from 'lucide-react';
-import logo from '../../../../../admin/logo/playstore-icon-revised.png';
+import defaultLogo from '../../../../../admin/logo/playstore-icon-revised.png';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -10,6 +10,7 @@ import { Label } from '../../../components/ui/label';
 import { Separator } from '../../../components/ui/separator';
 
 export default function Login() {
+    const logo = usePage().props.branding?.logoUrl || defaultLogo;
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         password: '',
@@ -23,7 +24,11 @@ export default function Login() {
 
     return (
         <div className="flex min-h-screen items-center justify-center px-4 py-10">
-            <Head title="Connexion" />
+            <Head title="Connexion">
+                <link rel="icon" href={logo} />
+                <link rel="shortcut icon" href={logo} />
+                <link rel="apple-touch-icon" href={logo} />
+            </Head>
 
          
 

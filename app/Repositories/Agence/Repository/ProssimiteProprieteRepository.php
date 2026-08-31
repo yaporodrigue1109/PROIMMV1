@@ -5,12 +5,14 @@ namespace App\Repositories\Agence\Repository;
 use App\Models\ProssimitePropriete;
 use App\Repositories\Agence\Interfaces\ProssimiteProprieteRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ProssimiteProprieteRepository implements ProssimiteProprieteRepositoryInterface
 {
     public function getAllByAgence(string $agenceId): Collection
     {
-        return ProssimitePropriete::where('agence_id', $agenceId)
+        return ProssimitePropriete::visibleForAgence($agenceId)
+            ->orderByRaw('agence_id IS NOT NULL')
             ->orderBy('name')
             ->get();
     }
@@ -20,7 +22,7 @@ class ProssimiteProprieteRepository implements ProssimiteProprieteRepositoryInte
         return ProssimitePropriete::find($id);
     }
 
-    public function findByName(string $name, int $agenceId): ?ProssimitePropriete
+    public function findByName(string $name, string $agenceId): ?ProssimitePropriete
     {
         return ProssimitePropriete::where('name', $name)
             ->where('agence_id', $agenceId)
@@ -39,14 +41,11 @@ class ProssimiteProprieteRepository implements ProssimiteProprieteRepositoryInte
         return $type->fresh();
     }
 
-    public function delete( $id): bool
+    public function delete(ProssimitePropriete $type): bool
     {
-        $type = $this->findOrFail($id);
-//        if ($this->isUsed($type)) {
-//            throw new \Exception(
-//                "Impossible de supprimer « {$type->name} » : {$this->countProprietes($type)} propriété(s) l'utilisent."
-//            );
-//        }
+        if ($type->agence_id !== $this->agenceId()) {
+            throw new ModelNotFoundException('Cette proximité globale est gérée uniquement par l’administrateur.');
+        }
 
         return $type->delete();
     }
@@ -70,7 +69,7 @@ class ProssimiteProprieteRepository implements ProssimiteProprieteRepositoryInte
         $type = $this->findById($id);
 
         if (!$type || $type->agence_id !== $this->agenceId()) {
-            throw new ModelNotFoundException("Type de propriété #$id introuvable.");
+            throw new ModelNotFoundException("Proximité #$id introuvable ou non modifiable.");
         }
 
         return $type;

@@ -13,8 +13,9 @@ class CheckAgencyRoutePermission
      */
     private const EXEMPT_ROUTES = [
         'agence.logout',
-        'agence.profile',
+        'agence.profile*',
         'agence.abonnement.*',
+        'agence.aide*',
     ];
 
     /**
@@ -28,10 +29,12 @@ class CheckAgencyRoutePermission
         'locataires' => 'locataires',
         'personnel' => 'personnel',
         'maintenance' => 'maintenance',
+        'announcements' => 'annonce',
         'caisse' => 'caisse',
         'reversements' => 'reversement',
         'support' => 'support',
         'parametrage' => 'parametrage',
+        'logs' => 'parametrage',
         'types-propriete' => 'parametrage',
         'equipement-propriete' => 'parametrage',
         'possimite-propriete' => 'parametrage',

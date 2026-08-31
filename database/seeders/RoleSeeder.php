@@ -41,6 +41,10 @@ class RoleSeeder extends Seeder
                 $values['is_active'] = true;
             }
 
+            if (Schema::hasColumn('roles', 'is_system')) {
+                $values['is_system'] = $id === 'role-responsable';
+            }
+
             DB::table('roles')->updateOrInsert(
                 ['role_id' => $id],
                 $values

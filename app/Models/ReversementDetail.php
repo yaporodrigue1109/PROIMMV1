@@ -6,9 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Models\Concerns\VisibleWithActiveProprietaire;
+use App\Models\Concerns\VisibleWithActiveLocataire;
 
 class ReversementDetail extends Model
 {
+   use VisibleWithActiveProprietaire, VisibleWithActiveLocataire;
    // use SoftDeletes;
 
     protected $primaryKey = 'id_reversement_detail';

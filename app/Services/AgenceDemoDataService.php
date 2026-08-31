@@ -18,10 +18,12 @@ class AgenceDemoDataService
         $suffix = substr(str_replace('-', '', $agence->agence_id), 0, 8);
         $id = fn (string $type, int $number = 1) => "demo-{$type}-{$suffix}-{$number}";
         $now = now();
+        $proprietairePhone = $this->uniqueDemoPhone('proprietaires', 'proprietaire_id', $id('proprietaire'), '07', $agence->agence_id);
+        $locatairePhone = $this->uniqueDemoPhone('locataire', 'locataire_id', $id('locataire'), '05', $agence->agence_id);
 
         $this->upsert('proprietaires', ['proprietaire_id' => $id('proprietaire')], [
             'proprietaire_id' => $id('proprietaire'), 'code' => "DEMO-PR-{$suffix}",
-            'name' => 'Kouadio Yao (Démo)', 'tel1' => '0700000001', 'email' => "demo.proprietaire.{$suffix}@example.test",
+            'name' => 'Kouadio Yao (Démo)', 'tel1' => $proprietairePhone, 'email' => "demo.proprietaire.{$suffix}@example.test",
             'genre_id' => 1, 'type_pieces_id' => 1, 'type_proprietaire' => 'particulier',
             'numpiece' => "DEMO-CNI-{$suffix}", 'date_expiration_piece' => $now->copy()->addYears(5)->toDateString(),
             'adresse' => 'Cocody Angré', 'profession' => 'Entrepreneur', 'nationalite' => 'Ivoirienne',
@@ -88,7 +90,7 @@ class AgenceDemoDataService
 
         $this->upsert('locataire', ['locataire_id' => $id('locataire')], [
             'locataire_id' => $id('locataire'), 'name' => 'Aminata Koné (Démo)', 'code' => "DEMO-LOC-{$suffix}",
-            'tel1' => '0500000001', 'email' => "demo.locataire.{$suffix}@example.test", 'adresse' => 'Cocody',
+            'tel1' => $locatairePhone, 'email' => "demo.locataire.{$suffix}@example.test", 'adresse' => 'Cocody',
             'type_piece_id' => 1, 'num_piece' => "DEMO-LOC-CNI-{$suffix}", 'genre_id' => 2,
             'profession' => 'Comptable', 'password' => Hash::make('demo-password'), 'created_at' => $now, 'updated_at' => $now,
         ]);
@@ -126,13 +128,31 @@ class AgenceDemoDataService
     public function purge(Agence $agence): void
     {
         $suffix = substr(str_replace('-', '', $agence->agence_id), 0, 8);
-        foreach (['transaction_agences', 'loyer', 'locataire_agence', 'maintenance', 'tarif_porte', 'porte', 'batiment', 'propriete', 'propietaire_lots', 'proprietaire_agences'] as $table) {
+        $demoIds = [
+            'transaction_agences' => 'transaction_agence_id',
+            'loyer' => 'loyer_id',
+            'locataire_agence' => 'locataire_agence_id',
+            'maintenance' => 'maintenance_id',
+            'tarif_porte' => 'tarif_id',
+            'porte' => 'porte_id',
+            'batiment' => 'batiment_id',
+            'propriete' => 'propriete_id',
+            'propietaire_lots' => 'propreietaire_lot_id',
+            'proprietaire_agences' => 'proprietaire_agence_id',
+        ];
+
+        foreach ($demoIds as $table => $primary) {
             if (!Schema::hasTable($table)) continue;
-            $primary = Schema::getColumnListing($table)[0] ?? 'id';
             DB::table($table)->where($primary, 'like', "demo-%-{$suffix}-%")->delete();
         }
         if (Schema::hasTable('locataire')) DB::table('locataire')->where('locataire_id', 'like', "demo-locataire-{$suffix}-%")->delete();
         if (Schema::hasTable('proprietaires')) DB::table('proprietaires')->where('proprietaire_id', 'like', "demo-proprietaire-{$suffix}-%")->delete();
+        if (Schema::hasTable('type_proprietes')) {
+            DB::table('type_proprietes')
+                ->where('agence_id', $agence->agence_id)
+                ->where('description', 'Type fictif de démonstration')
+                ->delete();
+        }
     }
 
     private function transaction(string $transactionId, string $agenceId, string $actorId, string $type, float $amount, $date, \Closure $id): void
@@ -155,5 +175,26 @@ class AgenceDemoDataService
         $match = array_intersect_key($match, $allowed);
         $values = array_intersect_key($values, $allowed);
         if ($match) DB::table($table)->updateOrInsert($match, $values);
+    }
+
+    private function uniqueDemoPhone(string $table, string $primaryKey, string $currentId, string $prefix, string $agencyId): string
+    {
+        $seed = hexdec(substr(hash('sha256', $agencyId.$table), 0, 7));
+
+        for ($attempt = 0; $attempt < 1000; $attempt++) {
+            $subscriber = ($seed + $attempt) % 100000000;
+            $phone = $prefix.str_pad((string) $subscriber, 8, '0', STR_PAD_LEFT);
+
+            $alreadyUsed = DB::table($table)
+                ->where('tel1', $phone)
+                ->where($primaryKey, '<>', $currentId)
+                ->exists();
+
+            if (! $alreadyUsed) {
+                return $phone;
+            }
+        }
+
+        throw new \RuntimeException("Impossible de générer un numéro de démonstration unique pour {$table}.");
     }
 }

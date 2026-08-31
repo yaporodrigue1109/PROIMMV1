@@ -26,8 +26,10 @@ class TypeProprieteController extends Controller
     public function store(Request $request): RedirectResponse
     {
         try {
-           // dd($request->all());
-            $data = $request->all();
+            $data = $request->validate([
+                'name' => ['required', 'string', 'max:100'],
+                'description' => ['nullable', 'string', 'max:500'],
+            ]);
 
             $this->service->create($data);
 
@@ -36,7 +38,6 @@ class TypeProprieteController extends Controller
                 ->with('success', 'Type « ' . $request->name . ' » créé avec succès.');
 
         } catch (\Exception $e) {
-            dd($e->getMessage());
             return back()
                 ->withInput()
                 ->with('error', $e->getMessage());
@@ -50,7 +51,9 @@ class TypeProprieteController extends Controller
     public function update(UpdateTypeProprieteRequest $request, int $types_propriete): RedirectResponse
     {
         try {
-            $this->service->update($types_propriete, $request->validated());
+            $type = $this->service->findById($types_propriete);
+            abort_unless($type && $type->agence_id === getInfoAgent()->users->agence_id, 403);
+            $this->service->update($type, $request->validated());
 
             return redirect()
                 ->route('agence.proprietes.index', ['#panel-types'])
@@ -71,7 +74,9 @@ class TypeProprieteController extends Controller
     {
         try {
            // dd($types_propriete);
-            $this->service->delete($types_propriete);
+            $type = $this->service->findById($types_propriete);
+            abort_unless($type && $type->agence_id === getInfoAgent()->users->agence_id, 403);
+            $this->service->delete($type);
 
             return redirect()
                 ->route('agence.proprietes.index', ['#panel-types'])

@@ -117,9 +117,9 @@ export default function Contacts({ contacts = { data: [] }, stats = {} }) {
             </div>
 
             <Card className="overflow-hidden rounded-2xl border-[#c8d4de] shadow-sm">
-                <div className="grid min-h-[620px] grid-cols-1 lg:grid-cols-[380px_1fr]">
-                    <div className="border-b border-[#eef3f8] lg:border-b-0 lg:border-r">
-                        <CardHeader className="space-y-3 border-b border-[#eef3f8] p-4">
+                <div className="grid min-h-[620px] grid-cols-1 lg:h-[calc(100vh-8rem)] lg:min-h-0 lg:grid-cols-[380px_1fr] lg:items-stretch">
+                    <div className="border-b border-[#eef3f8] lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden lg:border-b-0 lg:border-r">
+                        <CardHeader className="shrink-0 space-y-3 border-b border-[#eef3f8] p-4">
                             <CardTitle className="text-base">Messages du site web</CardTitle>
                             <div className="flex items-center gap-2 rounded-xl border border-[#c8d4de] px-3">
                                 <Search className="h-4 w-4 text-[#94a3b8]" />
@@ -143,7 +143,7 @@ export default function Contacts({ contacts = { data: [] }, stats = {} }) {
                             </Select>
                         </CardHeader>
 
-                        <div className="max-h-[520px] overflow-y-auto">
+                        <div className="max-h-[520px] overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1 lg:overscroll-contain">
                             {filtered.map((contact) => (
                                 <button
                                     key={contact.id}
@@ -174,7 +174,7 @@ export default function Contacts({ contacts = { data: [] }, stats = {} }) {
                         </div>
                     </div>
 
-                    <div className="p-5 md:p-7">
+                    <div className="min-h-0 overflow-y-auto overscroll-contain p-5 md:p-7">
                         {activeContact ? (
                             <div className="mx-auto max-w-3xl space-y-6">
                                 <div className="flex flex-col gap-4 border-b border-[#eef3f8] pb-5 sm:flex-row sm:items-start sm:justify-between">

@@ -160,13 +160,15 @@ class Agence extends Model
             'active'    => 'Active',
             'en_demo'   => 'En démo',
             'desactive' => 'Désactivée',
+            'fin_abonnement' => 'Fin d\'abonnement',
             default     => ucfirst($this->statut),
         };
     }
 
     public function getAbonnementExpireAttribute(): bool
     {
-        return $this->abonnement_end && $this->abonnement_end->isPast();
+        return (bool) ($this->abonnement_end
+            && $this->abonnement_end->startOfDay()->lt(now()->startOfDay()));
     }
 
     public function getJoursRestantsAbonnementAttribute(): int
@@ -174,7 +176,7 @@ class Agence extends Model
         if (!$this->abonnement_end) {
             return 0;
         }
-        return max(0, now()->diffInDays($this->abonnement_end, false));
+        return max(0, now()->startOfDay()->diffInDays($this->abonnement_end->startOfDay(), false));
     }
 }
 

@@ -19,6 +19,13 @@ use App\Models\Admin;
 use App\Models\Agence;
 use App\Models\Region;
 use App\Models\Ville;
+use App\Models\LocataireAgence;
+use App\Models\ProprietaireAgence;
+use App\Models\ProprietaireLot;
+use App\Models\Propriete;
+use App\Models\SupportTicket;
+use App\Models\Transaction;
+use App\Models\User;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Support\Facades\DB;
@@ -60,24 +67,10 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
         $agences = $this->agenceService->getAll($filters, 15);
         $agences = $this->hydrateAgenceSubscriptions($agences);
         $agenceItems = collect($agences instanceof \Illuminate\Pagination\AbstractPaginator ? $agences->items() : $agences);
-        $hasFilters = collect($filters)->filter(fn ($value) => filled($value))->isNotEmpty();
 
-        if ($agenceItems->isEmpty() && !$hasFilters) {
-            $agenceItems = $this->buildDemoAgences();
-            $agences = $agenceItems;
-        }
-
-        $agenceStats = $agenceItems->mapWithKeys(fn ($agence) => [
-            ($agence['agence_id'] ?? $agence->agence_id) => [
-                'proprietaires' => $agence['proprietaires'] ?? 0,
-                'locataires' => $agence['locataires'] ?? 0,
-                'utilisateurs' => $agence['utilisateurs'] ?? 0,
-                'biens' => $agence['biens'] ?? 0,
-                'lots' => $agence['lots'] ?? 0,
-                'tickets' => $agence['tickets'] ?? 0,
-                'tickets_resolus' => $agence['tickets_resolus'] ?? 0,
-            ],
-        ])->toArray();
+        $agenceStats = $this->getAgencyLifeStats(
+            $agenceItems->pluck('agence_id')->filter()->values()->all()
+        );
 
         return Inertia::render('Admin/Agences/Index', [
             'agences' => $agences,
@@ -235,26 +228,67 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
                 return response()->json(['success' => true, 'message' => 'Statut mis à jour.']);
             }
 
-            return back()->with('success', 'Statut de l\'agence mis à jour.');
+            return redirect()->route('admin.agences.index', [
+                'selected_agence_id' => $id,
+            ])->with('success', 'Statut de l\'agence mis à jour.');
 
         } catch (\Exception $e) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
 
-            return back()->with('error', $e->getMessage());
+            return redirect()->route('admin.agences.index', [
+                'selected_agence_id' => $id,
+            ])->with('error', $e->getMessage());
         }
     }
 
-    public function abonnementAgence(): Response
+    public function abonnementAgence(Request $request): Response
     {
-        $agence = $this->agenceService->getAll([], 1);
-        $selectedAgence = $agence instanceof \Illuminate\Pagination\AbstractPaginator
-            ? ($agence->items()[0] ?? null)
-            : ($agence[0] ?? null);
+        $agencyKey = $request->string('agence')->toString()
+            ?: $request->string('selected_agence_id')->toString();
+        $selectedAgence = $agencyKey
+            ? $this->agenceService->findByIdOrCode($agencyKey)
+            : Agence::query()->latest()->first();
+
+        abort_if(! $selectedAgence, 404, 'Agence introuvable.');
+
+        $selectedAgence->load(['abonnement', 'transactions']);
+        $selectedAgence = $this->hydrateAgenceSubscription($selectedAgence);
+        $transactions = $selectedAgence->transactions->sortByDesc('created_at')->values();
+        $validatedTransactions = $transactions->where('statut', 'validee');
+        $latestTransaction = $transactions->first();
+        $currentTotal = (float) ($latestTransaction?->montant_ttc ?? 0);
+        $currentModules = (float) ($latestTransaction?->montant_options_ht ?? 0);
+        $currentBase = (float) ($latestTransaction?->montant_base_ht ?? 0);
+        if ($currentBase <= 0 && $currentTotal > $currentModules) {
+            $currentBase = $currentTotal - $currentModules;
+        }
 
         return Inertia::render('Admin/Agences/Abonnement', [
             'agence' => $selectedAgence,
+            'billing' => [
+                'total_facture' => (float) $validatedTransactions->sum('montant_ttc'),
+                'paiements_reussis' => $validatedTransactions->count(),
+                'membre_depuis' => optional($selectedAgence->created_at)->locale('fr')->diffForHumans(null, true),
+                'montant_base' => $currentBase,
+                'montant_modules' => $currentModules,
+                'montant_courant' => $currentTotal,
+                'statut' => $selectedAgence->statut === 'active'
+                    && $selectedAgence->abonnement_end
+                    && $selectedAgence->abonnement_end->isFuture() ? 'Actif' : 'Inactif',
+                'historique' => $transactions->take(12)->map(fn (Transaction $transaction) => [
+                    'reference' => $transaction->reference,
+                    'debut' => optional($transaction->periode_debut)->format('d/m/Y'),
+                    'fin' => optional($transaction->periode_fin)->format('d/m/Y'),
+                    'montant' => (float) $transaction->montant_ttc,
+                    'statut' => match ($transaction->statut) {
+                        'validee' => 'Payé',
+                        'en_attente' => 'En attente',
+                        default => 'Annulé',
+                    },
+                ])->values(),
+            ],
         ]);
     }
 
@@ -272,6 +306,7 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
                     'title' => ucfirst($historique->action ?? 'Mise à jour'),
                     'description' => trim(($historique->notes ?: 'Historique de facturation') . ' · ' . ($historique->montant_ht ? number_format($historique->montant_ht, 0, ',', ' ') . ' FCFA' : '')),
                     'date' => optional($historique->created_at)->format('d/m/Y H:i'),
+                    'sort_date' => optional($historique->created_at)?->timestamp ?? 0,
                     'color' => $historique->action === 'renouvellement' ? 'green' : 'blue',
                     'user' => $historique->action_par ?? 'Système',
                 ];
@@ -281,6 +316,7 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
                     'title' => 'Transaction ' . ($transaction->reference ?? 'sans référence'),
                     'description' => number_format((float) ($transaction->montant_ttc ?? 0), 0, ',', ' ') . ' FCFA',
                     'date' => optional($transaction->created_at)->format('d/m/Y H:i'),
+                    'sort_date' => optional($transaction->created_at)?->timestamp ?? 0,
                     'color' => $transaction->statut === 'validee' ? 'green' : ($transaction->statut === 'en_attente' ? 'yellow' : 'red'),
                     'user' => $transaction->created_by ?? 'Système',
                 ];
@@ -288,14 +324,69 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
             ->sortByDesc('date')
             ->values();
 
+        $agenceId = $agence->agence_id;
+        $agencyStats = $this->getAgencyLifeStats([$agenceId])[$agenceId] ?? [];
         $stats = [
-            'nb_locataires' => 0,
-            'nb_proprietaires' => 0,
-            'nb_biens' => 0,
-            'nb_lots' => 0,
-            'nb_tickets' => 0,
-            'nb_tickets_resolus' => 0,
+            'nb_locataires' => $agencyStats['locataires'] ?? 0,
+            'nb_proprietaires' => $agencyStats['proprietaires'] ?? 0,
+            'nb_biens' => $agencyStats['biens'] ?? 0,
+            'nb_lots' => $agencyStats['lots'] ?? 0,
+            'nb_utilisateurs' => $agencyStats['utilisateurs'] ?? 0,
+            'nb_tickets' => $agencyStats['tickets'] ?? 0,
+            'nb_tickets_resolus' => $agencyStats['tickets_resolus'] ?? 0,
         ];
+
+        $operationalActivities = collect()
+            ->merge(Propriete::where('agence_id', $agenceId)->latest()->take(5)->get()->map(fn ($item) => [
+                'title' => 'Bien ajouté',
+                'description' => $item->reference ?: ($item->adresse_complete ?: 'Nouvelle propriété'),
+                'date' => optional($item->created_at)->format('d/m/Y H:i'),
+                'sort_date' => optional($item->created_at)?->timestamp ?? 0,
+                'color' => 'blue',
+                'user' => $item->created_by ?: 'Système',
+            ]))
+            ->merge(ProprietaireAgence::with('proprietaire')->where('agence_id', $agenceId)->latest()->take(5)->get()->map(fn ($item) => [
+                'title' => 'Propriétaire ajouté',
+                'description' => $item->proprietaire?->name ?? 'Nouveau propriétaire',
+                'date' => optional($item->created_at)->format('d/m/Y H:i'),
+                'sort_date' => optional($item->created_at)?->timestamp ?? 0,
+                'color' => 'green',
+                'user' => $item->created_by ?: 'Système',
+            ]))
+            ->merge(LocataireAgence::with('locataire')->where('agence_id', $agenceId)->latest()->take(5)->get()->map(fn ($item) => [
+                'title' => 'Locataire ajouté',
+                'description' => $item->locataire?->name ?? 'Nouveau locataire',
+                'date' => optional($item->created_at)->format('d/m/Y H:i'),
+                'sort_date' => optional($item->created_at)?->timestamp ?? 0,
+                'color' => 'green',
+                'user' => $item->created_by ?: 'Système',
+            ]))
+            ->merge(SupportTicket::where('agence_id', $agenceId)->latest()->take(5)->get()->map(fn ($item) => [
+                'title' => 'Ticket '.$item->reference,
+                'description' => $item->sujet,
+                'date' => optional($item->created_at)->format('d/m/Y H:i'),
+                'sort_date' => optional($item->created_at)?->timestamp ?? 0,
+                'color' => in_array($item->statut, ['resolu', 'ferme'], true) ? 'green' : 'yellow',
+                'user' => $item->demandeur_id ?: 'Système',
+            ]));
+
+        $activities = $activities
+            ->map(fn ($item) => $item + ['sort_date' => $item['sort_date'] ?? 0])
+            ->merge($operationalActivities)
+            ->sortByDesc('sort_date')
+            ->take(20);
+
+        $actorIds = $activities->pluck('user')
+            ->filter(fn ($actor) => $actor && $actor !== 'Système')
+            ->unique()
+            ->values();
+        $actorNames = User::whereIn('id_users', $actorIds)->pluck('name', 'id_users')
+            ->merge(Admin::whereIn('id_admin', $actorIds)->pluck('name', 'id_admin'));
+        $activities = $activities->map(function ($item) use ($actorNames) {
+            $item['user'] = $actorNames->get($item['user'], $item['user'] ?: 'Système');
+
+            return collect($item)->except('sort_date')->all();
+        })->values();
 
         return Inertia::render('Admin/Agences/Life', [
             'agence' => $agence,
@@ -309,67 +400,44 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
     /**
      * Retourne les dépendances communes aux formulaires create/edit.
      */
-    private function buildDemoAgences(): \Illuminate\Support\Collection
+    private function getAgencyLifeStats(array $agencyIds): array
     {
-        return collect([
-            [
-                'agence_id' => 'demo-agence-001',
-                'code_agence' => 'AGR2026DEMO',
-                'name' => 'Nova Habitat Cocody',
-                'adresse' => 'Riviera 2, boulevard Latrille, Cocody',
-                'tel1' => '07 00 00 00 01',
-                'tel2' => '01 00 00 00 01',
-                'email1' => 'contact@novahabitat.ci',
-                'email2' => 'direction@novahabitat.ci',
-                'statut' => 'en_demo',
-                'is_principale' => true,
-                'region_id' => 1,
-                'ville_id' => 1,
-                'region' => (object) ['id' => 1, 'name' => 'Lagunes'],
-                'ville' => (object) ['id' => 1, 'name' => 'Abidjan'],
-                'responsable' => (object) [
-                    'id_users' => 'usr-demo-001',
-                    'name' => 'Awa Konan',
-                    'tel1' => '07 07 07 07 07',
-                    'email' => 'awa@novahabitat.ci',
-                ],
-                'abonnement' => (object) [
-                    'abonnement_id' => 'plan-demo-premium',
-                    'name' => 'Essentiel Demo',
-                    'description' => 'Agence de démonstration pour visualiser le tableau de bord admin.',
-                    'prix_ht' => 49900,
-                    'modules' => [
-                        (object) ['nom' => 'SMS'],
-                        (object) ['nom' => 'WhatsApp'],
-                    ],
-                ],
-                'abonnement_start' => now()->subDays(12)->toDateString(),
-                'abonnement_end' => now()->addMonths(3)->toDateString(),
-                'duree_mois' => 6,
-                'montant_base_total' => 99800,
-                'montant_total' => 119800,
-                'capital_social' => 1500000,
-                'forme_juridique' => 'SARL',
-                'numero_identification' => 'CI-ABJ-2026-001',
-                'tva_number' => 'TVA-2026-001',
-                'nombre_employes' => 8,
-                'pays' => 'Côte d\'Ivoire',
-                'siege_social' => 'Riviera 2, Cocody',
-                'date_creation' => now()->subYear()->toDateString(),
-                'modules_payants' => [
-                    ['nom' => 'SMS', 'statut' => 'Actif'],
-                    ['nom' => 'WhatsApp', 'statut' => 'Actif'],
-                    ['nom' => 'Assistant IA', 'statut' => 'Inactif'],
-                ],
-                'proprietaires' => 14,
-                'locataires' => 36,
-                'utilisateurs' => 9,
-                'biens' => 22,
-                'lots' => 58,
-                'tickets' => 4,
-                'tickets_resolus' => 3,
-            ],
-        ]);
+        $agencyIds = collect($agencyIds)->filter()->unique()->values();
+        if ($agencyIds->isEmpty()) {
+            return [];
+        }
+
+        $groupedCount = static function ($query, string $distinctColumn) use ($agencyIds): array {
+            return $query
+                ->whereIn('agence_id', $agencyIds)
+                ->select('agence_id')
+                ->selectRaw("COUNT(DISTINCT {$distinctColumn}) AS aggregate")
+                ->groupBy('agence_id')
+                ->pluck('aggregate', 'agence_id')
+                ->map(fn ($value) => (int) $value)
+                ->all();
+        };
+
+        $owners = $groupedCount(ProprietaireAgence::query(), 'proprietaire_id');
+        $tenants = $groupedCount(LocataireAgence::query(), 'locataire_id');
+        $properties = $groupedCount(Propriete::query(), 'propriete_id');
+        $lots = $groupedCount(ProprietaireLot::query(), 'propreietaire_lot_id');
+        $users = $groupedCount(User::query(), 'id_users');
+        $tickets = $groupedCount(SupportTicket::query(), 'support_ticket_id');
+        $resolvedTickets = $groupedCount(
+            SupportTicket::query()->whereIn('statut', ['resolu', 'ferme']),
+            'support_ticket_id'
+        );
+
+        return $agencyIds->mapWithKeys(fn ($agencyId) => [$agencyId => [
+            'proprietaires' => $owners[$agencyId] ?? 0,
+            'locataires' => $tenants[$agencyId] ?? 0,
+            'biens' => $properties[$agencyId] ?? 0,
+            'lots' => $lots[$agencyId] ?? 0,
+            'utilisateurs' => $users[$agencyId] ?? 0,
+            'tickets' => $tickets[$agencyId] ?? 0,
+            'tickets_resolus' => $resolvedTickets[$agencyId] ?? 0,
+        ]])->all();
     }
 
     private function hydrateAgenceSubscriptions($agences)
@@ -393,19 +461,30 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
             ->where('type', 'subscription')
             ->where('agence_id', $agence->agence_id)
             ->with(['nouvelAbonnement'])
+            ->latest('created_at')
             ->first();
 
         $subscriptionSource = $snapshot ?? $agence->abonnement ?? null;
+        $latestTransaction = Transaction::where('agence_id', $agence->agence_id)
+            ->latest('created_at')
+            ->first();
+        $selectedModuleIds = collect($latestTransaction?->options_souscrites ?? [])
+            ->map(fn ($id) => (string) $id)
+            ->all();
+        $moduleItems = $this->extractModulesAsItems(
+            $subscriptionSource?->features ?? [],
+            $selectedModuleIds
+        );
         if ($subscriptionSource) {
             $subscriptionSource->setAttribute('prix_ht', $subscriptionSource->prix_ht ?? $subscriptionSource->prix_mensuel_ht ?? 0);
-            $subscriptionSource->setAttribute('modules', $this->extractModulesFromFeatures($subscriptionSource->features ?? []));
+            $subscriptionSource->setAttribute('description_text', $this->plainText($subscriptionSource->description));
+            $subscriptionSource->setAttribute('modules', collect($moduleItems)->pluck('nom')->all());
+            $subscriptionSource->setAttribute('modules_count', count($moduleItems));
+            $subscriptionSource->setAttribute('modules_available', count($this->extractModulesAsItems($subscriptionSource->features ?? [])));
             $agence->setRelation('subscription', $subscriptionSource);
         }
 
-        $agence->setAttribute(
-            'modules_payants',
-            $this->extractModulesAsItems($subscriptionSource?->features ?? [])
-        );
+        $agence->setAttribute('modules_payants', $moduleItems);
 
         if ($snapshot) {
             $agence->setAttribute('abonnement_start', $snapshot->nouvelle_date_debut ?? $agence->abonnement_start ?? null);
@@ -449,11 +528,32 @@ use App\Repositories\Interfaces\UserRepositoryInterface;
             ->all();
     }
 
-    private function extractModulesAsItems($features): array
+    private function extractModulesAsItems($features, array $selectedIds = []): array
     {
-        return collect($this->extractModulesFromFeatures($features))
-            ->map(fn ($name) => ['nom' => $name])
+        if (is_string($features)) {
+            $features = json_decode($features, true) ?: [];
+        }
+
+        return collect(is_array($features) ? $features : [])
+            ->filter(function ($item) use ($selectedIds) {
+                if (! is_array($item) || ($item['actif'] ?? true) === false) {
+                    return false;
+                }
+
+                return $selectedIds === []
+                    || in_array((string) ($item['id'] ?? ''), $selectedIds, true);
+            })
+            ->map(fn ($item) => [
+                'id' => $item['id'] ?? null,
+                'nom' => $item['label'] ?? $item['name'] ?? $item['nom'] ?? $item['libelle'] ?? 'Module',
+                'prix' => (float) ($item['prix_mensuel'] ?? $item['prix'] ?? 0),
+            ])
             ->all();
+    }
+
+    private function plainText(?string $value): string
+    {
+        return trim(html_entity_decode(strip_tags($value ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
     private function getFormDependencies(): array

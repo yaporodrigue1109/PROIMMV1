@@ -1,10 +1,18 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Search } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const SelectContext = React.createContext(null);
 const MENU_MAX_HEIGHT = 288;
+
+function normalizeSearchText(value) {
+    return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+}
 
 function getNodeText(children) {
     return React.Children.toArray(children)
@@ -55,6 +63,7 @@ function Select({
     const contentRef = React.useRef(null);
     const [internalValue, setInternalValue] = React.useState(defaultValue ?? '');
     const [open, setOpen] = React.useState(false);
+    const [search, setSearch] = React.useState('');
     const [items, setItems] = React.useState(new Map());
     const staticItems = React.useMemo(() => collectOptionLabels(children), [children]);
 
@@ -71,6 +80,24 @@ function Select({
         },
         [isControlled, onValueChange]
     );
+
+    const registerItem = React.useCallback((itemValue, label) => {
+        setItems((previous) => {
+            if (previous.get(itemValue) === label) return previous;
+            const next = new Map(previous);
+            next.set(itemValue, label);
+            return next;
+        });
+    }, []);
+
+    const unregisterItem = React.useCallback((itemValue) => {
+        setItems((previous) => {
+            if (!previous.has(itemValue)) return previous;
+            const next = new Map(previous);
+            next.delete(itemValue);
+            return next;
+        });
+    }, []);
 
     React.useEffect(() => {
         function handlePointerDown(event) {
@@ -108,6 +135,12 @@ function Select({
         setItems(new Map());
     }, [children]);
 
+    React.useEffect(() => {
+        if (!open) {
+            setSearch('');
+        }
+    }, [open]);
+
     const contextValue = React.useMemo(
         () => ({
             value: currentValue,
@@ -115,30 +148,14 @@ function Select({
             setOpen: disabled ? () => {} : setOpen,
             triggerRef,
             contentRef,
+            search,
+            setSearch,
             selectValue: updateValue,
-            registerItem: (itemValue, label) => {
-                setItems((prev) => {
-                    if (prev.get(itemValue) === label) {
-                        return prev;
-                    }
-                    const next = new Map(prev);
-                    next.set(itemValue, label);
-                    return next;
-                });
-            },
-            unregisterItem: (itemValue) => {
-                setItems((prev) => {
-                    if (!prev.has(itemValue)) {
-                        return prev;
-                    }
-                    const next = new Map(prev);
-                    next.delete(itemValue);
-                    return next;
-                });
-            },
+            registerItem,
+            unregisterItem,
             getLabel: (itemValue) => items.get(itemValue) ?? staticItems.get(itemValue),
         }),
-        [currentValue, disabled, items, open, staticItems, updateValue]
+        [currentValue, disabled, items, open, registerItem, search, staticItems, unregisterItem, updateValue]
     );
 
     return (
@@ -184,9 +201,16 @@ function SelectValue({ placeholder, children }) {
     return <span>{label || placeholder || ''}</span>;
 }
 
-function SelectContent({ className, children, ...props }) {
+function SelectContent({ className, children, searchable = true, searchPlaceholder = 'Rechercher...', ...props }) {
     const context = React.useContext(SelectContext);
     const [position, setPosition] = React.useState(null);
+    const searchInputRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (context?.open && searchable) {
+            requestAnimationFrame(() => searchInputRef.current?.focus());
+        }
+    }, [context?.open, searchable]);
 
     React.useEffect(() => {
         if (!context?.open) {
@@ -240,7 +264,7 @@ function SelectContent({ className, children, ...props }) {
             ref={context?.contentRef}
             role="listbox"
             className={cn(
-                'fixed z-[70] max-h-72 overflow-auto rounded-md border border-[#c8d4de] bg-white p-1 shadow-lg',
+                'fixed z-[70] flex max-h-72 flex-col overflow-hidden rounded-md border border-[#c8d4de] bg-white shadow-lg',
                 className
             )}
             style={{
@@ -253,7 +277,25 @@ function SelectContent({ className, children, ...props }) {
             }}
             {...props}
         >
-            {children}
+            {searchable ? (
+                <div className="shrink-0 border-b border-[#e8eef3] p-2">
+                    <div className="flex h-9 items-center rounded-md border border-[#d7e0e8] bg-[#f8fafc] px-2.5 focus-within:border-[#00559b] focus-within:bg-white">
+                        <Search className="h-4 w-4 shrink-0 text-[#94a3b8]" />
+                        <input
+                            ref={searchInputRef}
+                            type="search"
+                            value={context?.search ?? ''}
+                            onChange={(event) => context?.setSearch?.(event.target.value)}
+                            onKeyDown={(event) => event.stopPropagation()}
+                            placeholder={searchPlaceholder}
+                            className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-sm text-[#0f172a] outline-none placeholder:text-[#8798a5]"
+                        />
+                    </div>
+                </div>
+            ) : null}
+            <div className="min-h-0 flex-1 overflow-y-auto p-1">
+                {children}
+            </div>
         </div>,
         document.body
     );
@@ -262,19 +304,27 @@ function SelectContent({ className, children, ...props }) {
 function SelectItem({ className, value, children, ...props }) {
     const context = React.useContext(SelectContext);
     const label = getNodeText(children);
+    const registerItem = context?.registerItem;
+    const unregisterItem = context?.unregisterItem;
 
     React.useEffect(() => {
-        context?.registerItem?.(value, label);
+        registerItem?.(value, label);
 
         // FIX #2 (suite): nettoyage au démontage de l'item, indispensable
         // pour un select en cascade (ex: ville filtrée par région) où les
         // SelectItem sont montés/démontés dynamiquement.
         return () => {
-            context?.unregisterItem?.(value);
+            unregisterItem?.(value);
         };
-    }, [context, label, value]);
+    }, [label, registerItem, unregisterItem, value]);
 
     const selected = context?.value === value;
+    const search = normalizeSearchText(context?.search);
+    const matchesSearch = !search || normalizeSearchText(`${label} ${value}`).includes(search);
+
+    if (!matchesSearch) {
+        return null;
+    }
 
     return (
         <button

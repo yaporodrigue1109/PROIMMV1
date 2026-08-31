@@ -69,17 +69,6 @@ const DEMO_PROPERTIES = [
     },
 ];
 
-const DEMO_TYPES = [
-    { id: 1, name: 'Appartement' },
-    { id: 2, name: 'Villa' },
-    { id: 3, name: 'Immeuble résidentiel' },
-];
-
-const DEMO_REFERENTIELS = {
-    equipements: [{ id: 1, name: 'Piscine' }, { id: 2, name: 'Parking privé' }],
-    proximites: [{ id: 1, name: 'École' }, { id: 2, name: 'Marché' }],
-};
-
 function initials(name) {
     return String(name ?? '')
         .split(' ')
@@ -134,6 +123,8 @@ function normalizeReferenceItem(item) {
         id: item?.id ?? crypto.randomUUID(),
         name: item?.name ?? item?.libelle ?? '',
         description: item?.description ?? '',
+        is_global: Boolean(item?.is_global),
+        editable: item?.editable !== false,
     };
 }
 
@@ -329,6 +320,9 @@ function ReferentielCard({ title, icon: Icon, items, onCreate, onEdit, onDelete 
                                         </span>
                                         <div className="min-w-0">
                                             <p className="truncate text-[#0f172a]">{item.name}</p>
+                                            {item.is_global ? (
+                                                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#00559b]">Référentiel global</p>
+                                            ) : null}
                                             {item.description ? (
                                                 <p className="truncate text-xs text-[#94a3b8]">{item.description}</p>
                                             ) : null}
@@ -336,7 +330,7 @@ function ReferentielCard({ title, icon: Icon, items, onCreate, onEdit, onDelete 
                                     </div>
 
                                     <div className="flex shrink-0 items-center gap-1">
-                                        {onEdit ? (
+                                        {onEdit && item.editable !== false ? (
                                             <Button
                                                 type="button"
                                                 variant="outline"
@@ -347,7 +341,7 @@ function ReferentielCard({ title, icon: Icon, items, onCreate, onEdit, onDelete 
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
                                         ) : null}
-                                        {onDelete ? (
+                                        {onDelete && item.editable !== false ? (
                                             <Button
                                                 type="button"
                                                 variant="outline"
@@ -511,7 +505,7 @@ export default function Proprietes({
     }, [proprietes]);
 
     const typeOptions = useMemo(() => {
-        const source = Array.isArray(types) && types.length > 0 ? types : DEMO_TYPES;
+        const source = Array.isArray(types) ? types : [];
         return source
             .map((item) => ({
                 value: String(item?.id ?? item?.type_propriete_id ?? item?.name ?? ''),
@@ -522,12 +516,12 @@ export default function Proprietes({
     }, [types]);
 
     const referentielEquipements = useMemo(() => {
-        const source = Array.isArray(equipements) && equipements.length > 0 ? equipements : DEMO_REFERENTIELS.equipements;
+        const source = Array.isArray(equipements) ? equipements : [];
         return source.map((item) => normalizeReferenceItem(item));
     }, [equipements]);
 
     const referentielProximites = useMemo(() => {
-        const source = Array.isArray(proximites) && proximites.length > 0 ? proximites : DEMO_REFERENTIELS.proximites;
+        const source = Array.isArray(proximites) ? proximites : [];
         return source.map((item) => normalizeReferenceItem(item));
     }, [proximites]);
 
@@ -1005,6 +999,7 @@ export default function Proprietes({
                                     icon={MapPin}
                                     items={referentielProximites}
                                     onCreate={showRefActions ? () => openRefDialog('proximite', 'create') : null}
+                                    onEdit={showRefActions ? (item) => openRefDialog('proximite', 'edit', item) : null}
                                     onDelete={showRefActions ? (item) => deleteRefItem('proximite', item) : null}
                                 />
                             </div>

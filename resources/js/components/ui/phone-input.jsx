@@ -1,4 +1,5 @@
 import { Check, ChevronRight } from 'lucide-react';
+import { usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import PhoneInputBase from 'react-phone-number-input';
 import flags from 'react-phone-number-input/flags';
@@ -91,11 +92,14 @@ function CountrySelect({ value, onChange, options }) {
     );
 }
 
-function PhoneInput({ className, value, onChange, ...props }) {
+function PhoneInput({ className, value, onChange, countries, ...props }) {
+    const defaultCountry = usePage().props.geography?.defaultCountryCode ?? 'CI';
+
     return (
         <PhoneInputBase
             international
-            defaultCountry="CI"
+            defaultCountry={defaultCountry}
+            countries={countries}
             countrySelectComponent={CountrySelect}
             value={value || undefined}
             onChange={(nextValue) => onChange?.(nextValue ?? '')}

@@ -27,6 +27,7 @@ class ReversementResource extends JsonResource
             'montant_commission' => $this->montant_commission,
             'montant_apres_commission' => $this->montant_apres_commission,
             'nouvelle_caution' => $this->nouvelle_caution,
+            'caution_sodeci' => $this->cautionSodeci,
             'depenses_effectuees' => $this->depenses_effectuees,
             'net_a_reverser' => $this->net_a_reverser,
             'statut' => $this->statut,
