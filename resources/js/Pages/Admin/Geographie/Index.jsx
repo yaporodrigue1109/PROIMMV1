@@ -30,6 +30,16 @@ export default function Index({ pays = [], regions = [], villes = [] }) {
             return groups;
         }, {});
     }, [filtered]);
+    const citiesByCountryAndRegion = useMemo(() => {
+        return filtered.reduce((countries, city) => {
+            const country = city.region?.pays?.name ?? 'Sans pays';
+            const region = city.region?.name ?? 'Sans région';
+            if (!countries[country]) countries[country] = {};
+            if (!countries[country][region]) countries[country][region] = [];
+            countries[country][region].push(city);
+            return countries;
+        }, {});
+    }, [filtered]);
 
     const showForm = (item = null) => {
         setEditing(item); form.setData({ name: item?.name ?? '', iso2: item?.iso2 ?? '', indicatif: item?.indicatif ?? '', actif: item?.actif ?? true, pays_id: item?.pays_id ?? '', region_id: item?.region_id ?? '' }); form.clearErrors(); setOpen(true);
@@ -49,6 +59,18 @@ export default function Index({ pays = [], regions = [], villes = [] }) {
                     <div className="divide-y divide-slate-100">{countryRegions.sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((item) => <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_130px_100px] items-center px-4 py-3"><div className="flex min-w-0 items-center gap-3"><span className="rounded-lg bg-blue-50 p-2 text-[#00559b]"><Map className="h-4 w-4" /></span><span className="truncate font-medium text-slate-900">{item.name}</span></div><span className="text-center text-sm text-slate-600">{item.villes_count ?? 0}</span><div className="flex justify-end gap-2"><Button variant="outline" size="icon" onClick={() => showForm(item)}><Pencil className="h-4 w-4" /></Button><Button variant="outline" size="icon" className="text-red-600" onClick={() => remove(item)}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div>
                 </section>)}
                 {!filtered.length && <p className="py-10 text-center text-sm text-slate-500">Aucune région trouvée.</p>}
+            </div> : tab === 'villes' ? <div className="space-y-6">
+                {Object.entries(citiesByCountryAndRegion).sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([country, regionGroups]) => {
+                    const countryTotal = Object.values(regionGroups).reduce((total, cities) => total + cities.length, 0);
+                    return <section key={country} className="overflow-hidden rounded-2xl border border-slate-200">
+                        <div className="flex items-center justify-between bg-[#eef6fc] px-4 py-3"><div className="flex items-center gap-2 font-semibold text-[#00559b]"><Globe2 className="h-4 w-4" />{country}</div><span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600">{countryTotal} ville(s)</span></div>
+                        <div className="space-y-4 p-4">{Object.entries(regionGroups).sort(([a], [b]) => a.localeCompare(b, 'fr')).map(([region, regionCities]) => <div key={`${country}-${region}`} className="overflow-hidden rounded-xl border border-slate-200">
+                            <div className="flex items-center justify-between border-b bg-slate-50 px-4 py-2.5"><span className="flex items-center gap-2 text-sm font-semibold text-slate-700"><Map className="h-4 w-4 text-[#00559b]" />{region}</span><span className="text-xs text-slate-500">{regionCities.length} ville(s)</span></div>
+                            <div className="divide-y divide-slate-100">{regionCities.sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((item) => <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_100px] items-center px-4 py-3"><div className="flex min-w-0 items-center gap-3"><span className="rounded-lg bg-blue-50 p-2 text-[#00559b]"><MapPin className="h-4 w-4" /></span><span className="truncate font-medium text-slate-900">{item.name}</span></div><div className="flex justify-end gap-2"><Button variant="outline" size="icon" onClick={() => showForm(item)}><Pencil className="h-4 w-4" /></Button><Button variant="outline" size="icon" className="text-red-600" onClick={() => remove(item)}><Trash2 className="h-4 w-4" /></Button></div></div>)}</div>
+                        </div>)}</div>
+                    </section>;
+                })}
+                {!filtered.length && <p className="py-10 text-center text-sm text-slate-500">Aucune ville trouvée.</p>}
             </div> : <div className="divide-y">
                 {filtered.map((item) => { const Icon = cfg.icon; return <div key={item.id} className="flex items-center justify-between gap-4 py-4"><div className="flex items-center gap-3"><span className="rounded-xl bg-blue-50 p-2 text-[#00559b]"><Icon className="h-5 w-5" /></span><div><p className="font-semibold">{item.name}</p><p className="text-xs text-slate-500">{tab === 'pays' ? `${item.iso2} · ${item.indicatif} · ${item.regions_count ?? 0} région(s)` : item.region?.name ?? 'Sans région'}</p></div></div><div className="flex gap-2"><Button variant="outline" size="icon" onClick={() => showForm(item)}><Pencil className="h-4 w-4" /></Button><Button variant="outline" size="icon" className="text-red-600" onClick={() => remove(item)}><Trash2 className="h-4 w-4" /></Button></div></div>; })}
                 {!filtered.length && <p className="py-10 text-center text-sm text-slate-500">Aucun résultat.</p>}

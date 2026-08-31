@@ -21,7 +21,7 @@ class GeographieController extends Controller
         return Inertia::render('Admin/Geographie/Index', [
             'pays' => Pays::withCount('regions')->orderBy('name')->get(),
             'regions' => Region::with('pays:id,name')->withCount('villes')->orderBy('name')->get(),
-            'villes' => Ville::with('region:id,name,pays_id')->orderBy('name')->get(),
+            'villes' => Ville::with(['region:id,name,pays_id', 'region.pays:id,name'])->orderBy('name')->get(),
         ]);
     }
 
