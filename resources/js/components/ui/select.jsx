@@ -264,7 +264,7 @@ function SelectContent({ className, children, searchable = true, searchPlacehold
             ref={context?.contentRef}
             role="listbox"
             className={cn(
-                'fixed z-[70] flex max-h-72 flex-col overflow-hidden rounded-md border border-[#c8d4de] bg-white shadow-lg',
+                'fixed z-[1000] flex max-h-72 flex-col overflow-hidden rounded-md border border-[#c8d4de] bg-white shadow-lg',
                 className
             )}
             style={{
